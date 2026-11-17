@@ -281,6 +281,25 @@ MouseArea {
                         anchors.fill: indeterminateProgressBar
                     }
 
+                    ColumnLayout {
+                        visible: Wallpapers.folderModel.count === 0
+                        anchors.centerIn: parent
+                        spacing: 8
+
+                        MaterialSymbol {
+                            Layout.alignment: Qt.AlignHCenter
+                            text: "wallpaper"
+                            iconSize: 42
+                            color: Appearance.colors.colSubtext
+                        }
+                        StyledText {
+                            Layout.alignment: Qt.AlignHCenter
+                            horizontalAlignment: Text.AlignHCenter
+                            color: Appearance.colors.colSubtext
+                            text: Translation.tr("No wallpapers in this folder\nAdd images or pick a file below")
+                        }
+                    }
+
                     GridView {
                         id: grid
                         visible: Wallpapers.folderModel.count > 0
