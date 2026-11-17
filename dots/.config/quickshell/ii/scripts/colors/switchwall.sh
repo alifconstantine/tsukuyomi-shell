@@ -11,6 +11,18 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SHELL_CONFIG_FILE="$XDG_CONFIG_HOME/illogical-impulse/config.json"
 MATUGEN_DIR="$XDG_CONFIG_HOME/matugen"
 terminalscheme="$SCRIPT_DIR/terminal/scheme-base.json"
+ILLOGICAL_IMPULSE_VIRTUAL_ENV="${ILLOGICAL_IMPULSE_VIRTUAL_ENV:-$STATE_DIR/.venv}"
+
+resolve_venv_dir() {
+    eval echo "$ILLOGICAL_IMPULSE_VIRTUAL_ENV"
+}
+
+ensure_shell_config_file() {
+    mkdir -p "$(dirname "$SHELL_CONFIG_FILE")"
+    if [ ! -s "$SHELL_CONFIG_FILE" ]; then
+        printf '{}\n' > "$SHELL_CONFIG_FILE"
+    fi
+}
 
 handle_kde_material_you_colors() {
     # Check if Qt app theming is enabled in config
@@ -143,16 +155,14 @@ EOF
 
 set_wallpaper_path() {
     local path="$1"
-    if [ -f "$SHELL_CONFIG_FILE" ]; then
-        jq --arg path "$path" '.background.wallpaperPath = $path' "$SHELL_CONFIG_FILE" > "$SHELL_CONFIG_FILE.tmp" && mv "$SHELL_CONFIG_FILE.tmp" "$SHELL_CONFIG_FILE"
-    fi
+    ensure_shell_config_file
+    jq --arg path "$path" '.background.wallpaperPath = $path' "$SHELL_CONFIG_FILE" > "$SHELL_CONFIG_FILE.tmp" && mv "$SHELL_CONFIG_FILE.tmp" "$SHELL_CONFIG_FILE"
 }
 
 set_thumbnail_path() {
     local path="$1"
-    if [ -f "$SHELL_CONFIG_FILE" ]; then
-        jq --arg path "$path" '.background.thumbnailPath = $path' "$SHELL_CONFIG_FILE" > "$SHELL_CONFIG_FILE.tmp" && mv "$SHELL_CONFIG_FILE.tmp" "$SHELL_CONFIG_FILE"
-    fi
+    ensure_shell_config_file
+    jq --arg path "$path" '.background.thumbnailPath = $path' "$SHELL_CONFIG_FILE" > "$SHELL_CONFIG_FILE.tmp" && mv "$SHELL_CONFIG_FILE.tmp" "$SHELL_CONFIG_FILE"
 }
 
 categorize_wallpaper() {
@@ -169,15 +179,19 @@ switch() {
     color="$5"
 
     # Start Gemini auto-categorization if enabled
-    aiStylingEnabled=$(jq -r '.background.widgets.clock.cookie.aiStyling' "$SHELL_CONFIG_FILE")
+    aiStylingEnabled=$(jq -r '.background.widgets.clock.cookie.aiStyling // empty' "$SHELL_CONFIG_FILE" 2>/dev/null)
     if [[ "$aiStylingEnabled" == "true" ]]; then
         categorize_wallpaper "$imgpath" &
     fi
 
-    read scale screenx screeny screensizey < <(hyprctl monitors -j | jq '.[] | select(.focused) | .scale, .x, .y, .height' | xargs)
-    cursorposx=$(hyprctl cursorpos -j | jq '.x' 2>/dev/null) || cursorposx=960
+    read scale screenx screeny screensizey < <(hyprctl monitors -j 2>/dev/null | jq -r '.[] | select(.focused) | "\(.scale) \(.x) \(.y) \(.height)"' 2>/dev/null)
+    scale=${scale:-1}
+    screenx=${screenx:-0}
+    screeny=${screeny:-0}
+    screensizey=${screensizey:-1080}
+    cursorposx=$(hyprctl cursorpos -j 2>/dev/null | jq '.x' 2>/dev/null) || cursorposx=960
     cursorposx=$(bc <<< "scale=0; ($cursorposx - $screenx) * $scale / 1")
-    cursorposy=$(hyprctl cursorpos -j | jq '.y' 2>/dev/null) || cursorposy=540
+    cursorposy=$(hyprctl cursorpos -j 2>/dev/null | jq '.y' 2>/dev/null) || cursorposy=540
     cursorposy=$(bc <<< "scale=0; ($cursorposy - $screeny) * $scale / 1")
     cursorposy_inverted=$((screensizey - cursorposy))
 
@@ -272,7 +286,7 @@ switch() {
     # enforce dark mode for terminal
     if [[ -n "$mode_flag" ]]; then
         matugen_args+=(--mode "$mode_flag")
-        if [[ $(jq -r '.appearance.wallpaperTheming.terminalGenerationProps.forceDarkMode' "$SHELL_CONFIG_FILE") == "true" ]]; then
+        if [[ $(jq -r '.appearance.wallpaperTheming.terminalGenerationProps.forceDarkMode // empty' "$SHELL_CONFIG_FILE" 2>/dev/null) == "true" ]]; then
             generate_colors_material_args+=(--mode "dark")
         else
             generate_colors_material_args+=(--mode "$mode_flag")
@@ -304,16 +318,23 @@ switch() {
     fi
 
     matugen "${matugen_args[@]}"
-    source "$(eval echo $ILLOGICAL_IMPULSE_VIRTUAL_ENV)/bin/activate"
-    python3 "$SCRIPT_DIR/generate_colors_material.py" "${generate_colors_material_args[@]}" \
-        > "$STATE_DIR"/user/generated/material_colors.scss
-    deactivate
-    "$SCRIPT_DIR"/applycolor.sh
+    local venv_dir
+    venv_dir="$(resolve_venv_dir)"
+    if [[ -f "$venv_dir/bin/activate" ]]; then
+        # shellcheck disable=SC1091
+        source "$venv_dir/bin/activate"
+        python3 "$SCRIPT_DIR/generate_colors_material.py" "${generate_colors_material_args[@]}" \
+            > "$STATE_DIR"/user/generated/material_colors.scss
+        deactivate
+        "$SCRIPT_DIR"/applycolor.sh
+    else
+        echo "[switchwall.sh] Warning: Python venv missing at '$venv_dir'; skipping SCSS/terminal color generation" >&2
+    fi
 
     # Pass screen width, height, and wallpaper path to post_process
-    max_width_desired="$(hyprctl monitors -j | jq '([.[].width] | min)' | xargs)"
-    max_height_desired="$(hyprctl monitors -j | jq '([.[].height] | min)' | xargs)"
-    post_process "$max_width_desired" "$max_height_desired" "$imgpath"
+    max_width_desired="$(hyprctl monitors -j 2>/dev/null | jq '([.[].width] | min)' 2>/dev/null | xargs || true)"
+    max_height_desired="$(hyprctl monitors -j 2>/dev/null | jq '([.[].height] | min)' 2>/dev/null | xargs || true)"
+    post_process "${max_width_desired:-1920}" "${max_height_desired:-1080}" "$imgpath"
 }
 
 main() {
@@ -325,19 +346,27 @@ main() {
     noswitch_flag=""
 
     get_type_from_config() {
-        jq -r '.appearance.palette.type' "$SHELL_CONFIG_FILE" 2>/dev/null || echo "auto"
+        jq -r '.appearance.palette.type // "auto"' "$SHELL_CONFIG_FILE" 2>/dev/null || echo "auto"
     }
     get_accent_color_from_config() {
-        jq -r '.appearance.palette.accentColor' "$SHELL_CONFIG_FILE" 2>/dev/null || echo ""
+        jq -r '.appearance.palette.accentColor // empty' "$SHELL_CONFIG_FILE" 2>/dev/null || echo ""
     }
     set_accent_color() {
         local color="$1"
+        ensure_shell_config_file
         jq --arg color "$color" '.appearance.palette.accentColor = $color' "$SHELL_CONFIG_FILE" > "$SHELL_CONFIG_FILE.tmp" && mv "$SHELL_CONFIG_FILE.tmp" "$SHELL_CONFIG_FILE"
     }
 
     detect_scheme_type_from_image() {
         local img="$1"
-        source "$(eval echo $ILLOGICAL_IMPULSE_VIRTUAL_ENV)/bin/activate"
+        local venv_dir
+        venv_dir="$(resolve_venv_dir)"
+        if [[ ! -f "$venv_dir/bin/activate" ]]; then
+            echo "scheme-tonal-spot"
+            return 0
+        fi
+        # shellcheck disable=SC1091
+        source "$venv_dir/bin/activate"
         "$SCRIPT_DIR"/scheme_for_image.py "$img" 2>/dev/null | tr -d '\n'
         deactivate
     }
@@ -370,7 +399,7 @@ main() {
                 ;;
             --noswitch)
                 noswitch_flag="1"
-                imgpath=$(jq -r '.background.wallpaperPath' "$SHELL_CONFIG_FILE" 2>/dev/null || echo "")
+                imgpath=$(jq -r '.background.wallpaperPath // empty' "$SHELL_CONFIG_FILE" 2>/dev/null || echo "")
                 shift
                 ;;
             *)
@@ -387,6 +416,20 @@ main() {
     if [[ "$config_color" =~ ^#?[A-Fa-f0-9]{6}$ ]]; then
         color_flag="1"
         color="$config_color"
+    fi
+
+    # Fallback when toggling theme/mode (--noswitch) before any wallpaper has been saved
+    if [[ -n "$noswitch_flag" && -z "$color_flag" && ( -z "$imgpath" || ! -e "$imgpath" ) ]]; then
+        local pictures_dir=""
+        if command -v xdg-user-dir &>/dev/null; then
+            pictures_dir=$(xdg-user-dir PICTURES 2>/dev/null || echo "")
+        fi
+        pictures_dir="${pictures_dir:-$HOME/Pictures}"
+        if [[ -f "$pictures_dir/Wallpapers/default_wallpaper.png" ]]; then
+            imgpath="$pictures_dir/Wallpapers/default_wallpaper.png"
+        elif [[ -f "$CONFIG_DIR/assets/images/default_wallpaper.png" ]]; then
+            imgpath="$CONFIG_DIR/assets/images/default_wallpaper.png"
+        fi
     fi
 
     # If type_flag is not set, get it from config

@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 
 XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
-
-color=$(tr -d '\n' < "$XDG_STATE_HOME/quickshell/user/generated/color.txt")
+color_file="$XDG_STATE_HOME/quickshell/user/generated/color.txt"
+[[ -r "$color_file" ]] || exit 0
+color=$(tr -d '\n' < "$color_file")
+[[ -n "$color" ]] || exit 0
 
 current_mode=$(gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null | tr -d "'")
 if [[ "$current_mode" == "prefer-dark" ]]; then
@@ -43,6 +45,11 @@ case "$scheme_variant_str" in
         ;;
 esac
 
-source "$(eval echo $ILLOGICAL_IMPULSE_VIRTUAL_ENV)/bin/activate"
-kde-material-you-colors "$mode_flag" --color "$color" -sv "$sv_num"
-deactivate
+ILLOGICAL_IMPULSE_VIRTUAL_ENV="${ILLOGICAL_IMPULSE_VIRTUAL_ENV:-$XDG_STATE_HOME/quickshell/.venv}"
+venv_dir="$(eval echo "$ILLOGICAL_IMPULSE_VIRTUAL_ENV")"
+if [[ -f "$venv_dir/bin/activate" ]]; then
+    # shellcheck disable=SC1091
+    source "$venv_dir/bin/activate"
+    kde-material-you-colors "$mode_flag" --color "$color" -sv "$sv_num"
+    deactivate
+fi
