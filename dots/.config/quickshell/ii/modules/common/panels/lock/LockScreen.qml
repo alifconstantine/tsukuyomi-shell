@@ -92,12 +92,24 @@ Scope {
         surface: root.sessionLockSurface
     }
 
-    function lock() {
-        if (Config.options.lock.useHyprlock) {
-            Quickshell.execDetached(["bash", "-c", "pidof hyprlock || hyprlock"]);
-            return;
+    Process {
+        id: tsukuyomiLockCheck
+        command: ["bash", "-c", "command -v tsukuyomi-lock >/dev/null 2>&1"]
+        onExited: (exitCode) => {
+            if (exitCode === 0) {
+                Quickshell.execDetached(["tsukuyomi-lock"]);
+            } else if (Config.options.lock.useHyprlock) {
+                Quickshell.execDetached(["bash", "-c", "pidof hyprlock || hyprlock"]);
+            } else {
+                GlobalStates.screenLocked = true;
+            }
         }
-        GlobalStates.screenLocked = true;
+    }
+
+    function lock() {
+        if (!tsukuyomiLockCheck.running) {
+            tsukuyomiLockCheck.running = true;
+        }
     }
 
     IpcHandler {
