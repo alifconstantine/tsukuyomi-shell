@@ -9,7 +9,7 @@
     "barPosition": "top",
     "barFrostEnabled": true,
     "barColor": "foreground",
-    "barScale": 0.9,
+    "barGapTop": 6,
     "barCornerRadius": 16,
     "launcherLogoMode": "icon",
     "workspaceMode": "5",

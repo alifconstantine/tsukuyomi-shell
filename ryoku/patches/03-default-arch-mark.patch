@@ -7,3 +7,19 @@
 +    property string launcherLogoIcon: "arch"    // see launcherLogoIconGlyph()
      // Legacy launcher-logo text values migrated to the current text mode.
      readonly property var legacyLogoTextValues: ["omarchy", "hyprland"]
+--- a/shell/modules/bar/barstyles/qsbar/controlcenter/CcRail.qml
++++ b/shell/modules/bar/barstyles/qsbar/controlcenter/CcRail.qml
+@@ -122,5 +122,5 @@
+             UiText {
+                 anchors.verticalCenter: parent.verticalCenter
+-                text: UiPreferences.brandMark("\u529b")
++                text: UiPreferences.text("月", "T")
+                 color: Tokens.sun
+                 font.family: Tokens.jp
+@@ -129,5 +129,5 @@
+             UiText {
+                 anchors.verticalCenter: parent.verticalCenter
+-                text: "RYOKU"
++                text: "TSUKUYOMI"
+                 color: Tokens.ink
+                 font.family: Tokens.mono
