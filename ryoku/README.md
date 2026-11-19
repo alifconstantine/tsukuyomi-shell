@@ -1,6 +1,6 @@
 # Tsukuyomi desktop preview
 
-This branch brings up the Ryoku desktop as a nested Hyprland session with Tsukuyomi defaults. It uses the installed Ryoku binaries and QML from revision `08ff328`. `stage-preview.sh` checks the exact package versions before applying patches. [Upstream notices](https://github.com/Ryoku-dev/ryoku/blob/main/NOTICE)
+The preview brings up the Ryoku desktop as a nested Hyprland session with Tsukuyomi defaults. Both the preview and the ISO package use Ryoku revision `08ff328` and the same profile assembly. [Upstream notices](upstream/NOTICE)
 
 ## Open the preview
 
@@ -16,8 +16,8 @@ Pass the desktop ID of an installed browser. Omit it for a dock without a browse
 - Click the clock to open the dashboard. The dock opens Applications, Dolphin, the supplied browser, and Kitty.
 - Press `Ctrl+Shift+F11` to open the Hub or `Ctrl+Shift+F12` to close the preview window.
 
-The nested session has a private D-Bus and runtime directory. Hardware actions, portals, and session locking require testing from a real Tsukuyomi login in a VM. The preview uses Frosted. Liquid Glass is a follow-up preset once the desktop defaults are approved.
+The nested session has a private D-Bus and runtime directory. Hardware actions, portals, and session locking require a real Tsukuyomi login. The default material is Frosted. To add the glass rim to the bar, open QS Bar Settings, choose Bar, then use Glass in the Surface section while Islands and Frost are selected.
 
-## Prepare the next ISO iteration
+## Build the desktop package
 
-Use `stage-preview.sh NEW_PROFILE_DIR [BROWSER_DESKTOP_ID]` to build a fresh profile without opening the nested window. For the ISO candidate, package the matching shell, Qt modules, Hyprland provider and selected helpers in the offline repository. Review the upstream package hooks before integrating them. Route lock, idle and suspend through Tsukuyomi's existing `tsukuyomi-lock`. The preview hides RyoStore and Rashin entry points, and defers the upstream update and lockscreen pages. Audit optional package dependencies again when defining the ISO package list.
+`stage-profile.sh UPSTREAM_QUICKSHELL_DIR NEW_PROFILE_DIR [BROWSER_DESKTOP_ID]` assembles the configuration for both entry points. The ISO builder ships the matching shell, Qt modules, Hyprland provider, and selected helpers. SDDM launches the Tsukuyomi session, which routes lock and idle through the existing `tsukuyomi-lock`. RyoStore and Rashin are excluded from the desktop package and the upstream update and lockscreen pages are hidden. [Tsukuyomi ISO build](https://github.com/alifconstantine/tsukuyomi)
