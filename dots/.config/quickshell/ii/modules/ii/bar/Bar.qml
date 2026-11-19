@@ -12,6 +12,8 @@ import qs.modules.common.widgets
 
 Scope {
     id: bar
+    readonly property bool useIslands: Config.options.tsukuyomi.islands
+    readonly property int contentHeight: useIslands ? 48 : Appearance.sizes.barHeight
     property bool showBarBackground: Config.options.bar.showBackground
 
     Variants {
@@ -52,13 +54,26 @@ Scope {
                 }
                 property bool superShow: false
                 property bool mustShow: hoverRegion.containsMouse || superShow
+                    || (bar.useIslands && (barContent.item?.panel?.length ?? 0) > 0)
                 exclusionMode: ExclusionMode.Ignore
                 exclusiveZone: (Config?.options.bar.autoHide.enable && (!mustShow || !Config?.options.bar.autoHide.pushWindows)) ? 0 :
-                    Appearance.sizes.baseBarHeight + (Config.options.bar.cornerStyle === 1 ? Appearance.sizes.hyprlandGapsOut : 0)
+                    (bar.useIslands ? bar.contentHeight : Appearance.sizes.baseBarHeight + (Config.options.bar.cornerStyle === 1 ? Appearance.sizes.hyprlandGapsOut : 0))
                 WlrLayershell.namespace: "quickshell:bar"
-                implicitHeight: Appearance.sizes.barHeight + Appearance.rounding.screenRounding
+                implicitHeight: bar.contentHeight + (bar.useIslands ? 0 : Appearance.rounding.screenRounding)
                 mask: Region {
-                    item: hoverMaskRegion
+                    item: !bar.useIslands || Config.options.bar.autoHide.enable ? hoverMaskRegion : null
+                    Region {
+                        item: bar.useIslands ? barContent.item?.leftPill ?? null : null
+                        radius: 18
+                    }
+                    Region {
+                        item: bar.useIslands ? barContent.item?.clockPill ?? null : null
+                        radius: 18
+                    }
+                    Region {
+                        item: bar.useIslands && barContent.item?.rightPill?.visible ? barContent.item.rightPill : null
+                        radius: 18
+                    }
                 }
                 color: "transparent"
 
@@ -101,16 +116,16 @@ Scope {
                         }
                     }
 
-                    BarContent {
+                    Loader {
                         id: barContent
-                        
-                        implicitHeight: Appearance.sizes.barHeight
+                        height: bar.contentHeight
+                        sourceComponent: bar.useIslands ? islandsContent : legacyContent
                         anchors {
                             right: parent.right
                             left: parent.left
                             top: parent.top
                             bottom: undefined
-                            topMargin: (Config?.options.bar.autoHide.enable && !mustShow) ? -Appearance.sizes.barHeight : 0
+                            topMargin: (Config?.options.bar.autoHide.enable && !mustShow) ? -bar.contentHeight : 0
                             bottomMargin: (Config.options.interactions.deadPixelWorkaround.enable && barRoot.anchors.bottom) * -1
                             rightMargin: (Config.options.interactions.deadPixelWorkaround.enable && barRoot.anchors.right) * -1
                         }
@@ -136,7 +151,7 @@ Scope {
                             PropertyChanges {
                                 target: barContent
                                 anchors.topMargin: 0
-                                anchors.bottomMargin: (Config?.options.bar.autoHide.enable && !mustShow) ? -Appearance.sizes.barHeight : 0
+                                anchors.bottomMargin: (Config?.options.bar.autoHide.enable && !mustShow) ? -bar.contentHeight : 0
                             }
                         }
                     }
@@ -151,7 +166,7 @@ Scope {
                             bottom: undefined
                         }
                         height: Appearance.rounding.screenRounding
-                        active: showBarBackground && Config.options.bar.cornerStyle === 0 // Hug
+                        active: !bar.useIslands && showBarBackground && Config.options.bar.cornerStyle === 0 // Hug
 
                         states: State {
                             name: "bottom"
@@ -214,6 +229,9 @@ Scope {
             }
         }
     }
+
+    Component { id: islandsContent; TsukuyomiBarContent {} }
+    Component { id: legacyContent; BarContent {} }
 
     IpcHandler {
         target: "bar"

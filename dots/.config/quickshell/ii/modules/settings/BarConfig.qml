@@ -8,6 +8,17 @@ ContentPage {
     forceWidth: true
 
     ContentSection {
+        icon: "view_week"
+        title: Translation.tr("Bar Layout")
+        ConfigSwitch {
+            buttonIcon: "splitscreen"
+            text: Translation.tr("Tsukuyomi Islands")
+            checked: Config.options.tsukuyomi.islands
+            onCheckedChanged: Config.options.tsukuyomi.islands = checked
+        }
+    }
+
+    ContentSection {
         icon: "notifications"
         title: Translation.tr("Notifications")
         ConfigSwitch {
