@@ -13,7 +13,7 @@ import qs.modules.common.widgets
 Scope {
     id: bar
     readonly property bool useIslands: Config.options.tsukuyomi.islands
-    readonly property int contentHeight: useIslands ? 48 : Appearance.sizes.barHeight
+    readonly property int contentHeight: useIslands ? 38 : Appearance.sizes.barHeight
     property bool showBarBackground: Config.options.bar.showBackground
 
     Variants {
@@ -64,15 +64,15 @@ Scope {
                     item: !bar.useIslands || Config.options.bar.autoHide.enable ? hoverMaskRegion : null
                     Region {
                         item: bar.useIslands ? barContent.item?.leftPill ?? null : null
-                        radius: 18
+                        radius: 14
                     }
                     Region {
                         item: bar.useIslands ? barContent.item?.clockPill ?? null : null
-                        radius: 18
+                        radius: 14
                     }
                     Region {
                         item: bar.useIslands && barContent.item?.rightPill?.visible ? barContent.item.rightPill : null
-                        radius: 18
+                        radius: 14
                     }
                 }
                 color: "transparent"

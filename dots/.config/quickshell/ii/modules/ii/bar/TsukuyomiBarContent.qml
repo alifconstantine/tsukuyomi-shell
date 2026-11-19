@@ -12,6 +12,8 @@ import qs.services
 
 Item {
     id: root
+    readonly property int pillHeight: 28
+    readonly property int workspaceWidth: 22
     readonly property var options: Config.options.tsukuyomi
     readonly property var monitor: Hyprland.monitorFor(QsWindow.window?.screen)
     readonly property var brightness: Brightness.getMonitorForScreen(QsWindow.window?.screen)
@@ -24,7 +26,7 @@ Item {
         const occupied = Hyprland.workspaces.values
             .filter(ws => ws.id >= first && ws.id < first + groupSize && ws.monitor === root.monitor)
             .map(ws => ws.id);
-        const count = Math.max(1, Math.floor((sideBudget - 38) / 24));
+        const count = Math.max(1, Math.floor((sideBudget - 36) / workspaceWidth));
         return Array.from(new Set([activeWorkspace, ...initial, ...occupied]))
             .slice(0, count).sort((a, b) => a - b);
     }
@@ -52,7 +54,7 @@ Item {
         default: return key in root.catalogue;
         }
     })
-    readonly property int capacity: Math.max(0, Math.floor((sideBudget - 10) / 58))
+    readonly property int capacity: Math.max(0, Math.floor((sideBudget - 8) / 52))
     readonly property bool overflow: activeIndicators.length > capacity
     readonly property var shownIndicators: activeIndicators.slice(0, Math.max(0, capacity - (overflow ? 1 : 0)))
     readonly property Item leftPill: left
@@ -67,8 +69,8 @@ Item {
         case "brightness": return Math.round((brightness?.brightness ?? 0) * 100) + "%";
         case "notifications": return Notifications.unread > 0 ? String(Notifications.unread) : "";
         case "keyboard": return HyprlandXkb.currentLayoutCode.toUpperCase();
-        case "cpu": return Math.round(ResourceUsage.cpuUsage * 100) + "%";
-        case "ram": return Math.round(ResourceUsage.memoryUsedPercentage * 100) + "%";
+        case "cpu": return ResourceUsage.cpuReady ? Math.round(ResourceUsage.cpuUsage * 100) + "%" : "–";
+        case "ram": return ResourceUsage.memoryTotal > 1 ? Math.round(ResourceUsage.memoryUsedPercentage * 100) + "%" : "–";
         default: return "";
         }
     }
@@ -77,21 +79,35 @@ Item {
         root.panel = root.panel === name ? "" : name;
     }
 
-    TsukuyomiSurface {
-        id: left
-        anchors.left: parent.left
-        anchors.leftMargin: 12
-        anchors.verticalCenter: parent.verticalCenter
-        width: leftRow.implicitWidth + 10
-        height: 36
+    component PillButton: TsukuyomiButton {
+        flatSurface: true
+        cornerRadius: height / 2
+        glyphSize: 14
+        minimumHeight: 24
+        tooltipAbove: Config.options.bar.bottom
+        padding: 3
+        leftPadding: 5
+        rightPadding: 5
+    }
+
+    component BarPill: TsukuyomiSurface {
+        height: root.pillHeight
+        radius: height / 2
         gradient: null
         color: TsukuyomiStyle.surface
+    }
+
+    BarPill {
+        id: left
+        anchors.left: parent.left
+        anchors.leftMargin: 9
+        anchors.verticalCenter: parent.verticalCenter
+        width: leftRow.implicitWidth + 6
         RowLayout {
             id: leftRow
             anchors.centerIn: parent
             spacing: 0
-            TsukuyomiButton {
-                flatSurface: true
+            PillButton {
                 description: Translation.tr("System Controls")
                 selected: root.panel === "controls" || root.panel === "customize"
                 onClicked: {
@@ -99,8 +115,8 @@ Item {
                     else root.togglePanel("controls");
                 }
                 contentItem: Item {
-                    implicitWidth: 18
-                    implicitHeight: 18
+                    implicitWidth: 15
+                    implicitHeight: 15
                     Text {
                         visible: root.options.logo === "moon"
                         anchors.centerIn: parent
@@ -125,27 +141,43 @@ Item {
             }
             Rectangle {
                 implicitWidth: 1
-                implicitHeight: 16
+                implicitHeight: 12
                 color: TsukuyomiStyle.border
             }
-            Repeater {
-                model: root.workspaceIds
-                TsukuyomiButton {
-                    id: workspace
-                    required property int modelData
-                    flatSurface: true
-                    description: Translation.tr("Workspace %1").arg(modelData)
-                    implicitWidth: 24
-                    onClicked: Hyprland.dispatch(`hl.dsp.focus({workspace = ${modelData}})`)
-                    contentItem: Item {
-                        implicitWidth: 12
-                        implicitHeight: 12
-                        Rectangle {
-                            anchors.centerIn: parent
-                            width: workspace.modelData === root.activeWorkspace ? 13 : 5
-                            height: 5
-                            radius: 3
-                            color: workspace.modelData === root.activeWorkspace ? TsukuyomiStyle.foreground : TsukuyomiStyle.muted
+            Item {
+                Layout.preferredWidth: root.workspaceIds.length * root.workspaceWidth + 4
+                Layout.preferredHeight: root.pillHeight - 4
+                Rectangle {
+                    x: 2 + Math.max(0, root.workspaceIds.indexOf(root.activeWorkspace)) * root.workspaceWidth
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: root.workspaceWidth
+                    height: 21
+                    radius: height / 2
+                    color: TsukuyomiStyle.selection
+                    border.color: TsukuyomiStyle.border
+                    Behavior on x {
+                        NumberAnimation { duration: 170; easing.type: Easing.OutCubic }
+                    }
+                }
+                Row {
+                    anchors.centerIn: parent
+                    Repeater {
+                        model: root.workspaceIds
+                        PillButton {
+                            id: workspace
+                            required property int modelData
+                            implicitWidth: root.workspaceWidth
+                            description: Translation.tr("Workspace %1").arg(modelData)
+                            onClicked: Hyprland.dispatch(`hl.dsp.focus({workspace = ${modelData}})`)
+                            contentItem: Text {
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                                text: workspace.modelData
+                                font.pixelSize: 11
+                                font.weight: workspace.modelData === root.activeWorkspace ? Font.DemiBold : Font.Normal
+                                color: workspace.modelData === root.activeWorkspace ? TsukuyomiStyle.foreground : TsukuyomiStyle.muted
+                                Behavior on color { ColorAnimation { duration: 150 } }
+                            }
                         }
                     }
                 }
@@ -153,43 +185,56 @@ Item {
         }
     }
 
-    TsukuyomiSurface {
+    BarPill {
         id: clock
         anchors.centerIn: parent
-        width: timeButton.implicitWidth + 8
-        height: 36
-        gradient: null
-        color: TsukuyomiStyle.surface
-        TsukuyomiButton {
+        width: timeButton.implicitWidth + 6
+        PillButton {
             id: timeButton
             anchors.centerIn: parent
-            flatSurface: true
-            glyph: "expand_more"
-            text: DateTime.time
+            description: Translation.tr("Calendar") + " · " + DateTime.longDate
             selected: root.panel === "clock"
             onClicked: root.togglePanel("clock")
+            contentItem: RowLayout {
+                spacing: 7
+                Text {
+                    text: DateTime.time
+                    color: TsukuyomiStyle.foreground
+                    font.family: Appearance.font.family.main
+                    font.pixelSize: 12
+                    font.weight: Font.DemiBold
+                    font.features: ({tnum: 1})
+                }
+                Rectangle {
+                    implicitHeight: 11
+                    implicitWidth: 1
+                    color: TsukuyomiStyle.border
+                }
+                Text {
+                    text: DateTime.clock.date.toLocaleDateString(Qt.locale(), "ddd d")
+                    color: TsukuyomiStyle.muted
+                    font.family: Appearance.font.family.main
+                    font.pixelSize: 11
+                }
+            }
         }
     }
 
-    TsukuyomiSurface {
+    BarPill {
         id: right
         anchors.right: parent.right
-        anchors.rightMargin: 12
+        anchors.rightMargin: 9
         anchors.verticalCenter: parent.verticalCenter
-        width: indicators.implicitWidth + 10
-        height: 36
+        width: indicators.implicitWidth + 6
         visible: root.activeIndicators.length > 0
-        gradient: null
-        color: TsukuyomiStyle.surface
         RowLayout {
             id: indicators
             anchors.centerIn: parent
             spacing: 0
             Repeater {
                 model: root.shownIndicators
-                TsukuyomiButton {
+                PillButton {
                     required property string modelData
-                    flatSurface: true
                     glyph: root.catalogue[modelData][1]
                     description: text.length > 0 ? root.catalogue[modelData][0] + " " + text : root.catalogue[modelData][0]
                     text: root.statusValue(modelData)
@@ -198,9 +243,8 @@ Item {
                     onClicked: root.togglePanel("status")
                 }
             }
-            TsukuyomiButton {
+            PillButton {
                 visible: root.overflow
-                flatSurface: true
                 glyph: "more_horiz"
                 description: Translation.tr("More Indicators")
                 onClicked: root.togglePanel("status")
