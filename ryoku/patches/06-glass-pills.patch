@@ -1,0 +1,62 @@
+--- a/shell/modules/bar/barstyles/qsbar/Theme.qml
++++ b/shell/modules/bar/barstyles/qsbar/Theme.qml
+@@ -2389,4 +2389,7 @@
+     property bool barShadowEnabled: false
+     property bool barFrostEnabled: false
++    property bool barGlassEnabled: false
++    onBarGlassEnabledChanged: if (_widgetsLoaded) saveWidgets()
++    readonly property bool glassPills: barGlassEnabled && barFrostEnabled && !Performance.blurDisabled
+     // Auto-hide: reserve no space, slide off the edge, and reveal on a slow
+     // hover anywhere along the edge (even over the gaps between islands).
+@@ -3029,4 +3032,5 @@
+         q.barShadowEnabled = barShadowEnabled
+         q.barFrostEnabled = barFrostEnabled
++        q.barGlassEnabled = barGlassEnabled
+         q.barAutoHide = barAutoHide
+         q.barGapTop = barGapTop
+@@ -3104,4 +3108,5 @@
+         if (q.barShadowEnabled !== undefined) barShadowEnabled = q.barShadowEnabled
+         if (q.barFrostEnabled !== undefined) barFrostEnabled = q.barFrostEnabled
++        if (q.barGlassEnabled !== undefined) barGlassEnabled = q.barGlassEnabled === true
+         if (q.barAutoHide !== undefined) barAutoHide = q.barAutoHide === true
+         if (q.barGapTop !== undefined) barGapTop = clampGap(q.barGapTop)
+--- a/shell/modules/bar/barstyles/qsbar/BarSlot.qml
++++ b/shell/modules/bar/barstyles/qsbar/BarSlot.qml
+@@ -2129,4 +2129,14 @@
+                 radius: barSlot.root.barCornerRadius
+                 color: barSlot.root.barBg
++                gradient: barSlot.root.glassPills ? glassRim : null
++                Gradient {
++                    id: glassRim
++                    GradientStop {
++                        position: 0.0
++                        color: Qt.rgba(barSlot.root.ink.r, barSlot.root.ink.g, barSlot.root.ink.b, 0.2)
++                    }
++                    GradientStop { position: 0.12; color: barSlot.root.barBg }
++                    GradientStop { position: 1.0; color: barSlot.root.barBg }
++                }
+                 border.color: barSlot.root.v2BarBorder
+                 border.width: barSlot.root.barBorderEnabled ? 1 : 0
+--- a/shell/modules/bar/barstyles/qsbar/controlcenter/routes/BarsRoute.qml
++++ b/shell/modules/bar/barstyles/qsbar/controlcenter/routes/BarsRoute.qml
+@@ -393,4 +393,20 @@
+                         }
+                     }
++                    SettingRow {
++                        anchors.left: parent.left
++                        anchors.right: parent.right
++                        divider: true
++                        controlWidth: 54
++                        label: I18n.tr("Glass")
++                        desc: I18n.tr("Add a glass rim to frosted islands")
++                        source: "shell.json"
++                        enabled: page.root && page.root.barShellStyle === "islands" && page.root.barFrostEnabled
++                        Sw {
++                            anchors.right: parent.right
++                            anchors.verticalCenter: parent.verticalCenter
++                            on: page.root ? page.root.barGlassEnabled : false
++                            onToggled: value => { if (page.root) page.root.barGlassEnabled = value }
++                        }
++                    }
+                 }
+             }
