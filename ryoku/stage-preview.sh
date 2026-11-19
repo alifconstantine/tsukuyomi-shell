@@ -35,18 +35,28 @@ fi
 source_config=/usr/share/ryoku/config
 draft=$(mktemp -d -- "$(dirname -- "$profile")/.tsukuyomi-preview.XXXXXXXX")
 trap 'rm -rf -- "$draft"' EXIT
-install -d "$draft/.config" "$draft/.config/ryoku" "$draft/.local/share/applications" \
+install -d "$draft/.config/quickshell" "$draft/.config/ryoku" "$draft/.local/share/applications" \
     "$draft/Pictures/Wallpapers"
-cp -a "$source_config/quickshell" "$draft/.config/"
+find "$source_config/quickshell" -mindepth 1 -maxdepth 1 ! -name ryostore \
+    -exec cp -a -t "$draft/.config/quickshell/" -- {} +
 
 jq --arg browser "${browser%.desktop}" \
     '.dock.pinned = (["tsukuyomi-launcher", "org.kde.dolphin"] +
         ([$browser] | map(select(length > 0))) + ["kitty"])' \
     "$here/shell.json" > "$draft/.config/ryoku/shell.json"
+printf '{"clockEnabled":false,"calendarEnabled":false}\n' > "$draft/.config/ryoku/widgets.json"
+printf '{"enabled":false}\n' > "$draft/.config/ryoku/visualizer.json"
+printf '{"scheme":"dark","followWallpaper":false}\n' > "$draft/.config/ryoku/theme.json"
+printf '{"general":{"notifyOnWallpaperChange":false}}\n' > "$draft/.config/ryoku/ryogami.json"
 
 install -m 644 "$here/../dots/.config/quickshell/ii/assets/images/default_wallpaper.webp" \
     "$draft/Pictures/Wallpapers/Black Hole.webp"
 install -m 644 "$here/tsukuyomi-launcher.desktop" "$draft/.local/share/applications/"
+install -m 644 "$here/ryoku-hub.desktop" "$draft/.local/share/applications/"
+for app in ryostore rashin-app; do
+    printf '[Desktop Entry]\nType=Application\nName=%s\nHidden=true\n' "$app" \
+        > "$draft/.local/share/applications/$app.desktop"
+done
 
 shopt -s nullglob
 for change in "$here"/patches/*.patch; do

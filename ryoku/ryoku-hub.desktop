@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Tsukuyomi Hub
+GenericName=Desktop Settings
+Exec=ryoku-shell hub open
+Icon=preferences-system-symbolic
+Terminal=false
+Categories=Settings;DesktopSettings;

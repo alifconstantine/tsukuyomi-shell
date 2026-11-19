@@ -1,0 +1,58 @@
+--- a/shell/modules/dock/DockBackdrop.qml
++++ b/shell/modules/dock/DockBackdrop.qml
+@@ -6,8 +6,5 @@
+
+ // The rail and ledger forms draw ONE plate behind the whole app run instead of a
+-// plate per icon; every other form leaves this empty. Rail is a frosted sheet,
+-// square on the screen-edge side and rounded on the inner one, ruled by a single
+-// hairline along its inner edge. Ledger is a bordered sheet at the house radius;
+-// its per-cell dividers, index and active-cell inversion are drawn by the item.
++// plate per icon. The floating rail and ledger share a rounded outline.
+ Item {
+     id: backdrop
+@@ -28,20 +25,11 @@
+     Behavior on height { enabled: backdrop.band.animate; NumberAnimation { duration: Motion.rowReveal; easing.type: Motion.rowRevealCurve } }
+
+-    // outer = the screen-edge side; inner is the desktop-facing one it rounds.
+-    readonly property bool outerTop: backdrop.horizontal && backdrop.edge === "top"
+-    readonly property bool outerBottom: backdrop.horizontal && backdrop.edge === "bottom"
+-    readonly property bool outerLeft: !backdrop.horizontal && backdrop.edge === "left"
+-    readonly property bool outerRight: !backdrop.horizontal && backdrop.edge === "right"
+-
+     Rectangle {
+         id: plate
+         anchors.fill: parent
+         color: Qt.rgba(Theme.surfaceContainer.r, Theme.surfaceContainer.g, Theme.surfaceContainer.b, backdrop.band.frost ? 0.6 : 0.94)
+-        border.width: backdrop.ledger ? 1 : 0
++        border.width: 1
+         border.color: backdrop.band.hairline
+-        topLeftRadius:     backdrop.ledger ? backdrop.r : ((backdrop.outerBottom || backdrop.outerRight) ? backdrop.r : 0)
+-        topRightRadius:    backdrop.ledger ? backdrop.r : ((backdrop.outerBottom || backdrop.outerLeft) ? backdrop.r : 0)
+-        bottomLeftRadius:  backdrop.ledger ? backdrop.r : ((backdrop.outerTop || backdrop.outerRight) ? backdrop.r : 0)
+-        bottomRightRadius: backdrop.ledger ? backdrop.r : ((backdrop.outerTop || backdrop.outerLeft) ? backdrop.r : 0)
++        radius: backdrop.r
+
+         RectangularShadow {
+@@ -58,13 +46,3 @@
+         }
+     }
+-
+-    // Rail's single hairline rule along the inner edge (no box border).
+-    Rectangle {
+-        visible: backdrop.style === "rail"
+-        color: backdrop.band.hairline
+-        width: backdrop.horizontal ? parent.width : 1
+-        height: backdrop.horizontal ? 1 : parent.height
+-        x: backdrop.horizontal ? 0 : (backdrop.outerLeft ? parent.width - 1 : 0)
+-        y: backdrop.horizontal ? (backdrop.outerTop ? parent.height - 1 : 0) : 0
+-    }
+ }
+--- a/shell/modules/dock/DockItem.qml
++++ b/shell/modules/dock/DockItem.qml
+@@ -141,5 +141,5 @@
+             width: item.iconSize
+             height: item.iconSize
+-            visible: source !== "" && status === Image.Ready
++            visible: item.className !== "tsukuyomi-launcher" && source !== "" && status === Image.Ready
+             source: Dock.iconFor(item.className)
+             // Size the pixmap for the magnified icon so a grown icon never softens.

@@ -1,0 +1,9 @@
+--- a/shell/modules/bar/barstyles/qsbar/Theme.qml
++++ b/shell/modules/bar/barstyles/qsbar/Theme.qml
+@@ -2415,5 +2415,5 @@
+     property string launcherLogoMode: "text"     // "text" or "icon"
+     property string launcherLogoText: "ryoku"    // "ryoku", "omarchy", "hyprland", "arch", or "omacom"
+-    property string launcherLogoIcon: "ryoku"    // see launcherLogoIconGlyph()
++    property string launcherLogoIcon: "arch"    // see launcherLogoIconGlyph()
+     // Legacy launcher-logo text values migrated to the current text mode.
+     readonly property var legacyLogoTextValues: ["omarchy", "hyprland"]

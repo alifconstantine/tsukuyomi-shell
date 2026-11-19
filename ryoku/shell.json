@@ -1,6 +1,9 @@
 {
   "barStyle": "qsbar",
   "launcherTarget": "quick",
+  "general": {
+    "clock_format_24_h": true
+  },
   "qsbar": {
     "barShellStyle": "islands",
     "barPosition": "top",
@@ -9,7 +12,7 @@
     "barScale": 0.9,
     "barCornerRadius": 16,
     "launcherLogoMode": "icon",
-    "launcherLogoIcon": "arch",
+    "workspaceMode": "5",
     "workspaceStyle": "default",
     "layout": {
       "version": 1,
@@ -22,7 +25,20 @@
       "network": true,
       "volume": true,
       "battery": true,
-      "brightness": true
+      "brightness": true,
+      "status": false,
+      "memory": false,
+      "cpu": false,
+      "weather": false,
+      "media": false,
+      "mpris": false,
+      "claude": false,
+      "power": false,
+      "bluetooth": false,
+      "gpu": false,
+      "cpuTemperature": false,
+      "storage": false,
+      "layout": false
     }
   },
   "dock": {
