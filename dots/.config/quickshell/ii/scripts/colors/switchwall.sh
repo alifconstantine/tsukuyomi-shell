@@ -434,11 +434,17 @@ main() {
             pictures_dir=$(xdg-user-dir PICTURES 2>/dev/null || echo "")
         fi
         pictures_dir="${pictures_dir:-$HOME/Pictures}"
-        if [[ -f "$pictures_dir/Wallpapers/default_wallpaper.png" ]]; then
-            imgpath="$pictures_dir/Wallpapers/default_wallpaper.png"
-        elif [[ -f "$CONFIG_DIR/assets/images/default_wallpaper.png" ]]; then
-            imgpath="$CONFIG_DIR/assets/images/default_wallpaper.png"
-        fi
+        local fallback
+        for fallback in \
+            "$pictures_dir/Wallpapers/default_wallpaper.webp" \
+            "$CONFIG_DIR/assets/images/default_wallpaper.webp" \
+            "$pictures_dir/Wallpapers/default_wallpaper.png" \
+            "$CONFIG_DIR/assets/images/default_wallpaper.png"; do
+            if [[ -f "$fallback" ]]; then
+                imgpath="$fallback"
+                break
+            fi
+        done
     fi
 
     # If type_flag is not set, get it from config
