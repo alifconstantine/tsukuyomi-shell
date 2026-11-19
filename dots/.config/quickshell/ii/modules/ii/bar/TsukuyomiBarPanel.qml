@@ -194,6 +194,12 @@ PanelWindow {
         id: controlContents
         ColumnLayout {
             spacing: 10
+            TsukuyomiVitals {}
+            Rectangle {
+                Layout.fillWidth: true
+                implicitHeight: 1
+                color: TsukuyomiStyle.border
+            }
             RowLayout {
                 spacing: 8
                 TsukuyomiButton {
@@ -269,23 +275,6 @@ PanelWindow {
                         : [Translation.tr("Power Saver"), Translation.tr("Balanced")]
                     currentIndex: PowerProfiles.profile
                     onActivated: index => PowerProfiles.profile = index
-                }
-            }
-            TsukuyomiButton {
-                id: summary
-                Layout.fillWidth: true
-                glyph: checked ? "expand_less" : "expand_more"
-                text: Translation.tr("Device Summary")
-                checkable: true
-                flatSurface: true
-            }
-            Loader {
-                Layout.fillWidth: true
-                active: summary.checked
-                sourceComponent: Text {
-                    text: Translation.tr("CPU %1  ·  RAM %2").arg(root.bar.statusValue("cpu")).arg(root.bar.statusValue("ram"))
-                        + (Battery.available ? "  ·  " + root.bar.statusValue("battery") : "")
-                    color: TsukuyomiStyle.foreground
                 }
             }
             RowLayout {
