@@ -1,0 +1,45 @@
+{
+  "barStyle": "qsbar",
+  "launcherTarget": "quick",
+  "qsbar": {
+    "barShellStyle": "islands",
+    "barPosition": "top",
+    "barFrostEnabled": true,
+    "barColor": "foreground",
+    "barScale": 0.9,
+    "barCornerRadius": 16,
+    "launcherLogoMode": "icon",
+    "launcherLogoIcon": "arch",
+    "workspaceStyle": "default",
+    "layout": {
+      "version": 1,
+      "left": ["launcher", "workspaces"],
+      "center": ["clock"],
+      "right": ["quick", "network", "volume", "battery", "brightness"]
+    },
+    "widgets": {
+      "quick": true,
+      "network": true,
+      "volume": true,
+      "battery": true,
+      "brightness": true
+    }
+  },
+  "dock": {
+    "enabled": true,
+    "edge": "bottom",
+    "style": "rail",
+    "frost": true,
+    "autohide": true,
+    "revealOnEmpty": true,
+    "magnify": true,
+    "labels": true
+  },
+  "theme": {
+    "theme": "Default",
+    "matugen": {
+      "mode": "Dark",
+      "preference": "Darkness"
+    }
+  }
+}
