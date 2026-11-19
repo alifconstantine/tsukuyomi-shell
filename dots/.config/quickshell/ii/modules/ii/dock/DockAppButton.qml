@@ -1,8 +1,10 @@
 import qs.services
 import qs.modules.common
 import qs.modules.common.functions
+import qs.modules.common.widgets
 import Qt5Compat.GraphicalEffects
 import QtQuick
+import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Widgets
@@ -13,14 +15,16 @@ DockButton {
     property var appListRoot
     property int lastFocused: -1
     property real iconSize: 35
-    property real countDotWidth: 10
-    property real countDotHeight: 4
     property bool appIsActive: appToplevel.toplevels.find(t => (t.activated == true)) !== undefined
 
     readonly property bool isSeparator: appToplevel.appId === "SEPARATOR"
     property var desktopEntry: DesktopEntries.heuristicLookup(appToplevel.appId)
     enabled: !isSeparator
     implicitWidth: isSeparator ? 1 : implicitHeight - topInset - bottomInset
+    Accessible.name: desktopEntry?.name ?? appToplevel.appId
+    ToolTip.visible: hovered && !isSeparator && appToplevel.toplevels.length === 0
+    ToolTip.delay: 450
+    ToolTip.text: Accessible.name
 
     Connections {
         target: DesktopEntries
@@ -34,8 +38,8 @@ DockButton {
         active: isSeparator
         anchors {
             fill: parent
-            topMargin: dockVisualBackground.margin + dockRow.padding + Appearance.rounding.normal
-            bottomMargin: dockVisualBackground.margin + dockRow.padding + Appearance.rounding.normal
+            topMargin: root.topInset + 4
+            bottomMargin: root.bottomInset + 4
         }
         sourceComponent: DockSeparator {}
     }
@@ -75,7 +79,52 @@ DockButton {
     }
 
     altAction: () => {
-        TaskbarApps.togglePin(appToplevel.appId);
+        appListRoot.contextButton = root;
+        appMenu.visible = true;
+    }
+
+    PopupWindow {
+        id: appMenu
+        visible: false
+        grabFocus: true
+        color: "transparent"
+        implicitWidth: menuContents.implicitWidth + 16
+        implicitHeight: menuContents.implicitHeight + 16
+        anchor.item: root
+        anchor.edges: Edges.Top | Edges.Right
+        anchor.gravity: Edges.Top | Edges.Right
+
+        onVisibleChanged: {
+            if (!visible && root.appListRoot.contextButton === root)
+                root.appListRoot.contextButton = null;
+        }
+        TsukuyomiSurface { anchors.fill: parent; radius: 12 }
+        ColumnLayout {
+            id: menuContents
+            anchors.fill: parent
+            anchors.margins: 8
+            TsukuyomiButton {
+                Layout.fillWidth: true
+                flatSurface: true
+                glyph: "add"
+                text: Translation.tr("Open New Window")
+                enabled: root.desktopEntry !== null
+                onClicked: {
+                    appMenu.visible = false;
+                    root.desktopEntry?.execute();
+                }
+            }
+            TsukuyomiButton {
+                Layout.fillWidth: true
+                flatSurface: true
+                glyph: "keep"
+                text: root.appToplevel.pinned ? Translation.tr("Unpin from Dock") : Translation.tr("Pin to Dock")
+                onClicked: {
+                    appMenu.visible = false;
+                    TaskbarApps.togglePin(root.appToplevel.appId);
+                }
+            }
+        }
     }
 
     contentItem: Loader {
@@ -116,24 +165,17 @@ DockButton {
                 }
             }
 
-            RowLayout {
-                spacing: 3
+            Rectangle {
+                visible: appToplevel.toplevels.length > 0
                 anchors {
                     top: iconImageLoader.bottom
                     topMargin: 2
                     horizontalCenter: parent.horizontalCenter
                 }
-                Repeater {
-                    model: Math.min(appToplevel.toplevels.length, 3)
-                    delegate: Rectangle {
-                        required property int index
-                        radius: Appearance.rounding.full
-                        implicitWidth: (appToplevel.toplevels.length <= 3) ? 
-                            root.countDotWidth : root.countDotHeight // Circles when too many
-                        implicitHeight: root.countDotHeight
-                        color: appIsActive ? Appearance.colors.colPrimary : ColorUtils.transparentize(Appearance.colors.colOnLayer0, 0.4)
-                    }
-                }
+                width: 4
+                height: 4
+                radius: 2
+                color: appIsActive ? TsukuyomiStyle.foreground : TsukuyomiStyle.muted
             }
         }
     }

@@ -25,9 +25,14 @@ Scope { // Scope
             // Window
             required property var modelData
             screen: modelData
-            visible: !GlobalStates.screenLocked
+            readonly property var monitor: Hyprland.monitorFor(modelData)
+            readonly property var workspace: monitor?.activeWorkspace
+            readonly property bool fullscreen: workspace?.toplevels.values.some(window => window.wayland?.fullscreen) ?? false
+            readonly property bool workspaceEmpty: (workspace?.toplevels.values.length ?? 0) === 0
+            visible: !GlobalStates.screenLocked && !fullscreen
 
-            property bool reveal: root.pinned || (Config.options?.dock.hoverToReveal && dockMouseArea.containsMouse) || dockApps.requestDockShow || (!ToplevelManager.activeToplevel?.activated)
+            property bool reveal: root.pinned || (Config.options?.dock.hoverToReveal && dockMouseArea.containsMouse)
+                || dockApps.requestDockShow || workspaceEmpty
 
             anchors {
                 bottom: true
@@ -75,22 +80,19 @@ Scope { // Scope
                             horizontalCenter: parent.horizontalCenter
                         }
 
-                        implicitWidth: dockRow.implicitWidth + 5 * 2
+                        implicitWidth: dockRow.implicitWidth + 9 * 2
                         height: parent.height - Appearance.sizes.elevationMargin - Appearance.sizes.hyprlandGapsOut
 
                         StyledRectangularShadow {
                             target: dockVisualBackground
                         }
-                        Rectangle { // The real rectangle that is visible
+                        TsukuyomiSurface {
                             id: dockVisualBackground
                             property real margin: Appearance.sizes.elevationMargin
                             anchors.fill: parent
                             anchors.topMargin: Appearance.sizes.elevationMargin
                             anchors.bottomMargin: Appearance.sizes.hyprlandGapsOut
-                            color: Appearance.colors.colLayer0
-                            border.width: 1
-                            border.color: Appearance.colors.colLayer0Border
-                            radius: Appearance.rounding.large
+                            radius: 19
                         }
 
                         RowLayout {
@@ -98,37 +100,17 @@ Scope { // Scope
                             anchors.top: parent.top
                             anchors.bottom: parent.bottom
                             anchors.horizontalCenter: parent.horizontalCenter
-                            spacing: 3
+                            spacing: 5
                             property real padding: 5
 
-                            VerticalButtonGroup {
-                                Layout.topMargin: Appearance.sizes.hyprlandGapsOut // why does this work
-                                GroupButton {
-                                    // Pin button
-                                    baseWidth: 35
-                                    baseHeight: 35
-                                    clickedWidth: baseWidth
-                                    clickedHeight: baseHeight + 20
-                                    buttonRadius: Appearance.rounding.normal
-                                    toggled: root.pinned
-                                    onClicked: root.pinned = !root.pinned
-                                    contentItem: MaterialSymbol {
-                                        text: "keep"
-                                        horizontalAlignment: Text.AlignHCenter
-                                        iconSize: Appearance.font.pixelSize.larger
-                                        color: root.pinned ? Appearance.m3colors.m3onPrimary : Appearance.colors.colOnLayer0
-                                    }
-                                }
-                            }
-                            DockSeparator {}
-                            DockApps {
-                                id: dockApps
-                                buttonPadding: dockRow.padding
-                            }
-                            DockSeparator {}
                             DockButton {
+                                id: launcher
                                 Layout.fillHeight: true
-                                onClicked: GlobalStates.overviewOpen = !GlobalStates.overviewOpen
+                                Accessible.name: Translation.tr("Applications")
+                                ToolTip.visible: hovered
+                                ToolTip.delay: 450
+                                ToolTip.text: Accessible.name
+                                onClicked: Quickshell.execDetached(["fuzzel"])
                                 topInset: Appearance.sizes.hyprlandGapsOut + dockRow.padding
                                 bottomInset: Appearance.sizes.hyprlandGapsOut + dockRow.padding
                                 contentItem: MaterialSymbol {
@@ -136,8 +118,12 @@ Scope { // Scope
                                     horizontalAlignment: Text.AlignHCenter
                                     font.pixelSize: parent.width / 2
                                     text: "apps"
-                                    color: Appearance.colors.colOnLayer0
+                                    color: TsukuyomiStyle.foreground
                                 }
+                            }
+                            DockApps {
+                                id: dockApps
+                                buttonPadding: dockRow.padding
                             }
                         }
                     }

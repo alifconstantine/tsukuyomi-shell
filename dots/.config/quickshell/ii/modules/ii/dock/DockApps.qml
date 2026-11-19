@@ -19,8 +19,9 @@ Item {
     property real buttonPadding: 5
 
     property Item lastHoveredButton: null
+    property Item contextButton: null
     property bool buttonHovered: false
-    property bool requestDockShow: previewPopup.show
+    property bool requestDockShow: previewPopup.show || contextButton !== null
 
     Layout.fillHeight: true
     Layout.topMargin: Appearance.sizes.hyprlandGapsOut
@@ -48,7 +49,11 @@ Item {
 
         model: ScriptModel {
             objectProp: "appId"
-            values: TaskbarApps.apps
+            values: {
+                const apps = TaskbarApps.apps;
+                const hasUnpinned = apps.some(app => !app.pinned && app.appId !== "SEPARATOR");
+                return apps.filter(app => app.appId !== "SEPARATOR" || hasUnpinned);
+            }
         }
         delegate: DockAppButton {
             required property var modelData
@@ -64,7 +69,8 @@ Item {
         id: previewPopup
         property var appTopLevel: root.lastHoveredButton?.appToplevel
 
-        property bool shouldShow: (popupMouseArea.containsMouse || root.buttonHovered) && appTopLevel && appTopLevel.toplevels && appTopLevel.toplevels.length > 0
+        property bool shouldShow: !root.contextButton && (popupMouseArea.containsMouse || root.buttonHovered)
+            && (appTopLevel?.toplevels?.length ?? 0) > 0
 
         property bool show: false
         property real cachedCenterX: 0
