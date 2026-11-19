@@ -15,17 +15,15 @@ if [[ -n $browser && ! $browser =~ ^[A-Za-z0-9][A-Za-z0-9._-]*\.desktop$ ]]; the
 fi
 
 here=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
-runtime_version='1:1.0.9.r6109.g08ff328-1'
-for package in ryoku-shell ryoku-blobs ryoku-hub; do
-    if [[ $(pacman -Q "$package") != "$package $runtime_version" ]]; then
-        echo "This preview requires $package $runtime_version" >&2
+runtime_version='1:1.0.9.r6109.g08ff328'
+for spec in "ryoku-shell $runtime_version-1" "ryoku-blobs $runtime_version-1" \
+    "ryoku-hub $runtime_version-1" "ryogami $runtime_version-1" \
+    "ryoku-desktop-hyprland $runtime_version-2" "ryoku-desktop $runtime_version-5"; do
+    if [[ $(pacman -Q "${spec%% *}" 2>/dev/null) != "$spec" ]]; then
+        echo "This preview requires $spec" >&2
         exit 1
     fi
 done
-if [[ $(pacman -Q ryoku-desktop) != 'ryoku-desktop 1:1.0.9.r6109.g08ff328-5' ]]; then
-    echo 'This preview requires ryoku-desktop 1:1.0.9.r6109.g08ff328-5' >&2
-    exit 1
-fi
 
 if [[ -e $profile || -L $profile ]]; then
     echo "Choose a new profile directory: $profile" >&2
