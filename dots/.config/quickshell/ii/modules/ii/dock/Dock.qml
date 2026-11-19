@@ -3,7 +3,6 @@ import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Effects
 import QtQuick.Layouts
 import Quickshell.Io
@@ -30,9 +29,12 @@ Scope { // Scope
             readonly property bool fullscreen: workspace?.toplevels.values.some(window => window.wayland?.fullscreen) ?? false
             readonly property bool workspaceEmpty: (workspace?.toplevels.values.length ?? 0) === 0
             visible: !GlobalStates.screenLocked && !fullscreen
+            onVisibleChanged: {
+                if (!visible && launcherMenu) launcherMenu.visible = false;
+            }
 
             property bool reveal: root.pinned || (Config.options?.dock.hoverToReveal && dockMouseArea.containsMouse)
-                || dockApps.requestDockShow || workspaceEmpty
+                || dockApps.requestDockShow || launcherMenu.visible || workspaceEmpty
 
             anchors {
                 bottom: true
@@ -80,7 +82,7 @@ Scope { // Scope
                             horizontalCenter: parent.horizontalCenter
                         }
 
-                        implicitWidth: dockRow.implicitWidth + 9 * 2
+                        implicitWidth: dockRow.implicitWidth + 8 * 2
                         height: parent.height - Appearance.sizes.elevationMargin - Appearance.sizes.hyprlandGapsOut
 
                         StyledRectangularShadow {
@@ -92,7 +94,9 @@ Scope { // Scope
                             anchors.fill: parent
                             anchors.topMargin: Appearance.sizes.elevationMargin
                             anchors.bottomMargin: Appearance.sizes.hyprlandGapsOut
-                            radius: 19
+                            radius: 17
+                            upperColor: TsukuyomiStyle.glass ? (TsukuyomiStyle.dark ? "#c63a404c" : "#ddffffff") : TsukuyomiStyle.surface
+                            lowerColor: TsukuyomiStyle.glass ? (TsukuyomiStyle.dark ? "#b51b2029" : "#c9dfe4eb") : TsukuyomiStyle.surface
                         }
 
                         RowLayout {
@@ -100,26 +104,44 @@ Scope { // Scope
                             anchors.top: parent.top
                             anchors.bottom: parent.bottom
                             anchors.horizontalCenter: parent.horizontalCenter
-                            spacing: 5
+                            spacing: 3
                             property real padding: 5
 
                             DockButton {
                                 id: launcher
                                 Layout.fillHeight: true
                                 Accessible.name: Translation.tr("Applications")
-                                ToolTip.visible: hovered
-                                ToolTip.delay: 450
-                                ToolTip.text: Accessible.name
-                                onClicked: Quickshell.execDetached(["fuzzel"])
+                                Loader {
+                                    active: launcher.hovered && !launcherMenu.visible
+                                    sourceComponent: TsukuyomiTooltip {
+                                        owner: launcher
+                                        text: Translation.tr("Applications")
+                                        above: true
+                                    }
+                                }
+                                onClicked: launcherMenu.visible = !launcherMenu.visible
                                 topInset: Appearance.sizes.hyprlandGapsOut + dockRow.padding
                                 bottomInset: Appearance.sizes.hyprlandGapsOut + dockRow.padding
-                                contentItem: MaterialSymbol {
-                                    anchors.fill: parent
-                                    horizontalAlignment: Text.AlignHCenter
-                                    font.pixelSize: parent.width / 2
-                                    text: "apps"
-                                    color: TsukuyomiStyle.foreground
+                                contentItem: Item {
+                                    Rectangle {
+                                        anchors.centerIn: parent
+                                        width: 32
+                                        height: 32
+                                        radius: 10
+                                        color: launcherMenu.visible ? TsukuyomiStyle.selection : TsukuyomiStyle.raised
+                                        border.color: TsukuyomiStyle.border
+                                        MaterialSymbol {
+                                            anchors.centerIn: parent
+                                            iconSize: 21
+                                            text: "grid_view"
+                                            color: TsukuyomiStyle.foreground
+                                        }
+                                    }
                                 }
+                            }
+                            TsukuyomiDockLauncher {
+                                id: launcherMenu
+                                launcherButton: launcher
                             }
                             DockApps {
                                 id: dockApps

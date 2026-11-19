@@ -4,7 +4,6 @@ import qs.modules.common.functions
 import qs.modules.common.widgets
 import Qt5Compat.GraphicalEffects
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Widgets
@@ -14,7 +13,7 @@ DockButton {
     property var appToplevel
     property var appListRoot
     property int lastFocused: -1
-    property real iconSize: 35
+    property real iconSize: 37
     property bool appIsActive: appToplevel.toplevels.find(t => (t.activated == true)) !== undefined
 
     readonly property bool isSeparator: appToplevel.appId === "SEPARATOR"
@@ -22,9 +21,14 @@ DockButton {
     enabled: !isSeparator
     implicitWidth: isSeparator ? 1 : implicitHeight - topInset - bottomInset
     Accessible.name: desktopEntry?.name ?? appToplevel.appId
-    ToolTip.visible: hovered && !isSeparator && appToplevel.toplevels.length === 0
-    ToolTip.delay: 450
-    ToolTip.text: Accessible.name
+    Loader {
+        active: root.hovered && !root.isSeparator && !appMenu.visible && root.appToplevel.toplevels.length === 0
+        sourceComponent: TsukuyomiTooltip {
+            owner: root
+            text: root.desktopEntry?.name ?? root.appToplevel.appId
+            above: true
+        }
+    }
 
     Connections {
         target: DesktopEntries
@@ -140,6 +144,16 @@ DockButton {
                     verticalCenter: parent.verticalCenter
                 }
                 active: !root.isSeparator
+                scale: root.hovered ? 1.09 : 1
+                transform: Translate {
+                    y: root.hovered ? -3 : 0
+                    Behavior on y {
+                        NumberAnimation { duration: 135; easing.type: Easing.OutCubic }
+                    }
+                }
+                Behavior on scale {
+                    NumberAnimation { duration: 135; easing.type: Easing.OutCubic }
+                }
                 sourceComponent: IconImage {
                     source: Quickshell.iconPath(AppSearch.guessIcon(appToplevel.appId), "image-missing")
                     implicitSize: root.iconSize
