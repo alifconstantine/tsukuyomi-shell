@@ -1,0 +1,27 @@
+--- a/hub/pages/ControlsPage.qml
++++ b/hub/pages/ControlsPage.qml
+@@ -281,8 +281,9 @@
+         WheelScroll { }
+
+-        Row {
++        Flow {
+             id: editor
+             width: flick.width - 14
+             spacing: Tokens.s5
++            readonly property bool stacked: width < 640 + spacing
+             enabled: !page.writePending
+             opacity: page.writePending ? 0.62 : 1
+@@ -292,5 +293,5 @@
+             SettingCard {
+                 id: previewCardHost
+-                width: Math.max(360, Math.round((editor.width - editor.spacing) * 0.54))
++                width: editor.stacked ? editor.width : Math.max(360, Math.round((editor.width - editor.spacing) * 0.54))
+                 title: I18n.tr("PANEL PREVIEW")
+                 kana: I18n.tr("表示")
+@@ -433,5 +434,5 @@
+
+             Column {
+-                width: Math.max(280, editor.width - previewCardHost.width - editor.spacing)
++                width: editor.stacked ? editor.width : editor.width - previewCardHost.width - editor.spacing
+                 spacing: Tokens.s4
+
