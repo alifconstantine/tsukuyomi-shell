@@ -1,0 +1,23 @@
+--- a/shell/services/Perf.qml
++++ b/shell/services/Perf.qml
+@@ -37,6 +37,7 @@
+ Singleton {
+     id: root
+ 
++    readonly property bool softwareRenderer: Quickshell.env("TSUKUYOMI_SOFTWARE_RENDERER") === "1"
+     readonly property bool lowPower: adapter.lowPowerMode
+     readonly property real motionSpeed: {
+         const v = adapter.motionSpeed;
+@@ -80,9 +81,9 @@
+ 
+     // Effective eye-candy switches: explicit toggle, or the lowPowerMode master, or
+     // the Power Saver tier, or Game Mode. Performance/Balanced add nothing.
+-    readonly property bool reduceMotion:     lowPower || adapter.reduceMotion   || saver || gaming
+-    readonly property bool blurDisabled:     lowPower || adapter.disableBlur    || saver || gaming
+-    readonly property bool shadowsDisabled:  lowPower || adapter.disableShadows || saver || gaming
++    readonly property bool reduceMotion:     lowPower || adapter.reduceMotion   || saver || gaming || softwareRenderer
++    readonly property bool blurDisabled:     lowPower || adapter.disableBlur    || saver || gaming || softwareRenderer
++    readonly property bool shadowsDisabled:  lowPower || adapter.disableShadows || saver || gaming || softwareRenderer
+ 
+     // The two audio-driven surfaces freeze when there is nothing to show, which is
+     // what "WhenIdle" always meant and never did: `freezeVisualizerWhenIdle` and
