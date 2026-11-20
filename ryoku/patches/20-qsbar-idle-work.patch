@@ -1,0 +1,87 @@
+--- a/shell/modules/bar/barstyles/qsbar/panels/DashboardPopup.qml
++++ b/shell/modules/bar/barstyles/qsbar/panels/DashboardPopup.qml
+@@ -35,7 +35,7 @@
+     WlrLayershell.keyboardFocus: root.dashboardVisible ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+ 
+     // ── live clock ──
+-    SystemClock { id: sysClock; precision: SystemClock.Seconds }
++    SystemClock { id: sysClock; enabled: dash.visible; precision: SystemClock.Seconds }
+     readonly property date now: sysClock.date
+     function pad(n) { return n < 10 ? "0" + n : String(n) }
+     readonly property string timeMain: {
+--- a/shell/modules/bar/barstyles/qsbar/VariantRoot.qml
++++ b/shell/modules/bar/barstyles/qsbar/VariantRoot.qml
+@@ -238,13 +238,13 @@
+     }
+ 
+     TooltipOverlay { root: theme }
+-    DashboardPopup { root: theme }
++    LazyLoader { active: theme.dashboardVisible; DashboardPopup { root: theme } }
+     PowerProfilePanel { root: theme }
+-    MemoryPanel { root: theme }
+-    CpuPanel { root: theme }
+-    GpuPanel { root: theme }
+-    ThermalsPanel { root: theme }
+-    StoragePanel { root: theme }
++    LazyLoader { active: theme.memVisible; MemoryPanel { root: theme } }
++    LazyLoader { active: theme.cpuVisible; CpuPanel { root: theme } }
++    LazyLoader { active: theme.gpuVisible; GpuPanel { root: theme } }
++    LazyLoader { active: theme.thermalVisible; ThermalsPanel { root: theme } }
++    LazyLoader { active: theme.storageVisible; StoragePanel { root: theme } }
+     AiUsagePanel { root: theme }
+     VolumePanel { root: theme }
+     TrayPanel { root: theme }
+--- a/shell/modules/bar/barstyles/qsbar/Theme.qml
++++ b/shell/modules/bar/barstyles/qsbar/Theme.qml
+@@ -1011,6 +1011,7 @@
+     property bool   aiUsageVisible: false
+     property real   aiUsageReveal: aiUsageVisible ? 1 : 0
+     Behavior on aiUsageReveal {
++        enabled: !Perf.reduceMotion
+         NumberAnimation {
+             duration: theme.aiUsageVisible ? 160 : 120
+             easing.type: theme.aiUsageVisible ? Easing.OutCubic : Easing.InCubic
+@@ -1245,9 +1246,9 @@
+     }
+ 
+     Timer {
+-        // Keep relative reset and freshness labels moving while QS Bar is open.
++        // Only poll while the AI usage widget or its panel is in use.
+         interval: (theme.aiUsageVisible ? 5000 : 30000) * Perf.pollFactor
+-        running: true
++        running: theme.aiUsageVisible || theme.modClaude || theme.controlVisible
+         repeat: true
+         triggeredOnStart: true
+         onTriggered: theme.refreshAiUsage(false)
+@@ -1820,12 +1821,17 @@
+     }
+ 
+     Timer {
+-        interval: ((theme.modCpu || theme.cpuVisible || theme.modMemory || theme.memVisible) ? 2000 : 10000) * Perf.pollFactor
+-        running: true; repeat: true; triggeredOnStart: true
++        interval: 2000 * Perf.pollFactor
++        running: theme.modCpu || theme.cpuVisible || theme.modMemory || theme.memVisible
++        repeat: true
++        triggeredOnStart: true
+         onTriggered: {
+-            systemCpuFile.reload()
+-            systemLoadFile.reload()
+-            systemMemFile.reload()
++            if (theme.modCpu || theme.cpuVisible) {
++                systemCpuFile.reload()
++                systemLoadFile.reload()
++            }
++            if (theme.modMemory || theme.memVisible)
++                systemMemFile.reload()
+         }
+     }
+ 
+@@ -2360,7 +2366,7 @@
+     property string barPosition: "top"   // "top" or "bottom"
+     // ── gap animation mode (Bar Studio; drives the V2 gap/reactor layer) ──
+     // 0=off, 1=stream, 2=surge, 3=bolt, 7=reactor, 8=quotes.
+-    property int barAnim: 1
++    property int barAnim: 0
+     onBarAnimChanged: if (_widgetsLoaded) saveWidgets()
+     // Reactor IPC (barAnim modes 7/8): ParticleStream listens via onReactorTest.
+     signal reactorTest(string kind, string arg)

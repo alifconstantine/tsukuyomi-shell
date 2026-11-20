@@ -9,6 +9,7 @@
     "barPosition": "top",
     "barFrostEnabled": true,
     "barColor": "foreground",
+    "barAnim": 0,
     "barGapTop": 6,
     "barCornerRadius": 16,
     "launcherLogoMode": "icon",
