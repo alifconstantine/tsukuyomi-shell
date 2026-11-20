@@ -114,8 +114,8 @@ Item {
                         }
                         Btn {
                             text: I18n.tr("Lock to preview")
-                            enabled: !applyTheme.running
-                            onAct: Quickshell.execDetached(["ryoku-qylock-lock", card.modelData.slug])
+                            enabled: !listThemes.running && !applyTheme.running && card.modelData.slug === page.activeSlug
+                            onAct: Quickshell.execDetached(["ryoku-shell", "lock"])
                         }
                     }
                 }
