@@ -1,0 +1,221 @@
+--- a/ryostore/ProductGrid.qml
++++ b/ryostore/ProductGrid.qml
+@@ -121,7 +121,7 @@
+         model: grid.items
+         cellWidth: grid.cellW
+         cellHeight: grid.cellH
+-        cacheBuffer: Math.max(0, Math.ceil(grid.cellH * 3))
++        cacheBuffer: Math.max(0, Math.ceil(grid.cellH * 1.5))
+         keyNavigationEnabled: false
+         boundsBehavior: Flickable.StopAtBounds
+ 
+@@ -138,7 +138,7 @@
+             onHoveredChanged: if (!hovered) { dwell.stop(); grid.previewRequested(null); }
+         }
+ 
+-        delegate: Item {
++        delegate: Loader {
+             id: tile
+             required property var modelData
+             required property int index
+@@ -146,10 +146,7 @@
+             height: grid.cellH
+             readonly property bool isSelected: StoreLogic.itemKey(modelData) === grid.selectedKey
+ 
+-            Loader {
+-                anchors.fill: parent
+-                sourceComponent: grid.compact ? appTile : coverTile
+-            }
++            sourceComponent: grid.compact ? appTile : coverTile
+ 
+             Component {
+                 id: coverTile
+--- a/ryostore/ProductMedia.qml
++++ b/ryostore/ProductMedia.qml
+@@ -17,10 +17,13 @@
+ 
+     readonly property string cleanSource: String(source).split(/[?#]/)[0].toLowerCase()
+     readonly property bool video: /\.(mp4|webm|mkv|mov|m4v)$/.test(cleanSource)
+-    readonly property bool animated: !video && /\.(gif|webp)$/.test(cleanSource)
++    // Keep icons and WebP grid covers on the still image path. Full previews
++    // can still play provider-supplied WebP animation.
++    readonly property bool animated: mode !== "icon" && !video
++            && (cleanSource.endsWith(".gif") || ((mode === "hero" || mode === "view") && cleanSource.endsWith(".webp")))
+     readonly property bool framed: mode === "plate" || mode === "view"
+     readonly property bool fitted: framed || mode === "hero" || mode === "icon"
+-    readonly property bool nativeDecode: actualPixels || fitted || animated
++    readonly property bool nativeDecode: actualPixels || framed || mode === "hero"
+     readonly property int imageFit: fitted ? Image.PreserveAspectFit : Image.PreserveAspectCrop
+     readonly property int videoFit: fitted ? VideoOutput.PreserveAspectFit : VideoOutput.PreserveAspectCrop
+     readonly property real dpr: Window.window && Window.window.screen
+@@ -30,23 +33,26 @@
+     readonly property real innerH: Math.max(1, height - inset * 2)
+     readonly property bool windowFocused: !Window.window || Window.window.active
+     readonly property bool shouldPlay: active && visible && windowFocused
+-    readonly property bool ready: video ? videoPlayer.hasVideo
+-            : (animated ? moving.status === AnimatedImage.Ready : still.status === Image.Ready)
++    readonly property var videoView: videoLoader.item
++    readonly property var front: animated ? animationLoader.item : still
++    readonly property bool ready: video ? videoView !== null && videoView.player.hasVideo
++            : front !== null && front.status === Image.Ready
+     readonly property bool failed: cleanSource !== "" && (video
+-            ? videoPlayer.error !== MediaPlayer.NoError
+-            : (animated ? moving.status === AnimatedImage.Error : still.status === Image.Error))
++            ? videoView !== null && videoView.player.error !== MediaPlayer.NoError
++            : front !== null && front.status === Image.Error)
+     readonly property bool fallbackNeeded: !ready && (cleanSource === "" || failed || timedOut)
+-    readonly property var front: animated ? moving : still
+-    readonly property real nativeLogicalWidth: video || !nativeDecode ? innerW
++    readonly property real nativeLogicalWidth: video || !nativeDecode || front === null ? innerW
+             : Math.max(1, front.implicitWidth / dpr)
+-    readonly property real nativeLogicalHeight: video || !nativeDecode ? innerH
++    readonly property real nativeLogicalHeight: video || !nativeDecode || front === null ? innerH
+             : Math.max(1, front.implicitHeight / dpr)
+     onSourceChanged: timedOut = false
+     readonly property bool playing: video
+-            ? videoPlayer.playbackState === MediaPlayer.PlayingState
+-            : (animated && moving.playing)
+-    readonly property real paintedWidth: video ? videoOutput.contentRect.width : front.paintedWidth
+-    readonly property real paintedHeight: video ? videoOutput.contentRect.height : front.paintedHeight
++            ? videoView !== null && videoView.player.playbackState === MediaPlayer.PlayingState
++            : animated && front !== null && front.playing
++    readonly property real paintedWidth: video ? (videoView ? videoView.output.contentRect.width : 0)
++            : (front ? front.paintedWidth : 0)
++    readonly property real paintedHeight: video ? (videoView ? videoView.output.contentRect.height : 0)
++            : (front ? front.paintedHeight : 0)
+ 
+     clip: true
+ 
+@@ -89,7 +95,7 @@
+             height: parent.height
+             color: Tokens.tint5
+             id: shimmer
+-            readonly property bool animate: media.shouldPlay && media.mode !== "cover"
++            readonly property bool animate: media.shouldPlay && media.mode !== "cover" && media.mode !== "icon"
+             x: animate ? -width : (parent.width - width) / 2
+             XAnimator on x {
+                 from: -skeleton.width * 0.28
+@@ -109,6 +115,7 @@
+ 
+     Image {
+         id: still
++        activeFocusOnTab: false
+         anchors.centerIn: parent
+         source: !media.video && !media.animated ? media.source : ""
+         sourceSize: media.nativeDecode
+@@ -130,55 +137,70 @@
+         visible: source !== "" && status === Image.Ready
+     }
+ 
+-    AnimatedImage {
+-        id: moving
++    Loader {
++        id: animationLoader
+         anchors.centerIn: parent
+-        source: media.animated ? media.source : ""
+-        width: media.actualPixels
+-                ? media.nativeLogicalWidth
+-                : Math.min(media.innerW, media.nativeLogicalWidth)
+-        height: media.actualPixels
+-                ? media.nativeLogicalHeight
+-                : Math.min(media.innerH, media.nativeLogicalHeight)
+-        fillMode: media.imageFit
++        active: media.animated
+         asynchronous: true
+-        cache: true
+-        retainWhileLoading: true
+-        smooth: true
+-        mipmap: true
+-        playing: media.shouldPlay && visible
+-        visible: source !== "" && status === AnimatedImage.Ready
+-    }
+-
+-    VideoOutput {
+-        id: videoOutput
++        sourceComponent: AnimatedImage {
++            source: media.source
++            sourceSize: media.nativeDecode ? Qt.size(0, 0)
++                    : Qt.size(Math.ceil(media.innerW * media.dpr), Math.ceil(media.innerH * media.dpr))
++            width: media.actualPixels
++                    ? media.nativeLogicalWidth : Math.min(media.innerW, media.nativeLogicalWidth)
++            height: media.actualPixels
++                    ? media.nativeLogicalHeight : Math.min(media.innerH, media.nativeLogicalHeight)
++            fillMode: media.imageFit
++            asynchronous: true
++            cache: true
++            retainWhileLoading: true
++            smooth: true
++            mipmap: true
++            playing: media.shouldPlay && visible
++            visible: status === AnimatedImage.Ready
++        }
++    }
++
++    Loader {
++        id: videoLoader
++        active: media.video
++        asynchronous: true
+         anchors.fill: parent
+         anchors.margins: media.inset
+-        visible: media.video && videoPlayer.hasVideo
+-        fillMode: media.videoFit
+-    }
+-
+-    MediaPlayer {
+-        id: videoPlayer
+-        source: media.video ? media.source : ""
+-        videoOutput: videoOutput
+-        loops: MediaPlayer.Infinite
+-        audioOutput: AudioOutput { muted: true }
+-
+-        function syncPlayback() {
+-            if (media.shouldPlay && source.toString() !== "" && media.video)
+-                play();
+-            else
+-                pause();
+-        }
+-
+-        onSourceChanged: syncPlayback()
+-        onMediaStatusChanged: syncPlayback()
+-    }
+-
+-    Connections {
+-        target: media
+-        function onShouldPlayChanged() { videoPlayer.syncPlayback(); }
++        sourceComponent: Item {
++            readonly property alias output: videoOutput
++            readonly property alias player: videoPlayer
++
++            VideoOutput {
++                id: videoOutput
++                anchors.fill: parent
++                visible: videoPlayer.hasVideo
++                fillMode: media.videoFit
++            }
++
++            MediaPlayer {
++                id: videoPlayer
++                source: media.source
++                videoOutput: videoOutput
++                loops: MediaPlayer.Infinite
++                audioOutput: AudioOutput { muted: true }
++
++                function syncPlayback() {
++                    if (media.shouldPlay && source.toString() !== "")
++                        play();
++                    else
++                        pause();
++                }
++
++                onSourceChanged: syncPlayback()
++                onMediaStatusChanged: syncPlayback()
++            }
++
++            Connections {
++                target: media
++                function onShouldPlayChanged() { videoPlayer.syncPlayback(); }
++            }
++        }
+     }
+ 
+     Rectangle {
