@@ -1,0 +1,115 @@
+--- a/ryostore/App.qml
++++ b/ryostore/App.qml
+@@ -32,5 +32,5 @@
+     property var detailContext: null
+     property rect detailOriginRect: Qt.rect(0, 0, 0, 0)
+-    property bool reducedMotion: performance.lowPowerMode || performance.reduceMotion
++    property bool reducedMotion: Tokens.reduceMotion || performance.lowPowerMode || performance.reduceMotion
+     readonly property bool nomarchyActive: shellSettings.barStyle === "nomarchy"
+     onNomarchyActiveChanged: {
+@@ -147,15 +147,4 @@
+     readonly property var featured: app.appsBrowse && !app.appsFiltered
+             ? StoreLogic.featuredApps(collection, 5, app.discoverSeed) : []
+-    readonly property string contentMotionKey: [
+-        view,
+-        categoryID,
+-        query,
+-        providerFilter,
+-        categoryQuery,
+-        pluginFilter,
+-        omarchySort,
+-        appSort,
+-        appsTag
+-    ].join("|")
+     readonly property var currentCategory: categoryID === "subshells"
+         ? app.navigationCategories.find(category => category.id === "subshells")
+@@ -862,5 +851,4 @@
+         selectedKey: app.selectedKey
+         reducedMotion: app.reducedMotion
+-        contentKey: app.contentMotionKey
+         enabled: !app.detailOpen
+         onPreviewRequested: item => app.previewItem = item
+--- a/ryostore/ProductGrid.qml
++++ b/ryostore/ProductGrid.qml
+@@ -15,6 +15,4 @@
+     property string selectedKey: ""
+     property bool reducedMotion: false
+-    property string contentKey: ""
+-    property int entranceEpoch: 0
+     property bool compact: false
+
+@@ -78,7 +76,4 @@
+                        grid.cellW, grid.cellH);
+     }
+-    onContentKeyChanged: entranceEpoch++
+-
+-
+     onSelectedKeyChanged: Qt.callLater(grid.scrollToSelected)
+
+@@ -151,48 +146,4 @@
+             height: grid.cellH
+             readonly property bool isSelected: StoreLogic.itemKey(modelData) === grid.selectedKey
+-            property real entranceProgress: 1
+-            opacity: entranceProgress
+-
+-            transform: Translate {
+-                y: (1 - tile.entranceProgress) * Tokens.s3
+-            }
+-
+-            function reveal() {
+-                entrance.stop();
+-                if (grid.reducedMotion) {
+-                    entranceProgress = 1;
+-                    return;
+-                }
+-                entranceProgress = 0;
+-                entrance.restart();
+-            }
+-
+-            SequentialAnimation {
+-                id: entrance
+-                PauseAnimation {
+-                    duration: Math.min(tile.index * Math.round(Tokens.snap / 3), Tokens.move)
+-                }
+-                NumberAnimation {
+-                    target: tile
+-                    property: "entranceProgress"
+-                    from: 0
+-                    to: 1
+-                    duration: Tokens.swap
+-                    easing.type: Tokens.ease
+-                }
+-            }
+-
+-            Connections {
+-                target: grid
+-                function onEntranceEpochChanged() { tile.reveal(); }
+-                function onReducedMotionChanged() {
+-                    if (grid.reducedMotion) {
+-                        entrance.stop();
+-                        tile.entranceProgress = 1;
+-                    }
+-                }
+-            }
+-
+-            Component.onCompleted: reveal()
+
+             Loader {
+--- a/ryostore/ProductMedia.qml
++++ b/ryostore/ProductMedia.qml
+@@ -89,5 +89,7 @@
+             height: parent.height
+             color: Tokens.tint5
+-            x: media.shouldPlay ? -width : (parent.width - width) / 2
++            id: shimmer
++            readonly property bool animate: media.shouldPlay && media.mode !== "cover"
++            x: animate ? -width : (parent.width - width) / 2
+             XAnimator on x {
+                 from: -skeleton.width * 0.28
+@@ -95,5 +97,5 @@
+                 duration: 1100
+                 loops: Animation.Infinite
+-                running: skeleton.visible && media.shouldPlay
++                running: skeleton.visible && shimmer.animate
+             }
+         }
