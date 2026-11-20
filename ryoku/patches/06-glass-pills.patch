@@ -5,7 +5,7 @@
      property bool barFrostEnabled: false
 +    property bool barGlassEnabled: false
 +    onBarGlassEnabledChanged: if (_widgetsLoaded) saveWidgets()
-+    readonly property bool glassPills: barGlassEnabled && barFrostEnabled && !Performance.blurDisabled
++    readonly property bool glassPills: barGlassEnabled && barFrostEnabled && !Perf.blurDisabled
      // Auto-hide: reserve no space, slide off the edge, and reveal on a slow
      // hover anywhere along the edge (even over the gaps between islands).
 @@ -3029,4 +3032,5 @@
