@@ -1,0 +1,79 @@
+--- a/hub/pages/ProfilePage.qml
++++ b/hub/pages/ProfilePage.qml
+@@ -26,13 +26,22 @@
+     property bool grabbing: false
+     property int fieldsArmed: 0 // inline text fields currently being edited
+ 
+-    Component.onCompleted: LiveStats.active = true
+-    Component.onDestruction: LiveStats.active = false
++    function updateTelemetry() {
++        LiveStats.active = pg.visible;
++        SysInfo.profileVisible = pg.visible;
++    }
++
++    Component.onCompleted: updateTelemetry()
++    onVisibleChanged: updateTelemetry()
++    Component.onDestruction: {
++        LiveStats.active = false;
++        SysInfo.profileVisible = false;
++    }
+ 
+     property var now: new Date()
+     Timer {
+         interval: 1000
+-        running: true
++        running: pg.visible
+         repeat: true
+         triggeredOnStart: true
+         onTriggered: pg.now = new Date()
+--- a/hub/pages/RecordingPage.qml
++++ b/hub/pages/RecordingPage.qml
+@@ -431,7 +431,7 @@
+         id: ctlRetry
+         interval: 2000
+         repeat: true
+-        running: pg.recordStatus !== "ready"
++        running: pg.visible && pg.recordStatus !== "ready"
+         onTriggered: {
+             if (ctl.connected)
+                 pg.requestRecording();
+--- a/hub/Singletons/SysInfo.qml
++++ b/hub/Singletons/SysInfo.qml
+@@ -11,6 +11,8 @@
+ // each falls back to a placeholder when its source is absent.
+ Singleton {
+     id: root
++
++    property bool profileVisible: false
+ 
+     readonly property string helper: "ryoku-sysinfo"
+     readonly property string helperExtra: "ryoku-profile-stats"
+@@ -92,7 +94,6 @@
+ 
+     Process {
+         id: extra
+-        running: true
+         command: ["bash", root.helperExtra]
+         stdout: StdioCollector {
+             onStreamFinished: {
+@@ -116,7 +117,7 @@
+ 
+     Timer {
+         interval: 30000
+-        running: true
++        running: root.profileVisible
+         repeat: true
+         triggeredOnStart: true
+         onTriggered: { poller.running = true; extra.running = true; }
+--- a/hub/Singletons/LiveStats.qml
++++ b/hub/Singletons/LiveStats.qml
+@@ -22,8 +22,7 @@
+ Singleton {
+     id: root
+ 
+-    // ProfilePage flips this on construction and off on destruction; the poll
+-    // loop only runs while the plate is the visible page.
++    // ProfilePage tracks the plate's visibility so the loop stops while it is parked.
+     property bool active: false
+ 
+     property int cpu: 0          // %
