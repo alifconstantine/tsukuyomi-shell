@@ -1,0 +1,7 @@
+--- a/hub/pages/FastfetchPage.qml
++++ b/hub/pages/FastfetchPage.qml
+@@ -522,3 +522,3 @@
+     }
+-    function previewInTerminal() { Spawn.runApp(["kitty", "-e", "sh", "-c", "ryoku-fastfetch; read -n1"], { label: "kitty" }); }
++    function previewInTerminal() { Spawn.runApp(["kitty", "--hold", "fastfetch", "--pipe", "false"], { label: "kitty" }); }
+     function openConfig() { Spawn.runApp(["kitty", "-e", "nvim", "-O", pg.configPath], { label: "kitty" }); }
