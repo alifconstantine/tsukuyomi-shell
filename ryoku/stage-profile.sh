@@ -32,6 +32,7 @@ jq --arg browser "${browser%.desktop}" \
         ([$browser] | map(select(length > 0))) + ["kitty"])' \
     "$here/shell.json" > "$draft/.config/ryoku/shell.json"
 printf '{"clockEnabled":false,"calendarEnabled":false}\n' > "$draft/.config/ryoku/widgets.json"
+printf '{"desktop":{"apps":{"files":"dolphin"}}}\n' > "$draft/.config/ryoku/desktop.json"
 printf '{"enabled":false}\n' > "$draft/.config/ryoku/visualizer.json"
 printf '{"scheme":"dark","followWallpaper":false}\n' > "$draft/.config/ryoku/theme.json"
 printf '{"general":{"notifyOnWallpaperChange":false}}\n' > "$draft/.config/ryoku/ryogami.json"
