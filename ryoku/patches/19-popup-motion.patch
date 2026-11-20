@@ -1,0 +1,339 @@
+--- a/shell/modules/bar/barstyles/qsbar/panels/BatteryPanel.qml
++++ b/shell/modules/bar/barstyles/qsbar/panels/BatteryPanel.qml
+@@ -1,4 +1,5 @@
+ import QtQuick
++import shell.services
+ import "../modules"
+ import Quickshell
+ import Quickshell.Io
+@@ -49,6 +50,7 @@
+ 
+     property real reveal: root.batteryVisible ? 1 : 0
+     Behavior on reveal {
++        enabled: !Perf.reduceMotion
+         NumberAnimation {
+             duration: root.batteryVisible ? 160 : 120
+             easing.type: root.batteryVisible ? Easing.OutCubic : Easing.InCubic
+--- a/shell/modules/bar/barstyles/qsbar/panels/BluetoothPanel.qml
++++ b/shell/modules/bar/barstyles/qsbar/panels/BluetoothPanel.qml
+@@ -125,6 +125,7 @@
+ 
+     property real reveal: root.bluetoothVisible ? 1 : 0
+     Behavior on reveal {
++        enabled: !Perf.reduceMotion
+         NumberAnimation {
+             duration: root.bluetoothVisible ? 160 : 120
+             easing.type: root.bluetoothVisible ? Easing.OutCubic : Easing.InCubic
+--- a/shell/modules/bar/barstyles/qsbar/panels/BrightnessPanel.qml
++++ b/shell/modules/bar/barstyles/qsbar/panels/BrightnessPanel.qml
+@@ -1,4 +1,5 @@
+ import QtQuick
++import shell.services
+ import "../modules"
+ import Quickshell
+ import Quickshell.Io
+@@ -27,6 +28,7 @@
+ 
+     property real reveal: root.brightnessVisible ? 1 : 0
+     Behavior on reveal {
++        enabled: !Perf.reduceMotion
+         NumberAnimation {
+             duration: root.brightnessVisible ? 160 : 120
+             easing.type: root.brightnessVisible ? Easing.OutCubic : Easing.InCubic
+--- a/shell/modules/bar/barstyles/qsbar/panels/CpuPanel.qml
++++ b/shell/modules/bar/barstyles/qsbar/panels/CpuPanel.qml
+@@ -1,4 +1,5 @@
+ import QtQuick
++import shell.services
+ import "../modules"
+ import Quickshell
+ import Quickshell.Io
+@@ -37,6 +38,7 @@
+ 
+     property real reveal: root.cpuVisible ? 1 : 0
+     Behavior on reveal {
++        enabled: !Perf.reduceMotion
+         NumberAnimation {
+             duration: root.cpuVisible ? 160 : 120
+             easing.type: root.cpuVisible ? Easing.OutCubic : Easing.InCubic
+--- a/shell/modules/bar/barstyles/qsbar/panels/DashboardPopup.qml
++++ b/shell/modules/bar/barstyles/qsbar/panels/DashboardPopup.qml
+@@ -25,6 +25,7 @@
+ 
+     property real reveal: root.dashboardVisible ? 1 : 0
+     Behavior on reveal {
++        enabled: !Perf.reduceMotion
+         NumberAnimation {
+             duration: root.dashboardVisible ? 220 : 150
+             easing.type: root.dashboardVisible ? Easing.OutCubic : Easing.InCubic
+--- a/shell/modules/bar/barstyles/qsbar/panels/GpuPanel.qml
++++ b/shell/modules/bar/barstyles/qsbar/panels/GpuPanel.qml
+@@ -1,4 +1,5 @@
+ import QtQuick
++import shell.services
+ import "../modules"
+ import Quickshell
+ import Quickshell.Io
+@@ -30,6 +31,7 @@
+ 
+     property real reveal: root.gpuVisible ? 1 : 0
+     Behavior on reveal {
++        enabled: !Perf.reduceMotion
+         NumberAnimation {
+             duration: root.gpuVisible ? 160 : 120
+             easing.type: root.gpuVisible ? Easing.OutCubic : Easing.InCubic
+--- a/shell/modules/bar/barstyles/qsbar/panels/MemoryPanel.qml
++++ b/shell/modules/bar/barstyles/qsbar/panels/MemoryPanel.qml
+@@ -1,4 +1,5 @@
+ import QtQuick
++import shell.services
+ import "../modules"
+ import Quickshell
+ import Quickshell.Io
+@@ -32,6 +33,7 @@
+ 
+     property real reveal: root.memVisible ? 1 : 0
+     Behavior on reveal {
++        enabled: !Perf.reduceMotion
+         NumberAnimation {
+             duration: root.memVisible ? 160 : 120
+             easing.type: root.memVisible ? Easing.OutCubic : Easing.InCubic
+--- a/shell/modules/bar/barstyles/qsbar/panels/MprisPanel.qml
++++ b/shell/modules/bar/barstyles/qsbar/panels/MprisPanel.qml
+@@ -107,6 +107,7 @@
+ 
+     property real reveal: root.mprisVisible ? 1 : 0
+     Behavior on reveal {
++        enabled: !Perf.reduceMotion
+         NumberAnimation {
+             duration: root.mprisVisible ? 160 : 120
+             easing.type: root.mprisVisible ? Easing.OutCubic : Easing.InCubic
+--- a/shell/modules/bar/barstyles/qsbar/panels/NetworkPanel.qml
++++ b/shell/modules/bar/barstyles/qsbar/panels/NetworkPanel.qml
+@@ -427,6 +427,7 @@
+ 
+     property real reveal: root.networkVisible ? 1 : 0
+     Behavior on reveal {
++        enabled: !Perf.reduceMotion
+         NumberAnimation {
+             duration: root.networkVisible ? 160 : 120
+             easing.type: root.networkVisible ? Easing.OutCubic : Easing.InCubic
+--- a/shell/modules/bar/barstyles/qsbar/panels/NotificationPanel.qml
++++ b/shell/modules/bar/barstyles/qsbar/panels/NotificationPanel.qml
+@@ -1,4 +1,5 @@
+ import QtQuick
++import shell.services
+ import "../modules"
+ import Quickshell
+ import Quickshell.Wayland
+@@ -180,6 +181,7 @@
+ 
+     property real reveal: root.notifVisible ? 1 : 0
+     Behavior on reveal {
++        enabled: !Perf.reduceMotion
+         NumberAnimation {
+             duration: root.notifVisible ? 160 : 120
+             easing.type: root.notifVisible ? Easing.OutCubic : Easing.InCubic
+--- a/shell/modules/bar/barstyles/qsbar/panels/PluginPanel.qml
++++ b/shell/modules/bar/barstyles/qsbar/panels/PluginPanel.qml
+@@ -1,4 +1,5 @@
+ import QtQuick
++import shell.services
+ import "../modules"
+ import Quickshell
+ import Quickshell.Wayland
+@@ -42,6 +43,7 @@
+ 
+     property real reveal: root.pluginPanelVisible ? 1 : 0
+     Behavior on reveal {
++        enabled: !Perf.reduceMotion
+         NumberAnimation {
+             duration: root.pluginPanelVisible ? 160 : 120
+             easing.type: root.pluginPanelVisible ? Easing.OutCubic : Easing.InCubic
+--- a/shell/modules/bar/barstyles/qsbar/panels/PowerProfilePanel.qml
++++ b/shell/modules/bar/barstyles/qsbar/panels/PowerProfilePanel.qml
+@@ -39,6 +39,7 @@
+ 
+     property real reveal: root.powerProfileVisible ? 1 : 0
+     Behavior on reveal {
++        enabled: !Perf.reduceMotion
+         NumberAnimation {
+             duration: root.powerProfileVisible ? 160 : 120
+             easing.type: root.powerProfileVisible ? Easing.OutCubic : Easing.InCubic
+--- a/shell/modules/bar/barstyles/qsbar/panels/StoragePanel.qml
++++ b/shell/modules/bar/barstyles/qsbar/panels/StoragePanel.qml
+@@ -1,4 +1,5 @@
+ import QtQuick
++import shell.services
+ import "../modules"
+ import Quickshell
+ import Quickshell.Wayland
+@@ -51,6 +52,7 @@
+ 
+     property real reveal: root.storageVisible ? 1 : 0
+     Behavior on reveal {
++        enabled: !Perf.reduceMotion
+         NumberAnimation {
+             duration: root.storageVisible ? 160 : 120
+             easing.type: root.storageVisible ? Easing.OutCubic : Easing.InCubic
+--- a/shell/modules/bar/barstyles/qsbar/panels/ThermalsPanel.qml
++++ b/shell/modules/bar/barstyles/qsbar/panels/ThermalsPanel.qml
+@@ -1,4 +1,5 @@
+ import QtQuick
++import shell.services
+ import "../modules"
+ import Quickshell
+ import Quickshell.Wayland
+@@ -34,6 +35,7 @@
+ 
+     property real reveal: root.thermalVisible ? 1 : 0
+     Behavior on reveal {
++        enabled: !Perf.reduceMotion
+         NumberAnimation {
+             duration: root.thermalVisible ? 160 : 120
+             easing.type: root.thermalVisible ? Easing.OutCubic : Easing.InCubic
+--- a/shell/modules/bar/barstyles/qsbar/panels/TrayMenu.qml
++++ b/shell/modules/bar/barstyles/qsbar/panels/TrayMenu.qml
+@@ -87,6 +87,7 @@
+ 
+     property real reveal: root.trayMenuVisible ? 1 : 0
+     Behavior on reveal {
++        enabled: !Perf.reduceMotion
+         NumberAnimation { duration: root.trayMenuVisible ? 140 : 100; easing.type: Easing.OutCubic }
+     }
+     visible: reveal > 0.001
+--- a/shell/modules/bar/barstyles/qsbar/panels/TrayPanel.qml
++++ b/shell/modules/bar/barstyles/qsbar/panels/TrayPanel.qml
+@@ -25,6 +25,7 @@
+ 
+     property real reveal: root.trayVisible ? 1 : 0
+     Behavior on reveal {
++        enabled: !Perf.reduceMotion
+         NumberAnimation {
+             duration: root.trayVisible ? 160 : 120
+             easing.type: root.trayVisible ? Easing.OutCubic : Easing.InCubic
+--- a/shell/modules/bar/barstyles/qsbar/panels/WorkspacePanel.qml
++++ b/shell/modules/bar/barstyles/qsbar/panels/WorkspacePanel.qml
+@@ -1,4 +1,5 @@
+ import QtQuick
++import shell.services
+ import "../modules"
+ import "../modules/WorkspaceIsolation.js" as WorkspaceIsolation
+ import Quickshell
+@@ -22,6 +23,7 @@
+ 
+     property real reveal: root.workspaceVisible ? 1 : 0
+     Behavior on reveal {
++        enabled: !Perf.reduceMotion
+         NumberAnimation {
+             duration: root.workspaceVisible ? 160 : 120
+             easing.type: root.workspaceVisible ? Easing.OutCubic : Easing.InCubic
+--- a/shell/modules/bar/barstyles/qsbar/panels/ImageCarouselPanel.qml
++++ b/shell/modules/bar/barstyles/qsbar/panels/ImageCarouselPanel.qml
+@@ -1,4 +1,5 @@
+ import QtQuick
++import shell.services
+ import Quickshell
+ import Quickshell.Wayland
+ import Quickshell.Io
+@@ -41,7 +42,7 @@
+ 
+     // ── reveal (fade + subtle rise) ──
+     property real reveal: 0
+-    Behavior on reveal { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
++    Behavior on reveal { enabled: !Perf.reduceMotion; NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+     onReadyChanged: reveal = ready ? 1 : 0
+ 
+     // ── filtered list (each entry keeps its original index) ──
+--- a/shell/modules/bar/barstyles/qsbar/panels/ImageCarouselHearthstone.qml
++++ b/shell/modules/bar/barstyles/qsbar/panels/ImageCarouselHearthstone.qml
+@@ -1,4 +1,5 @@
+ import QtQuick
++import shell.services
+ import QtQuick.Shapes
+ import Quickshell
+ import Quickshell.Wayland
+@@ -41,7 +42,7 @@
+ 
+     // ── reveal + deal ──
+     property real reveal: 0
+-    Behavior on reveal { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
++    Behavior on reveal { enabled: !Perf.reduceMotion; NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+     property real dealT: 0
+     readonly property int dealDuration: isThemeMode ? 260 : 180
+     readonly property int cardMotionDuration: isThemeMode ? 220 : 180
+--- a/shell/modules/bar/barstyles/qsbar/panels/MediaBrowserPanel.qml
++++ b/shell/modules/bar/barstyles/qsbar/panels/MediaBrowserPanel.qml
+@@ -1,4 +1,5 @@
+ import QtQuick
++import shell.services
+ import Quickshell
+ import Quickshell.Wayland
+ import Quickshell.Io
+@@ -39,7 +40,7 @@
+ 
+     // ── reveal ──
+     property real reveal: 0
+-    Behavior on reveal { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
++    Behavior on reveal { enabled: !Perf.reduceMotion; NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+     onReadyChanged: reveal = ready ? 1 : 0
+ 
+     // ── filtered list ──
+--- a/shell/modules/bar/barstyles/qsbar/panels/MediaBrowserHearthstone.qml
++++ b/shell/modules/bar/barstyles/qsbar/panels/MediaBrowserHearthstone.qml
+@@ -1,4 +1,5 @@
+ import QtQuick
++import shell.services
+ import QtQuick.Shapes
+ import Quickshell
+ import Quickshell.Wayland
+@@ -39,7 +40,7 @@
+ 
+     // ── reveal + deal ──
+     property real reveal: 0
+-    Behavior on reveal { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
++    Behavior on reveal { enabled: !Perf.reduceMotion; NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+     property real dealT: 0
+     Behavior on dealT { NumberAnimation { duration: 360; easing.type: Easing.OutCubic } }
+     onReadyChanged: { reveal = ready ? 1 : 0; if (ready) dealT = 1 }
+--- a/shell/modules/bar/barstyles/qsbar/controlcenter/ControlCenter.qml
++++ b/shell/modules/bar/barstyles/qsbar/controlcenter/ControlCenter.qml
+@@ -1,4 +1,5 @@
+ import QtQuick
++import shell.services
+ import Quickshell
+ import Quickshell.Wayland
+ import "../modules"
+@@ -124,6 +125,7 @@
+ 
+     property real reveal: cc.root.controlVisible ? 1 : 0
+     Behavior on reveal {
++        enabled: !Perf.reduceMotion
+         NumberAnimation {
+             duration: cc.root.controlVisible ? tk.revealOpen : tk.revealClose
+             easing.type: Easing.OutCubic
+--- a/shell/modules/bar/barstyles/qsbar/panels/TooltipOverlay.qml
++++ b/shell/modules/bar/barstyles/qsbar/panels/TooltipOverlay.qml
+@@ -1,4 +1,5 @@
+ import QtQuick
++import shell.services
+ import Quickshell
+ import Quickshell.Wayland
+ import "../modules"
+@@ -15,7 +16,7 @@
+     WlrLayershell.layer: WlrLayer.Overlay
+     // "quickshell" (not "ryoku-tooltip") so the theme's match:namespace quickshell
+     // blur rule frosts the tooltip too - same ride-the-theme mechanism as the bar.
+-    WlrLayershell.namespace: "quickshell"
++    WlrLayershell.namespace: "ryoku-qsbar-tooltip"
+     mask: Region {}
+ 
+     readonly property int barBottom: root.v2BarHeight
+@@ -23,6 +24,7 @@
+ 
+     property real reveal: root.tooltipShown ? 1 : 0
+     Behavior on reveal {
++        enabled: !Perf.reduceMotion
+         NumberAnimation {
+             duration: root.tooltipShown ? 160 : 120
+             easing.type: root.tooltipShown ? Easing.OutCubic : Easing.InCubic
