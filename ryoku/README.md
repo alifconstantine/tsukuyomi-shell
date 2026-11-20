@@ -19,6 +19,8 @@ Pass the desktop ID of an installed browser. Omit it for a dock without a browse
 
 The nested session has a private D-Bus and runtime directory. Hardware actions, portals, and session locking require a real Tsukuyomi login. The default material is Frosted. To add the glass rim to the bar, open QS Bar Settings, choose Bar, then use Glass in the Surface section while Islands and Frost are selected.
 
+On an installed Tsukuyomi session, open **Tsukuyomi Store → Subshells** to install Gokko, then use **Tsukuyomi Hub → Subshells** to switch between Gokko and QS Bar. **Tsukuyomi Hub → Add-ons** manages installed shell plugins. For lockscreen themes, install a theme from **Tsukuyomi Hub → Lockscreen → Browse Tsukuyomi Store**, refresh the list, and choose **Use theme**. **Lock to preview** tests the active theme in the session locker. **Clockwork Orbital** restores the stock look.
+
 ## Build the desktop package
 
 `stage-profile.sh UPSTREAM_QUICKSHELL_DIR NEW_PROFILE_DIR [BROWSER_DESKTOP_ID]` stages Quickshell and the adjacent upstream `hypr/` tree for both entry points. The ISO builder ships the matching shell, Qt modules, Hyprland provider, and selected helpers. SDDM launches the Tsukuyomi session, which routes lock and idle through the existing `tsukuyomi-lock`. Tsukuyomi Store uses the packaged Ryoku catalogue and opens from Applications, the Hub, and QS Bar Settings. The catalogue needs a network connection on first use. [Tsukuyomi ISO build](https://github.com/alifconstantine/tsukuyomi)
