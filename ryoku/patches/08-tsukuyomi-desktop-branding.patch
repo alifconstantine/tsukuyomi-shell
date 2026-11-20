@@ -1,0 +1,730 @@
+--- a/hub/ReloadCoverControl.qml
++++ b/hub/ReloadCoverControl.qml
+@@ -71,5 +71,5 @@
+                     anchors.centerIn: parent
+                     visible: renderer.status === Loader.Error
+-                    text: UiPreferences.brandMark("力")
++                    text: UiPreferences.showJapaneseGloss ? "月" : "T"
+                     color: Tokens.inkFaint
+                     font.family: Tokens.jp
+@@ -198,5 +198,5 @@
+                 Layout.fillWidth: true
+                 visible: renderer.status === Loader.Error
+-                text: I18n.tr("Preview unavailable; reload still falls back to the Ryoku wordmark.")
++                text: I18n.tr("Preview unavailable; reload still falls back to the Tsukuyomi wordmark.")
+                 color: Tokens.ink
+                 font.family: Tokens.ui
+@@ -208,5 +208,5 @@
+                 Layout.fillWidth: true
+                 visible: renderer.status === Loader.Ready && renderer.item && renderer.item.mediaError
+-                text: I18n.tr("Couldn't preview this asset; shell reload will use the Ryoku wordmark.")
++                text: I18n.tr("Couldn't preview this asset; shell reload will use the Tsukuyomi wordmark.")
+                 color: Tokens.ink
+                 font.family: Tokens.ui
+--- a/hub/SchemaPage.qml
++++ b/hub/SchemaPage.qml
+@@ -103,5 +103,5 @@
+                 Rectangle { width: 16; height: 1; color: Tokens.ink; anchors.verticalCenter: parent.verticalCenter }
+                 Text {
+-                    text: UiPreferences.brandMark("力"); color: Tokens.ink; font.family: Tokens.jp
++                    text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp
+                     font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter
+                 }
+--- a/hub/pages/AnimationsPage.qml
++++ b/hub/pages/AnimationsPage.qml
+@@ -609,5 +609,5 @@
+                 color: Tokens.bone
+                 y: mv.trackY - height; x: 0
+-                Text { anchors.centerIn: parent; text: UiPreferences.brandMark("\u529b"); color: Tokens.inkOnBone; font.family: Tokens.jp; font.pixelSize: Tokens.fSmall }
++                Text { anchors.centerIn: parent; text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.inkOnBone; font.family: Tokens.jp; font.pixelSize: Tokens.fSmall }
+             }
+             NumberAnimation {
+@@ -658,5 +658,5 @@
+             spacing: Tokens.s2
+             Rectangle { width: 16; height: 1; color: Tokens.ink; anchors.verticalCenter: parent.verticalCenter }
+-            Text { text: UiPreferences.brandMark("力"); color: Tokens.ink; font.family: Tokens.jp; font.pixelSize: Tokens.fMicro; anchors.verticalCenter: parent.verticalCenter }
++            Text { text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp; font.pixelSize: Tokens.fMicro; anchors.verticalCenter: parent.verticalCenter }
+             Text {
+                 text: I18n.tr("DESKTOP"); color: Tokens.inkMuted; font.family: Tokens.ui
+@@ -700,5 +700,5 @@
+                     leftPadding: Tokens.s4; rightPadding: Tokens.s4
+                     topPadding: Tokens.s3; bottomPadding: Tokens.s1
+-                    text: I18n.tr("How fast the shell's own panels, menus and transitions move. Speed scales every Ryoku animation live; Reduce motion snaps them into place for comfort.") + (pg.hasWindowAnims ? " " + I18n.tr("Separate from the window animations below.") : "")
++                    text: I18n.tr("How fast the shell's own panels, menus and transitions move. Speed scales the shell animations live; Reduce motion snaps them into place for comfort.") + (pg.hasWindowAnims ? " " + I18n.tr("Separate from the window animations below.") : "")
+                     color: Tokens.inkMuted; font.family: Tokens.ui
+                     font.pixelSize: Tokens.fSmall; wrapMode: Text.WordWrap
+--- a/hub/pages/AppOverridesPage.qml
++++ b/hub/pages/AppOverridesPage.qml
+@@ -103,5 +103,5 @@
+             }
+             Text {
+-                text: UiPreferences.brandMark("力"); color: Tokens.ink; font.family: Tokens.jp
++                text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp
+                 font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter
+             }
+--- a/hub/pages/BarStudioPage.qml
++++ b/hub/pages/BarStudioPage.qml
+@@ -223,5 +223,5 @@
+                 Rectangle { width: 16; height: 1; color: Tokens.ink; anchors.verticalCenter: parent.verticalCenter }
+                 Text {
+-                    text: UiPreferences.brandMark("力"); color: Tokens.ink; font.family: Tokens.jp
++                    text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp
+                     font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter
+                 }
+@@ -487,5 +487,5 @@
+                         Text {
+                             width: parent.width
+-                            text: I18n.tr("Python keeps its bar, widgets and look in its own settings guide. Dock settings stay in Stage Editor; Ryoku's launcher, wallpaper picker and clipboard stay on their usual keys.")
++                            text: I18n.tr("Python keeps its bar, widgets and look in its own settings guide. Dock settings stay in Stage Editor; The launcher, wallpaper picker and clipboard stay on their usual keys.")
+                             color: Tokens.inkMuted
+                             font.family: Tokens.ui
+@@ -518,5 +518,5 @@
+                         Text {
+                             width: parent.width
+-                            text: I18n.tr("Nomarchy keeps Omarchy's configurable bar, panels and plugin menus while routing desktop actions through Ryoku.")
++                            text: I18n.tr("Nomarchy keeps Omarchy's configurable bar, panels and plugin menus while routing desktop actions through Tsukuyomi.")
+                             color: Tokens.inkMuted
+                             font.family: Tokens.ui
+--- a/hub/pages/ConnectionsPage.qml
++++ b/hub/pages/ConnectionsPage.qml
+@@ -2169,5 +2169,5 @@
+         readonly property string hsCon: "RyokuHotspot"
+         readonly property string hsIface: hs.wifiDev ? (hs.wifiDev.name || "wlan0") : "wlan0"
+-        property string hsName: "Ryoku"
++        property string hsName: "Tsukuyomi"
+         property string hsPw: ""
+         property bool hsActive: false
+@@ -2390,5 +2390,5 @@
+                     label: I18n.tr("Network name")
+                     value: hs.hsName
+-                    placeholder: "Ryoku"
++                    placeholder: "Tsukuyomi"
+                     editing: hs.hsEdit === "name"
+                     draft: hs.hsDraft
+@@ -2448,5 +2448,5 @@
+                 }
+                 Text {
+-                    text: UiPreferences.brandMark("\u529b"); color: Tokens.ink; font.family: Tokens.jp
++                    text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp
+                     font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter
+                 }
+--- a/hub/pages/ControlsPage.qml
++++ b/hub/pages/ControlsPage.qml
+@@ -162,5 +162,5 @@
+                 spacing: Tokens.s2
+                 Rectangle { width: 16; height: Tokens.border; color: Tokens.ink; anchors.verticalCenter: parent.verticalCenter }
+-                Text { text: UiPreferences.brandMark("力"); color: Tokens.ink; font.family: Tokens.jp; font.pixelSize: Tokens.fMicro; anchors.verticalCenter: parent.verticalCenter }
++                Text { text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp; font.pixelSize: Tokens.fMicro; anchors.verticalCenter: parent.verticalCenter }
+                 Text {
+                     text: I18n.tr("DESKTOP")
+--- a/hub/pages/DictationPage.qml
++++ b/hub/pages/DictationPage.qml
+@@ -289,5 +289,5 @@
+             }
+             Text {
+-                text: UiPreferences.brandMark("力"); color: Tokens.ink; font.family: Tokens.jp
++                text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp
+                 font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter
+             }
+--- a/hub/pages/DisplaysPage.qml
++++ b/hub/pages/DisplaysPage.qml
+@@ -896,5 +896,5 @@
+             }
+             Text {
+-                text: UiPreferences.brandMark("\u529b"); color: Tokens.ink; font.family: Tokens.jp
++                text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp
+                 font.pixelSize: Tokens.fMicro; anchors.verticalCenter: parent.verticalCenter
+             }
+@@ -1094,5 +1094,5 @@
+                     horizontalAlignment: Text.AlignHCenter
+                     wrapMode: Text.WordWrap
+-                    text: I18n.tr("The display backend looks out of date. Run 'ryoku deploy' (or update the desktop) and retry.")
++                    text: I18n.tr("The display backend looks out of date. Update Tsukuyomi and retry.")
+                     color: Tokens.inkMuted; font.family: Tokens.ui; font.pixelSize: Tokens.fSmall
+                 }
+@@ -1237,5 +1237,5 @@
+                         divider: true
+                         label: I18n.tr("SHOW BAR")
+-                        desc: I18n.tr("Show the active Ryoku bar style on this display.")
++                        desc: I18n.tr("Show the active bar style on this display.")
+                         source: "shell.json"
+                         controlWidth: 54
+--- a/hub/pages/FastfetchPage.qml
++++ b/hub/pages/FastfetchPage.qml
+@@ -304,6 +304,5 @@
+     }
+     readonly property var brandArt: [
+-        { "name": "RYOKU", "path": "~/.local/share/ryoku/assets/brand/fastfetch-emblem.png" },
+-        { "name": "MARK", "path": "~/.local/share/ryoku/assets/brand/logo-mark.png" },
++        { "name": "TSUKUYOMI", "path": "/usr/share/tsukuyomi/fastfetch/tsukuyomi-emblem.png" },
+         { "name": "LAOCOON", "path": pg.picsRoot + "/ryodecors/laocoon.png" },
+         { "name": "DAVID", "path": pg.picsRoot + "/ryodecors/david.png" },
+@@ -314,6 +313,5 @@
+         { "name": "NEEDLE", "path": pg.picsRoot + "/ryodecors/needle.png" },
+         { "name": "MIC", "path": pg.picsRoot + "/ryodecors/mic.png" },
+-        { "name": "CAMERA", "path": pg.picsRoot + "/ryodecors/camera.png" },
+-        { "name": "RASHIN", "path": pg.picsRoot + "/ryodecors/rashin-hero.png" }
++        { "name": "CAMERA", "path": pg.picsRoot + "/ryodecors/camera.png" }
+     ]
+     readonly property var readyArt: pg.brandArt.concat(pg.installedArt)
+@@ -712,5 +710,5 @@
+             }
+             Text {
+-                text: UiPreferences.brandMark("力"); color: Tokens.ink; font.family: Tokens.jp
++                text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp
+                 font.pixelSize: Tokens.fMicro; anchors.verticalCenter: parent.verticalCenter
+             }
+--- a/hub/pages/GpuPage.qml
++++ b/hub/pages/GpuPage.qml
+@@ -594,5 +594,5 @@
+             Rectangle { width: 16; height: 1; color: Tokens.ink; anchors.verticalCenter: parent.verticalCenter }
+             Text {
+-                text: UiPreferences.brandMark("力"); color: Tokens.ink; font.family: Tokens.jp
++                text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp
+                 font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter
+             }
+--- a/hub/pages/IconThemeSettings.qml
++++ b/hub/pages/IconThemeSettings.qml
+@@ -109,5 +109,5 @@
+             desc: root.error !== ""
+                 ? root.error
+-                : I18n.tr("The installed icon set used by apps and the Ryoku shell.")
++                : I18n.tr("The installed icon set used by apps and the shell.")
+
+             PickBar {
+--- a/hub/pages/ImportPage.qml
++++ b/hub/pages/ImportPage.qml
+@@ -195,5 +195,5 @@
+     function tierNote(t) {
+         if (t === "deep")
+-            return I18n.tr("Keybinds, rules and supported settings become Ryoku settings; anything without a typed mapping stays in the provider's user include.");
++            return I18n.tr("Keybinds, rules and supported settings become Tsukuyomi settings; anything without a typed mapping stays in the provider's user include.");
+         if (t === "layer")
+             return I18n.tr("Layered into this app's override file, which already wins over the shipped config.");
+@@ -464,5 +464,5 @@
+             }
+             Text {
+-                text: UiPreferences.brandMark("力"); color: Tokens.ink; font.family: Tokens.jp
++                text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp
+                 font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter
+             }
+@@ -479,5 +479,5 @@
+         Text {
+             width: Math.min(parent.width, 720)
+-            text: I18n.tr("Bring another setup onto Ryoku. Everything it touches is backed up.")
++            text: I18n.tr("Bring another setup onto Tsukuyomi. Everything it touches is backed up.")
+             color: Tokens.inkMuted; font.family: Tokens.ui
+             font.pixelSize: Tokens.fBody; wrapMode: Text.WordWrap
+@@ -606,5 +606,5 @@
+                     Repeater {
+                         model: [
+-                            { app: pg.providerCased(), note: "keybinds, rules and supported settings become Ryoku settings; unknown native nodes stay in the provider user include" },
++                            { app: pg.providerCased(), note: "keybinds, rules and supported settings become Tsukuyomi settings; unknown native nodes stay in the provider user include" },
+                             { app: "Kitty", note: "kitty.conf, layered into kitty/user.conf" },
+                             { app: "Fish", note: "config.fish, functions and conf.d, layered into fish/user.fish" },
+@@ -646,5 +646,5 @@
+                             Text {
+                                 width: parent.width
+-                                text: I18n.tr("Scan the detected source to bring its keybinds, rules and app configs onto Ryoku.")
++                                text: I18n.tr("Scan the detected source to bring its keybinds, rules and app configs onto Tsukuyomi.")
+                                 color: Tokens.inkMuted; font.family: Tokens.ui
+                                 font.pixelSize: Tokens.fSmall; wrapMode: Text.WordWrap
+@@ -908,5 +908,5 @@
+                     width: resCol.width
+                     visible: pg.conflictTotal > 0
+-                    text: I18n.tr("Each combo your config wants that Ryoku already uses. Keep Ryoku's shortcut, use yours (Ryoku unbinds its own so yours actually wins), or remap yours to a free chord. Untouched rows keep Ryoku's.")
++                    text: I18n.tr("Choose which shortcut to keep for each conflict. You can also assign your shortcut to a free key combination.")
+                     color: Tokens.inkMuted; font.family: Tokens.ui
+                     font.pixelSize: Tokens.fSmall; wrapMode: Text.WordWrap; lineHeight: 1.3
+@@ -969,5 +969,5 @@
+                             Text {
+                                 width: parent.width
+-                                text: "Ryoku" + ": " + (confRow.modelData.ryoku.desc || I18n.tr("a shipped shortcut"))
++                                text: "Tsukuyomi" + ": " + (confRow.modelData.ryoku.desc || I18n.tr("a shipped shortcut"))
+                                 color: Tokens.inkDim; font.family: Tokens.ui
+                                 font.pixelSize: Tokens.fSmall; wrapMode: Text.WordWrap
+@@ -1146,5 +1146,5 @@
+                     spacing: Tokens.s2
+                     Text {
+-                        text: pg.undone ? UiPreferences.text("空", "EMPTY") : UiPreferences.brandMark("力")
++                        text: pg.undone ? UiPreferences.text("空", "EMPTY") : UiPreferences.showJapaneseGloss ? "月" : "T"
+                         color: pg.undone ? Tokens.inkDim : Tokens.sun
+                         font.family: Tokens.jp; font.pixelSize: Tokens.fHero
+--- a/hub/pages/InputPage.qml
++++ b/hub/pages/InputPage.qml
+@@ -1009,5 +1009,5 @@
+             }
+             Text {
+-                text: UiPreferences.brandMark("力"); color: Tokens.ink; font.family: Tokens.jp
++                text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp
+                 font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter
+             }
+@@ -1994,5 +1994,5 @@
+                     desc: pg.mouseDaemonSeen
+                         ? I18n.tr("No mouse is connected. A laptop's own pad is never a mouse, so it stays out of this page.")
+-                        : I18n.tr("The shell daemon is not answering; ryoku doctor can repair the session.")
++                        : I18n.tr("The shell is not responding. Sign out and back in to retry.")
+                     changed: false
+                 }
+--- a/hub/pages/KeybindsPage.qml
++++ b/hub/pages/KeybindsPage.qml
+@@ -845,5 +845,5 @@
+             }
+             Text {
+-                text: UiPreferences.brandMark("力"); color: Tokens.ink; font.family: Tokens.jp
++                text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp
+                 font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter
+             }
+@@ -1789,6 +1789,6 @@
+                 wrapMode: Text.WordWrap
+                 text: pg.wmCfgPath
+-                    ? I18n.tr("Custom shortcuts layered over the ones Ryoku ships and kept in the Hub, so they show in the Shortcuts legend and get conflict-checked. Click record and press the combo -- even SUPER + Q is captured safely -- or type it, e.g. SUPER + J. Binds hand-written in %1 never appear here and are not conflict-checked.").arg(pg.wmCfgPath)
+-                    : I18n.tr("Custom shortcuts layered over the ones Ryoku ships and kept in the Hub, so they show in the Shortcuts legend and get conflict-checked. Click record and press the combo -- even SUPER + Q is captured safely -- or type it, e.g. SUPER + J. Binds hand-written in the compositor's own config never appear here and are not conflict-checked.")
++                    ? I18n.tr("Custom shortcuts layered over the default shortcuts and kept in the Hub, so they show in the Shortcuts legend and get conflict-checked. Click record and press the combo -- even SUPER + Q is captured safely -- or type it, e.g. SUPER + J. Binds hand-written in %1 never appear here and are not conflict-checked.").arg(pg.wmCfgPath)
++                    : I18n.tr("Custom shortcuts layered over the default shortcuts and kept in the Hub, so they show in the Shortcuts legend and get conflict-checked. Click record and press the combo -- even SUPER + Q is captured safely -- or type it, e.g. SUPER + J. Binds hand-written in the compositor's own config never appear here and are not conflict-checked.")
+                 color: Tokens.inkMuted; font.family: Tokens.ui; font.pixelSize: Tokens.fSmall
+                 lineHeight: 1.3
+--- a/hub/pages/LauncherPage.qml
++++ b/hub/pages/LauncherPage.qml
+@@ -323,5 +323,5 @@
+             }
+             Text {
+-                text: UiPreferences.brandMark("\u529b"); color: Tokens.ink; font.family: Tokens.jp
++                text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp
+                 font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter
+             }
+--- a/hub/pages/LayerRulesPage.qml
++++ b/hub/pages/LayerRulesPage.qml
+@@ -158,5 +158,5 @@
+             }
+             Text {
+-                text: UiPreferences.brandMark("力"); color: Tokens.ink; font.family: Tokens.jp
++                text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp
+                 font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter
+             }
+--- a/hub/pages/OverlaysPage.qml
++++ b/hub/pages/OverlaysPage.qml
+@@ -26,6 +26,6 @@
+     function tryNotification() {
+         Quickshell.execDetached([
+-            "notify-send", "-a", I18n.tr("Ryoku"),
+-            I18n.tr("Ryoku notification"),
++            "notify-send", "-a", I18n.tr("Tsukuyomi"),
++            I18n.tr("Test notification"),
+             I18n.tr("This is how your notifications look.")
+         ]);
+--- a/hub/pages/PerformancePage.qml
++++ b/hub/pages/PerformancePage.qml
+@@ -306,5 +306,5 @@
+             }
+             Text {
+-                text: UiPreferences.brandMark("力"); color: Tokens.ink; font.family: Tokens.jp
++                text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp
+                 font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter
+             }
+--- a/hub/pages/PluginsPage.qml
++++ b/hub/pages/PluginsPage.qml
+@@ -570,5 +570,5 @@
+                                     Text {
+                                         anchors.verticalCenter: parent.verticalCenter
+-                                        text: offer.modelData.bundled ? I18n.tr("bundled with Ryoku") : (offer.modelData.installed ? I18n.tr("installed") : (offer.modelData.desc || ""))
++                                        text: offer.modelData.bundled ? I18n.tr("bundled with the desktop") : (offer.modelData.installed ? I18n.tr("installed") : (offer.modelData.desc || ""))
+                                         color: Tokens.inkMuted; font.family: Tokens.ui; font.pixelSize: Tokens.fSmall
+                                         elide: Text.ElideRight
+--- a/hub/pages/ProfilePage.qml
++++ b/hub/pages/ProfilePage.qml
+@@ -101,5 +101,5 @@
+
+     readonly property var paletteModel: SysInfo.sysPalette.length > 0 ? SysInfo.sysPalette.split(",") : Scheme.ramp
+-    readonly property string barcodeText: I18n.tr("RYOKU-") + SysInfo.codename.toUpperCase() + "-" + (pg.installDate.length > 0 ? pg.installDate : I18n.tr("UNKNOWN"))
++    readonly property string barcodeText: I18n.tr("TSUKUYOMI-") + SysInfo.codename.toUpperCase() + "-" + (pg.installDate.length > 0 ? pg.installDate : I18n.tr("UNKNOWN"))
+
+     // customization: read from ProfileStore with the plate's built-in default, so
+@@ -626,5 +626,5 @@
+             anchors.centerIn: parent
+             rotation: -90
+-            text: pg.f("text.marginalia", I18n.tr("RYOKU · %1 · KERNEL %2 · SHOT ON BLACK").arg(pg.fv(SysInfo.codename)).arg(pg.fv(SysInfo.sysKernel)))
++            text: pg.f("text.marginalia", I18n.tr("TSUKUYOMI · %1 · KERNEL %2").arg(pg.fv(SysInfo.codename)).arg(pg.fv(SysInfo.sysKernel)))
+             color: Tokens.inkFaint
+             font.family: Tokens.mono
+@@ -680,5 +680,5 @@
+                 Text {
+                     anchors.verticalCenter: parent.verticalCenter
+-                    text: UiPreferences.brandMark("力")
++                    text: UiPreferences.showJapaneseGloss ? "月" : "T"
+                     color: Tokens.inkDim
+                     font.family: Tokens.jp
+@@ -1048,5 +1048,5 @@
+     PickFile {
+         id: importDlg
+-        title: I18n.tr("Open a Ryoku profile")
++        title: I18n.tr("Open a desktop profile")
+         fileFilters: ["*.ryoprofile"]
+         startFolder: "file://" + (Quickshell.env("HOME") || "")
+--- a/hub/pages/RecordingPage.qml
++++ b/hub/pages/RecordingPage.qml
+@@ -561,5 +561,5 @@
+             }
+             Text {
+-                text: UiPreferences.brandMark("力"); color: Tokens.ink; font.family: Tokens.jp
++                text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp
+                 font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter
+             }
+@@ -576,5 +576,5 @@
+         Text {
+             width: Math.min(parent.width, 720)
+-            text: I18n.tr("How Ryoku records: quality, encoder, and where files land.")
++            text: I18n.tr("Choose recording quality, the encoder, and where files are saved.")
+             color: Tokens.inkMuted; font.family: Tokens.ui
+             font.pixelSize: Tokens.fBody; wrapMode: Text.WordWrap
+--- a/hub/pages/SessionPage.qml
++++ b/hub/pages/SessionPage.qml
+@@ -192,5 +192,5 @@
+             }
+             Text {
+-                text: UiPreferences.brandMark("力"); color: Tokens.ink; font.family: Tokens.jp
++                text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp
+                 font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter
+             }
+--- a/hub/pages/WindowRulesPage.qml
++++ b/hub/pages/WindowRulesPage.qml
+@@ -172,5 +172,5 @@
+             }
+             Text {
+-                text: UiPreferences.brandMark("力"); color: Tokens.ink; font.family: Tokens.jp
++                text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp
+                 font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter
+             }
+--- a/hub/pages/users/AddPersonDialog.qml
++++ b/hub/pages/users/AddPersonDialog.qml
+@@ -129,5 +129,5 @@
+                 }
+                 Text {
+-                    text: I18n.tr("A separate Ryoku account")
++                    text: I18n.tr("A separate desktop account")
+                     color: Tokens.ink
+                     font.family: Tokens.display
+--- a/hub/schema/GlobalPage.js
++++ b/hub/schema/GlobalPage.js
+@@ -36,5 +36,5 @@
+         "key": "general.clock_format_24_h",
+         "label": "24-hour time",
+-        "desc": "Use 24-hour time everywhere in Ryoku. Turn off for 12-hour time with AM/PM.",
++        "desc": "Use 24-hour time throughout the desktop. Turn off for 12-hour time with AM/PM.",
+         "ctl": "sw",
+         "src": "shell"
+@@ -68,5 +68,5 @@
+         "key": "showJapaneseGloss",
+         "label": "Japanese glosses",
+-        "desc": "Show Ryoku's Japanese glosses, decorative text and mark across the desktop. Off keeps English and Latin marks; CJK fonts, language support and your content are unaffected.",
++        "desc": "Show Japanese glosses, decorative text and mark across the desktop. Off keeps English and Latin marks; CJK fonts, language support and your content are unaffected.",
+         "ctl": "sw",
+         "src": "shell"
+--- a/hub/schema/GpuPage.js
++++ b/hub/schema/GpuPage.js
+@@ -14,5 +14,5 @@
+     {
+         "tab": "",
+-        "group": "RYOKU RENDERS ON",
++        "group": "GRAPHICS MODE",
+         "key": "AQ_DRM_DEVICES",
+         "label": "Graphics mode",
+@@ -255,5 +255,5 @@
+     {
+         "tab": "",
+-        "group": "RYOKU RENDERS ON",
++        "group": "GRAPHICS MODE",
+         "key": "",
+         "label": "Graphics mode explainer",
+--- a/hub/schema/KeybindsPage.js
++++ b/hub/schema/KeybindsPage.js
+@@ -68,5 +68,5 @@
+         "tab": "Custom", "group": "CUSTOM",
+         "label": "Custom shortcuts",
+-        "desc": "Add your own key combos layered over the ones Ryoku ships",
++        "desc": "Add your own key combos layered over the default shortcuts",
+         "opts": ["custom", "add", "record", "command", "run", "bind"]
+     }
+--- a/hub/schema/SessionPage.js
++++ b/hub/schema/SessionPage.js
+@@ -12,5 +12,5 @@
+         "key": "desktop.autostart",
+         "label": "Autostart command",
+-        "desc": "Runs once at login, on top of Ryoku's own autostart.",
++        "desc": "Runs once at login, on top of the desktop defaults.",
+         "ctl": "list",
+         "src": "desktop.json"
+--- a/reload-cover/ReloadMedia.qml
++++ b/reload-cover/ReloadMedia.qml
+@@ -70,10 +70,15 @@
+         visible: root.showingDefault
+
+-        Image {
++        Text {
+             id: logo
+             anchors.fill: parent
+-            source: "assets/logo.png"
+-            sourceSize.width: Math.round(root.defaultLogoWidth)
+-            fillMode: Image.PreserveAspectFit
++            text: "TSUKUYOMI"
++            color: "#eae2d5"
++            font.family: "sans-serif"
++            font.pixelSize: height * 0.56
++            font.weight: Font.DemiBold
++            font.letterSpacing: height * 0.08
++            horizontalAlignment: Text.AlignHCenter
++            verticalAlignment: Text.AlignVCenter
+         }
+
+--- a/ryoshot/Beautify.qml
++++ b/ryoshot/Beautify.qml
+@@ -661,5 +661,5 @@
+                 Text {
+                     anchors.verticalCenter: parent.verticalCenter
+-                    text: "<b>" + beautify.userName + "</b><font color=\"#f5b53f\">@RyokuArch</font>"
++                    text: "<b>" + beautify.userName + "</b><font color=\"#f5b53f\">@Tsukuyomi</font>"
+                     textFormat: Text.StyledText
+                     color: "#ffffff"
+--- a/ryoshot/shell.qml
++++ b/ryoshot/shell.qml
+@@ -833,11 +833,11 @@
+     function notifySend(title, body) {
+         Quickshell.execDetached(body && body.length > 0
+-            ? ["notify-send", "-a", "ryoku", title, body]
+-            : ["notify-send", "-a", "ryoku", title]);
++            ? ["notify-send", "-a", "Tsukuyomi", title, body]
++            : ["notify-send", "-a", "Tsukuyomi", title]);
+     }
+
+     /** A saved shot carries its own thumbnail, so the toast shows the result. */
+     function notifyShot(title, path) {
+-        Quickshell.execDetached(["notify-send", "-a", "ryoku", "-i", path, title, path]);
++        Quickshell.execDetached(["notify-send", "-a", "Tsukuyomi", "-i", path, title, path]);
+     }
+
+@@ -877,5 +877,5 @@
+     function notifyColorCopied(value) {
+         Quickshell.execDetached(["sh", "-c",
+-            "sw=$(mktemp --suffix=.png); if magick -size 96x96 xc:\"$1\" \"$sw\" 2>/dev/null; then notify-send -a ryoku -i \"$sw\" \"$2\" \"$1\"; (sleep 5; rm -f \"$sw\") & else notify-send -a ryoku \"$2\" \"$1\"; fi",
++            "sw=$(mktemp --suffix=.png); if magick -size 96x96 xc:\"$1\" \"$sw\" 2>/dev/null; then notify-send -a Tsukuyomi -i \"$sw\" \"$2\" \"$1\"; (sleep 5; rm -f \"$sw\") & else notify-send -a Tsukuyomi \"$2\" \"$1\"; fi",
+             "sh", value, I18n.tr("Colour copied")]);
+     }
+--- a/shell/modules/bar/barstyles/qsbar/Theme.qml
++++ b/shell/modules/bar/barstyles/qsbar/Theme.qml
+@@ -2821,5 +2821,5 @@
+     }
+     function launcherLogoTextLabel(id) {
+-        return String(id).toUpperCase()
++        return id === "ryoku" ? "TSUKUYOMI" : String(id).toUpperCase()
+     }
+     // omarchy's U+E900 needs a font Ryoku doesn't ship, so it's absent here and
+@@ -2827,7 +2827,7 @@
+     function launcherLogoIconGlyph(id) {
+         if (id === "ryoku")
+-            return UiPreferences.brandMark("力")
++            return UiPreferences.showJapaneseGloss ? "月" : "T"
+         var c = launcherLogoIconCodes[id]
+-        return c !== undefined ? String.fromCodePoint(c) : UiPreferences.brandMark("力")
++        return c !== undefined ? String.fromCodePoint(c) : (UiPreferences.showJapaneseGloss ? "月" : "T")
+     }
+     function launcherLogoIconFont(id) {
+--- a/shell/modules/bar/barstyles/qsbar/controlcenter/routes/IdentityRoute.qml
++++ b/shell/modules/bar/barstyles/qsbar/controlcenter/routes/IdentityRoute.qml
+@@ -88,6 +88,6 @@
+                         Repeater {
+                             model: [
+-                                { mode: "text", label: I18n.tr("Wordmark"), glyph: "RYOKU" },
+-                                { mode: "icon", label: I18n.tr("Glyph"),    glyph: UiPreferences.brandMark("\u529b") }
++                                { mode: "text", label: I18n.tr("Wordmark"), glyph: "TSUKUYOMI" },
++                                { mode: "icon", label: I18n.tr("Glyph"),    glyph: UiPreferences.showJapaneseGloss ? "月" : "T" }
+                             ]
+
+--- a/shell/modules/dock/ii/settings/ScreenshotsConfig.qml
++++ b/shell/modules/dock/ii/settings/ScreenshotsConfig.qml
+@@ -22,5 +22,5 @@
+         NoticeBox {
+             Layout.fillWidth: true
+-            text: Translation.tr("Leave it empty to follow the folder selected in Ryoku's screenshot tool.")
++            text: Translation.tr("Leave it empty to follow the folder selected in the screenshot tool.")
+         }
+     }
+--- a/shell/modules/gamebar/cards/VoiceCard.qml
++++ b/shell/modules/gamebar/cards/VoiceCard.qml
+@@ -85,6 +85,6 @@
+         case "auth_required":
+             return card.voice.companionNeeded
+-                ? I18n.tr("Vesktop needs its voice companion before Ryoku can read the call.")
+-                : I18n.tr("Allow Ryoku to read and control your Discord voice state.");
++                ? I18n.tr("Vesktop needs its voice companion before the Game Bar can read the call.")
++                : I18n.tr("Allow the Game Bar to read and control your Discord voice state.");
+         case "authorizing": return I18n.tr("Confirm the request in Discord.");
+         case "unavailable": return I18n.tr("Discord's voice socket is not reachable. Retry in a moment.");
+--- a/shell/modules/phone/KdeConnectService.qml
++++ b/shell/modules/phone/KdeConnectService.qml
+@@ -1955,5 +1955,5 @@
+             return;
+         }
+-        root.actionFeedback(I18n.tr("Configure wireless debugging in Ryoku Settings"), false);
++        root.actionFeedback(I18n.tr("Configure wireless debugging in Tsukuyomi Hub"), false);
+     }
+
+--- a/shell/modules/phone/PhoneBridge.qml
++++ b/shell/modules/phone/PhoneBridge.qml
+@@ -452,5 +452,5 @@
+         function ping(): string {
+             if (!KdeConnectService.activeReachable) return root.fail(I18n.tr("The phone is not connected"))
+-            KdeConnectService.sendPing(KdeConnectService.activeDeviceId, I18n.tr("Ping from Ryoku"))
++            KdeConnectService.sendPing(KdeConnectService.activeDeviceId, I18n.tr("Ping from Tsukuyomi"))
+             return root.ok()
+         }
+--- a/shell/modules/phone/PhoneCameraService.qml
++++ b/shell/modules/phone/PhoneCameraService.qml
+@@ -78,5 +78,5 @@
+         }
+         if (!root.videoDevice) {
+-            root.lastError = I18n.tr("No Ryoku Phone camera device is available. Enable Phone in Ryoku Settings, then reload the v4l2loopback module.")
++            root.lastError = I18n.tr("No phone camera is available. Enable Phone in Tsukuyomi Hub, then reload the v4l2loopback module.")
+             root.errorOccurred(root.lastError)
+             return
+--- a/shell/modules/sidebar/ControlsSettingsPopup.qml
++++ b/shell/modules/sidebar/ControlsSettingsPopup.qml
+@@ -280,5 +280,5 @@
+         Text {
+             width: parent.width
+-            text: I18n.tr("OPEN IN RYOKU HUB")
++            text: I18n.tr("OPEN IN TSUKUYOMI HUB")
+             color: Tokens.inkMuted
+             font.family: Tokens.mono
+--- a/shell/shell.qml
++++ b/shell/shell.qml
+@@ -698,5 +698,5 @@
+     CustomShortcut {
+         name: "barToggle"
+-        description: I18n.tr("Toggle the Ryoku frame bar on the active monitor")
++        description: I18n.tr("Toggle the desktop bar on the active monitor")
+         onPressed: root.toggleSurface("barToggle")
+     }
+--- a/welcome/BarCard.qml
++++ b/welcome/BarCard.qml
+@@ -68,5 +68,5 @@
+             visible: root.recommended
+             width: parent.width
+-            text: I18n.tr("RYOKU DEFAULT")
++            text: I18n.tr("TSUKUYOMI DEFAULT")
+             color: root.selected ? Tokens.inkOnBoneDim : Tokens.inkFaint
+             font.family: Tokens.mono
+--- a/welcome/PageDone.qml
++++ b/welcome/PageDone.qml
+@@ -25,11 +25,14 @@
+             spacing: Tokens.s5
+
+-            Image {
++            Text {
+                 anchors.horizontalCenter: parent.horizontalCenter
+                 width: 58
+                 height: 58
+-                source: Qt.resolvedUrl("art/logo-mark.svg")
+-                fillMode: Image.PreserveAspectFit
+-                sourceSize: Qt.size(116, 116)
++                text: UiPreferences.showJapaneseGloss ? "月" : "T"
++                color: Tokens.ink
++                font.family: Tokens.jp
++                font.pixelSize: height * 0.8
++                horizontalAlignment: Text.AlignHCenter
++                verticalAlignment: Text.AlignVCenter
+             }
+
+@@ -47,5 +50,5 @@
+             Text {
+                 width: parent.width
+-                text: I18n.tr("Change anything later in Ryoku Hub, or tune QS Bar from its own settings.")
++                text: I18n.tr("Change anything later in Tsukuyomi Hub, or tune QS Bar from its own settings.")
+                 color: Tokens.inkDim
+                 font.family: Tokens.ui
+@@ -61,5 +64,5 @@
+
+                 Btn {
+-                    text: I18n.tr("Open Ryoku Hub")
++                    text: I18n.tr("Open Tsukuyomi Hub")
+                     onAct: root.runCommand(["ryoku-shell", "hub", "open"])
+                 }
+--- a/welcome/PageEssentials.qml
++++ b/welcome/PageEssentials.qml
+@@ -12,5 +12,5 @@
+         { chord: I18n.tr("Super + Space"), title: I18n.tr("Launcher"), description: I18n.tr("Find apps and files."), command: ["ryoku-shell", "launcher"] },
+         { chord: I18n.tr("Alt + Space"), title: I18n.tr("AI bar"), description: I18n.tr("Ask a quick question."), command: ["ryoku-shell", "ask"] },
+-        { chord: I18n.tr("Super + comma"), title: I18n.tr("Ryoku Hub"), description: I18n.tr("Change system and desktop settings."), command: ["ryoku-shell", "hub", "open"] },
++        { chord: I18n.tr("Super + comma"), title: I18n.tr("Tsukuyomi Hub"), description: I18n.tr("Change system and desktop settings."), command: ["ryoku-shell", "hub", "open"] },
+         { chord: I18n.tr("Super + Escape"), title: I18n.tr("Quick settings"), description: I18n.tr("Open controls and session actions."), command: ["ryoku-shell", "quicksettings"] },
+         { chord: I18n.tr("Super + K"), title: I18n.tr("Kit"), description: I18n.tr("Shortcuts, commands, your phone and quick tools."), command: ["ryoku-kit"] },
+--- a/welcome/PageHello.qml
++++ b/welcome/PageHello.qml
+@@ -65,15 +65,18 @@
+                 spacing: Tokens.s5
+
+-                Image {
++                Text {
+                     width: 64
+                     height: 64
+-                    source: Qt.resolvedUrl("art/logo-mark.svg")
+-                    fillMode: Image.PreserveAspectFit
+-                    sourceSize: Qt.size(128, 128)
++                    text: UiPreferences.showJapaneseGloss ? "月" : "T"
++                    color: Tokens.ink
++                    font.family: Tokens.jp
++                    font.pixelSize: height * 0.8
++                    horizontalAlignment: Text.AlignHCenter
++                    verticalAlignment: Text.AlignVCenter
+                 }
+
+                 Text {
+                     width: parent.width
+-                    text: I18n.tr("Welcome to Ryoku")
++                    text: I18n.tr("Welcome to Tsukuyomi")
+                     color: Tokens.ink
+                     font.family: Tokens.display
+--- a/welcome/PageMake.qml
++++ b/welcome/PageMake.qml
+@@ -151,5 +151,5 @@
+                     Text {
+                         width: parent.width
+-                        text: I18n.tr("Choose a picture or live wall. Ryoku follows its colours automatically.")
++                        text: I18n.tr("Choose a picture or live wall. Enable Match wallpaper to use its colours across the desktop.")
+                         color: Tokens.inkDim
+                         font.family: Tokens.ui
+--- a/welcome/Welcome.qml
++++ b/welcome/Welcome.qml
+@@ -133,10 +133,13 @@
+             spacing: Tokens.s3
+
+-            Image {
++            Text {
+                 width: 32
+                 height: 32
+-                source: Qt.resolvedUrl("art/logo-mark.svg")
+-                fillMode: Image.PreserveAspectFit
+-                sourceSize: Qt.size(64, 64)
++                text: UiPreferences.showJapaneseGloss ? "月" : "T"
++                color: Tokens.ink
++                font.family: Tokens.jp
++                font.pixelSize: height * 0.8
++                horizontalAlignment: Text.AlignHCenter
++                verticalAlignment: Text.AlignVCenter
+             }
+
+@@ -146,5 +149,5 @@
+
+                 Text {
+-                    text: I18n.tr("RYOKU")
++                    text: "TSUKUYOMI"
+                     color: Tokens.ink
+                     font.family: Tokens.ui
+--- a/welcome/shell.qml
++++ b/welcome/shell.qml
+@@ -10,5 +10,5 @@
+         id: win
+
+-        title: I18n.tr("Welcome to Ryoku")
++        title: I18n.tr("Welcome to Tsukuyomi")
+         readonly property int fitW: win.screen
+             ? Math.min(1180, win.screen.width - 24) : 1180
