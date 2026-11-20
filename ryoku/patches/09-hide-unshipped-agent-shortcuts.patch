@@ -1,0 +1,56 @@
+--- a/shell/shell.qml
++++ b/shell/shell.qml
+@@ -1142,9 +1142,4 @@
+     }
+     CustomShortcut {
+-        name: "ask"
+-        description: I18n.tr("Ask Rashin")
+-        onPressed: root.toggleSurface("ask")
+-    }
+-    CustomShortcut {
+         name: "compress"
+         description: I18n.tr("Open Tools to compress media")
+--- a/shell/modules/launcher/shared/HelpPanel.qml
++++ b/shell/modules/launcher/shared/HelpPanel.qml
+@@ -21,6 +21,5 @@
+         { k: "=",      d: I18n.tr("calculator") },
+         { k: "?",      d: I18n.tr("web search (supports !bangs)") },
+-        { k: "@",      d: I18n.tr("live radio: @lofi tunes in, @stop tunes out") },
+-        { k: "\\",     d: I18n.tr("ask the Rashin agent (one terse answer)") }
++        { k: "@",      d: I18n.tr("live radio: @lofi tunes in, @stop tunes out") }
+     ]
+     readonly property var keyRows: [
+--- a/shell/modules/launcher/variants/main/Launcher.qml
++++ b/shell/modules/launcher/variants/main/Launcher.qml
+@@ -88,5 +88,5 @@
+     // "\" prefix: a one-shot quick ask to the Rashin agent. No provider claims
+     // it; the panel owns the whole body and the Enter key while active.
+-    readonly property bool askMode: query.length > 0 && query[0] === "\\"
++    readonly property bool askMode: false
+     readonly property string askQuestion: askMode ? query.slice(1).replace(/^\s+/, "") : ""
+     // an async provider is resolving the current query and nothing has come back
+--- a/shell/modules/launcher/variants/hero/Launcher.qml
++++ b/shell/modules/launcher/variants/hero/Launcher.qml
+@@ -66,6 +66,5 @@
+     readonly property bool help: activeMode === "help"
+     readonly property bool bodyOpen: activeMode !== "rest"
+-    readonly property bool askMode: activeMode === "special"
+-        && query.length > 0 && query.charAt(0) === "\\"
++    readonly property bool askMode: false
+     readonly property string askQuestion: askMode
+         ? query.slice(1).replace(/^\s+/, "") : ""
+@@ -528,13 +527,6 @@
+         closeShelf();
+         actionError = "";
+-        var next;
+-        if (query.length > 0 && query.charAt(0) === "\\")
+-            next = { mode: "special", query: query };
+-        else
+-            next = LauncherState.resolveTypedPrefix(
+-                activeMode, query, Dispatcher.prefixes);
++        var next = LauncherState.resolveTypedPrefix(activeMode, query, Dispatcher.prefixes);
+         activeMode = next.mode;
+-        if (!(query.length > 0 && query.charAt(0) === "\\"))
+-            drawer.resetAsk();
+         resetSelection();
+     }
