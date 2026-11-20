@@ -29,33 +29,34 @@
 +            { key: "animations", name: "Animations" } ] },
          { name: "COMPOSITOR", items: [
              { key: "windowmanager", name: "Window Manager", needs: { provider: true } }, { key: "plugins", name: "Plugins", needs: { cap: "plugins" } },
-@@ -157,6 +157,4 @@
+@@ -157,6 +157,5 @@
              { key: "recording", name: "Recording" }, { key: "dictation", name: "Dictation" }, { key: "fastfetch", name: "Fastfetch", adv: true },
              { key: "import", name: "Import config", adv: true, wired: true } ] },
 -        { name: "EXTEND", items: [
 -            { key: "addons", name: "Add-ons" }, { key: "rashin", name: "Rashin" } ] },
++        { name: "EXTEND", items: [ { key: "addons", name: "Add-ons" } ] },
          { name: "", items: [ { key: "credits", name: "Credits" } ] }
      ]
-@@ -507,5 +505,10 @@
+@@ -507,5 +506,10 @@
          return null;
      }
 -    function sectionAvailable(s) { var it = hub.itemFor(s); return it ? hub.needsMet(it) : true; }
 +    function sectionAvailable(s) {
-+        if (["addons", "rashin", "lockscreen", "updates"].indexOf(s) !== -1)
++        if (["rashin", "lockscreen", "updates"].indexOf(s) !== -1)
 +            return false;
 +        var it = hub.itemFor(s);
 +        return it ? hub.needsMet(it) : true;
 +    }
      // Whether the active provider backs at least one setting on this page, tested
      // against the effective row set under the same supports + modelsKey gate the
-@@ -926,5 +929,5 @@
+@@ -926,5 +930,5 @@
              property string markImage: ""
              property bool markTint: true
 -            property string name: "Ryoku"
 +            property string name: "Tsukuyomi"
              property var reloadCover: ReloadCoverModel.empty()
          }
-@@ -1134,9 +1137,7 @@
+@@ -1134,9 +1138,7 @@
                          anchors.verticalCenter: parent.verticalCenter
                          Text {
 -                            text: I18n.tr(SysInfo.sysDistro.toLowerCase().indexOf("cachyos") >= 0
@@ -68,30 +69,12 @@
 +                            font.family: Tokens.ui
                              font.pixelSize: 14; font.weight: Font.Medium; font.letterSpacing: 2.4
                          }
-@@ -1568,4 +1569,5 @@
+@@ -1568,4 +1570,5 @@
      Item {
          id: updatesBtn
 +        visible: false
          anchors { top: parent.top; right: parent.right }
          anchors.topMargin: Tokens.s4; anchors.rightMargin: Tokens.s6
---- a/hub/pages/LauncherPage.qml
-+++ b/hub/pages/LauncherPage.qml
-@@ -205,5 +205,5 @@
-         id: storeCatalog
-         command: ["ryostore", "catalog", "--category", "launchers"]
--        running: true
-+        running: false
-         stdout: StdioCollector {
-             onStreamFinished: {
-@@ -569,8 +569,4 @@
-                             }
-                         }
--                        Btn {
--                            text: I18n.tr("BROWSE RYOSTORE")
--                            onAct: pg.browseStore()
--                        }
-                     }
-                 }
 --- a/shell/modules/sidebar/SidebarChrome.qml
 +++ b/shell/modules/sidebar/SidebarChrome.qml
 @@ -88,5 +88,15 @@

@@ -29,7 +29,7 @@ draft=$(mktemp -d -- "$(dirname -- "$profile")/.tsukuyomi-preview.XXXXXXXX")
 trap 'rm -rf -- "$draft"' EXIT
 install -d "$draft/.config/quickshell" "$draft/.config/ryoku" "$draft/.local/share/applications" \
     "$draft/Pictures/Wallpapers"
-find "$quickshell" -mindepth 1 -maxdepth 1 ! -name ryostore \
+find "$quickshell" -mindepth 1 -maxdepth 1 \
     -exec cp -a -t "$draft/.config/quickshell/" -- {} +
 cp -a -- "$hypr" "$draft/.config/"
 sed -i 's/Ryoku Settings/Tsukuyomi Hub/g' "$draft/.config/hypr/modules/window_rules.lua"
@@ -54,6 +54,7 @@ printf '{"general":{"notifyOnWallpaperChange":false,"closeOnSelection":true},"ke
 install -m 644 "$here/../dots/.config/quickshell/ii/assets/images/default_wallpaper.webp" \
     "$draft/Pictures/Wallpapers/Black Hole.webp"
 install -m 644 "$here/tsukuyomi-launcher.desktop" "$draft/.local/share/applications/"
+install -m 644 "$here/tsukuyomi-store.desktop" "$draft/.local/share/applications/"
 install -m 644 "$here/ryoku-hub.desktop" "$draft/.local/share/applications/"
 for app in ryostore rashin-app; do
     printf '[Desktop Entry]\nType=Application\nName=%s\nHidden=true\n' "$app" \

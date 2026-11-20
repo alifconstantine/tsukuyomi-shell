@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Tsukuyomi Store
+Comment=Install themes, subshells, and desktop plugins
+Exec=ryostore open discover
+Icon=system-software-install
+Terminal=false
+Categories=System;Settings;
