@@ -1,0 +1,44 @@
+--- a/ryostore/Singletons/Store.qml
++++ b/ryostore/Singletons/Store.qml
+@@ -175,6 +175,11 @@
+         remoteProc.running = false;
+     }
+ 
++    function flatpakCommand(item, operation) {
++        const scope = item.metadata ? String(item.metadata.installation || "") : "";
++        return ["/usr/lib/tsukuyomi/flatpak-setup", operation, String(item.id), scope];
++    }
++
+     function install(item, dither, components) {
+         // A paused item, or one written for another window manager, stays listed
+         // but never downloads: install and update are refused here so no UI path
+@@ -189,6 +194,11 @@
+         installErrorKey = "";
+         root._failedOp = "";
+         _installError = "";
++        if (item.category === "flatpak") {
++            installProc.command = flatpakCommand(item, item.installed ? "update" : "install");
++            installProc.running = true;
++            return;
++        }
+         var cmd = ["ryostore", "install", String(item.category), String(item.id)];
+         // what you see is what you install: the catalogue leads with the colour
+         // original, so an install with no explicit choice takes that one
+@@ -215,7 +225,8 @@
+         installErrorKey = "";
+         root._failedOp = "";
+         _installError = "";
+-        installProc.command = ["ryostore", "remove", String(item.category), String(item.id)];
++        installProc.command = item.category === "flatpak" ? flatpakCommand(item, "remove")
++                : ["ryostore", "remove", String(item.category), String(item.id)];
+         installProc.running = true;
+     }
+ 
+@@ -380,6 +391,7 @@
+             if (code !== 0) {
+                 root.resetInstallProgress();
+                 root.installStage = "FAILED";
++                root.installErrorKey = root.busyKey;
+                 root.installError = root._installError.trim()
+                         || root.operationFailure(root._op);
+                 root._failedOp = root._op;

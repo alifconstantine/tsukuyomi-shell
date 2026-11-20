@@ -1,0 +1,189 @@
+--- a/ryostore/App.qml
++++ b/ryostore/App.qml
+@@ -136,6 +136,56 @@
+             ? String(selectedIndex + 1) + " / " + String(collection.length)
+             : ""
+     readonly property bool showHero: view === "discover" && categoryID === "" && !searchOpen && collection.length > 0
++    property string flatpakState: ""
++    property bool flatpakOffline: false
++    readonly property var flatpakCategory: Store.category("flatpak")
++    readonly property string flatpakMessage: {
++        switch (flatpakState) {
++        case "missing": return flatpakOffline
++                ? I18n.tr("Flatpak is not installed. Connect to the internet to set it up.")
++                : I18n.tr("Install Flatpak to get applications from Flathub.");
++        case "remote": return I18n.tr("Add the Flathub repository to install applications.");
++        case "ready":
++            if (flatpakOffline)
++                return I18n.tr("You are offline. Installed apps can still be opened.");
++            if (flatpakCategory && (flatpakCategory.offline || flatpakCategory.error))
++                return I18n.tr("Flathub catalogue unavailable. Try refreshing later.");
++        }
++        return "";
++    }
++
++    onAppsBrowseChanged: if (appsBrowse) flatpakStatus.running = true
++
++    Connections {
++        target: app.Window.window
++        function onActiveChanged() {
++            if (app.appsBrowse && app.Window.window.active)
++                flatpakStatus.running = true;
++        }
++    }
++
++    Process {
++        id: flatpakStatus
++        command: ["/usr/lib/tsukuyomi/flatpak-setup", "status"]
++        stdout: StdioCollector {
++            onStreamFinished: {
++                const state = text.trim().split("\n");
++                app.flatpakState = state[0] || "";
++                app.flatpakOffline = state.includes("offline");
++            }
++        }
++    }
++
++    Process {
++        id: flatpakSetup
++        command: ["kitty", "-e", "/usr/lib/tsukuyomi/flatpak-setup", "setup"]
++        onExited: code => {
++            flatpakStatus.running = true;
++            if (code === 0)
++                Store.refresh(true);
++        }
++    }
++
+     readonly property bool appsBrowse: categoryID === "flatpak" && view === "discover" && !searchOpen
+     readonly property bool categoryBrowse: view === "discover" && categoryID !== "" && !searchOpen
+     property string categoryQuery: ""
+@@ -166,7 +216,8 @@
+                   ? I18n.tr("%1 installed pieces, %2 ready to update.").arg(libraryCount).arg(updateCount)
+                   : I18n.tr("%1 installed pieces, all current.").arg(libraryCount))
+                : (currentCategory
+-                  ? String(currentCategory.description || I18n.tr("Browse this collection."))
++                  ? (categoryID === "flatpak" ? I18n.tr("Applications from Flathub, installed with Flatpak.")
++                     : String(currentCategory.description || I18n.tr("Browse this collection.")))
+                   : I18n.tr("A changing edit of additions from across Ryoku.")))
+     // The Themes category browses per provider through a subtab strip; the filter
+     // narrows the collection to one provider or to the installed library.
+@@ -838,12 +889,46 @@
+         }
+     }
+ 
++    Item {
++        id: flatpakNotice
++        anchors { top: appsTools.bottom; left: header.right; right: parent.right; margins: Tokens.s6 }
++        anchors.topMargin: 0
++        visible: app.appsBrowse && app.flatpakMessage !== ""
++        height: visible ? Math.max(44, flatpakNoticeText.implicitHeight + 12) : 0
++        enabled: !app.detailOpen
++
++        Text {
++            id: flatpakNoticeText
++            anchors { left: parent.left; right: setupFlatpak.visible ? setupFlatpak.left : parent.right }
++            anchors.rightMargin: setupFlatpak.visible ? Tokens.s4 : 0
++            anchors.verticalCenter: parent.verticalCenter
++            text: app.flatpakMessage
++            color: Tokens.inkMuted
++            font.family: Tokens.ui
++            font.pixelSize: Tokens.fBody
++            wrapMode: Text.WordWrap
++        }
++
++        Btn {
++            id: setupFlatpak
++            objectName: "tsukuyomi-store-setup-flatpak"
++            anchors { right: parent.right; verticalCenter: parent.verticalCenter }
++            visible: app.flatpakState === "missing" || app.flatpakState === "remote"
++            armed: !flatpakSetup.running && (app.flatpakState !== "missing" || !app.flatpakOffline)
++            text: flatpakSetup.running ? I18n.tr("SETTING UP") : I18n.tr("SET UP FLATHUB")
++            Accessible.role: Accessible.Button
++            Accessible.name: text
++            onAct: if (armed) flatpakSetup.running = true
++            Accessible.onPressAction: if (armed) flatpakSetup.running = true
++        }
++    }
++
+     ProductGrid {
+         id: productGrid
+         objectName: "ryostore-grid"
+         anchors {
+             left: header.right; leftMargin: Tokens.s6
+-            top: app.appsBrowse ? appsTools.bottom : stage.bottom
++            top: app.appsBrowse ? flatpakNotice.bottom : stage.bottom
+             right: parent.right; rightMargin: Tokens.s6
+             bottom: actionBar.top
+             topMargin: app.appsBrowse ? Tokens.s3 : 0
+--- a/ryostore/ProductDetail.qml
++++ b/ryostore/ProductDetail.qml
+@@ -1,4 +1,5 @@
+ import QtQuick
++import Quickshell
+ import Ryoku.Ui
+ import Ryoku.Ui.Singletons
+ import "lib/store.js" as StoreLogic
+@@ -73,6 +74,19 @@
+             && !!(actionItem.metadata && actionItem.metadata.community === true)
+     readonly property bool isOmarchyPlugin: String(actionItem.category || "") === "omarchy-plugins"
+     readonly property bool isFlathubApp: String(actionItem.category || "") === "flatpak"
++    readonly property bool canOpenFlatpak: isFlathubApp && actionItem.installed === true
++            && /^[A-Za-z_][A-Za-z0-9_-]*(\.[A-Za-z_][A-Za-z0-9_-]*){2,}$/.test(String(actionItem.id || ""))
++
++    function openFlatpak() {
++        if (!canOpenFlatpak || busyKey !== "")
++            return;
++        const install = actionItem.metadata ? actionItem.metadata.installation : "";
++        const args = ["flatpak", "run"];
++        if (install === "system" || install === "user")
++            args.push("--" + install);
++        args.push("--", String(actionItem.id));
++        Quickshell.execDetached(args);
++    }
+     readonly property bool isUnsandboxedPlugin: isCommunityPlugin || isOmarchyPlugin
+     readonly property string trustLabel: isFlathubApp
+             ? I18n.tr("FLATHUB %1").arg(String(actionItem.verificationStatus || "unverified").toUpperCase())
+@@ -724,7 +738,7 @@
+                                 - (communityWarningMark.visible
+                                    ? communityWarningMark.width + parent.spacing : 0)
+                         text: detail.isFlathubApp
+-                                ? I18n.tr("Flathub application. Ryostore does not review it. Check its source and permissions. New apps install system-wide when available (authorization may be required), otherwise through an existing user remote.")
++                                ? I18n.tr("Flathub application. Tsukuyomi Store does not review it. Check its source and permissions. New apps install system-wide when available (authorization may be required), otherwise through an existing user remote.")
+                                 : (detail.isOmarchyPlugin
+                                    ? (dossier.compact
+                                       ? I18n.tr("Runs unsandboxed with your shell permissions. Review the source before enabling.")
+@@ -858,9 +872,21 @@
+                     onAct: detail.triggerInstallAll()
+                 }
+ 
++                Btn {
++                    objectName: "tsukuyomi-store-open-flatpak"
++                    visible: detail.canOpenFlatpak
++                    armed: detail.busyKey === ""
++                    text: I18n.tr("OPEN")
++                    primary: true
++                    Accessible.role: Accessible.Button
++                    Accessible.name: text
++                    onAct: detail.openFlatpak()
++                    Accessible.onPressAction: detail.openFlatpak()
++                }
++
+                 InstallAction {
+                     objectName: "ryostore-detail-install"
+-                    visible: !detail.isBundle
++                    visible: !detail.isBundle && !(detail.canOpenFlatpak && installed)
+                     text: detail.busyKey === detail.actionKey && detail.installStage !== ""
+                             ? I18n.tr(detail.installStage)
+                             : (detail.competingLabel !== "" ? I18n.tr(detail.competingLabel)
+--- a/ryostore/lib/store.js
++++ b/ryostore/lib/store.js
+@@ -56,7 +56,8 @@
+ }
+ 
+ function unavailableReason(item) {
+-    return isUnavailable(item) ? String((item && item.unavailableReason) || "") : "";
++    const reason = isUnavailable(item) ? String((item && item.unavailableReason) || "") : "";
++    return reason.replace(/ Run ryoku doctor to set it up\.$/, " Set up Flathub in Store → Apps.");
+ }
+ 
+ // pluginKind classifies a plugin by its host surface. Sidebar-only plugins stay
