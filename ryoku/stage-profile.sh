@@ -13,6 +13,11 @@ if [[ ! -f $quickshell/shell/shell.qml || ! -f $quickshell/hub/shell.qml ]]; the
     echo "Invalid Ryoku Quickshell tree: $quickshell" >&2
     exit 1
 fi
+hypr="$(dirname -- "${quickshell%/}")/hypr"
+if [[ ! -f $hypr/modules/binds.lua ]]; then
+    echo "Missing Ryoku Hyprland config: $hypr" >&2
+    exit 1
+fi
 
 here=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 if [[ -e $profile || -L $profile ]]; then
@@ -26,16 +31,25 @@ install -d "$draft/.config/quickshell" "$draft/.config/ryoku" "$draft/.local/sha
     "$draft/Pictures/Wallpapers"
 find "$quickshell" -mindepth 1 -maxdepth 1 ! -name ryostore \
     -exec cp -a -t "$draft/.config/quickshell/" -- {} +
+cp -a -- "$hypr" "$draft/.config/"
+sed -i 's/Ryoku Settings/Tsukuyomi Hub/g' "$draft/.config/hypr/modules/window_rules.lua"
+sed -i '/hl\.dsp\.global("ryoku:ask")/d; /ryoku-summon Rashin /d; s/ryoku-restart-audio/systemctl --user restart pipewire.service pipewire-pulse.service wireplumber.service/' \
+    "$draft/.config/hypr/modules/binds.lua"
 
 jq --arg browser "${browser%.desktop}" \
     '.dock.pinned = (["tsukuyomi-launcher", "org.kde.dolphin"] +
         ([$browser] | map(select(length > 0))) + ["kitty"])' \
     "$here/shell.json" > "$draft/.config/ryoku/shell.json"
 printf '{"clockEnabled":false,"calendarEnabled":false}\n' > "$draft/.config/ryoku/widgets.json"
-printf '{"desktop":{"apps":{"files":"dolphin"}}}\n' > "$draft/.config/ryoku/desktop.json"
+jq -n --arg browser "$browser" '
+    {desktop:{apps:{files:"dolphin", browser:(
+        if $browser == "" then "xdg-open about:blank"
+        else "gtk-launch " + $browser end
+    )}}}' > "$draft/.config/ryoku/desktop.json"
 printf '{"enabled":false}\n' > "$draft/.config/ryoku/visualizer.json"
 printf '{"scheme":"dark","followWallpaper":false}\n' > "$draft/.config/ryoku/theme.json"
-printf '{"general":{"notifyOnWallpaperChange":false}}\n' > "$draft/.config/ryoku/ryogami.json"
+printf '{"general":{"notifyOnWallpaperChange":false,"closeOnSelection":true},"keys":{"apply":"enter"}}\n' \
+    > "$draft/.config/ryoku/ryogami.json"
 
 install -m 644 "$here/../dots/.config/quickshell/ii/assets/images/default_wallpaper.webp" \
     "$draft/Pictures/Wallpapers/Black Hole.webp"

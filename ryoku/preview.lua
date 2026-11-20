@@ -1,3 +1,9 @@
+package.path = os.getenv("HOME") .. "/.config/hypr/?.lua;" .. package.path
+require("modules.binds")
+require("modules.resize")
+require("modules.record")
+require("modules.ryoshot")
+
 hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1 })
 hl.config({ general = { border_size = 1, ["col.active_border"] = "rgba(ffffff33)" } })
 hl.layer_rule({
