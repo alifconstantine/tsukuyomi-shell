@@ -1,0 +1,215 @@
+--- a/ryostore/Singletons/Store.qml
++++ b/ryostore/Singletons/Store.qml
+@@ -31,7 +31,10 @@
+     property string revision: ""
+     property bool _forced: false
+     property string _checkOutput: ""
+-    property bool _reloadAfterCheck: false
++    property bool _checkPending: true
++    property bool _forceAfterCheck: false
++    property bool _shuttingDown: false
++    property string _warmedRevision: ""
+     property var remoteItems: []
+     property string remoteResultQuery: ""
+     property bool remoteSearching: false
+@@ -40,8 +43,6 @@
+     property string _remoteRunning: ""
+     property string _remoteOutput: ""
+     property string _remoteErrorText: ""
+-    property string _checkRevision: ""
+-    property bool _autoRefreshAttempted: false
+     property string _op: "install"            // which flow installProc is running
+     property string _failedOp: ""
+ 
+@@ -139,8 +140,18 @@
+     }
+ 
+     function refresh(force) {
++        if (checkProc.running) {
++            root._forceAfterCheck = root._forceAfterCheck || force === true;
++            return;
++        }
+         if (catalogProc.running)
+             return;
++        if (force) {
++            root._checkPending = false;
++            startupCheck.stop();
++        }
++        warmTimer.stop();
++        warmProc.running = false;
+         root._forced = force === true;
+         loading = true;
+         error = "";
+@@ -150,28 +161,13 @@
+         catalogProc.running = true;
+     }
+ 
+-    function refreshIfStale() {
+-        if (!root._autoRefreshAttempted && !catalogProc.running && !root.loading
+-                && root.revision !== "" && root._checkRevision !== ""
+-                && root.revision !== root._checkRevision) {
+-            root._autoRefreshAttempted = true;
+-            root.refresh(true);
+-        }
+-    }
+-
+-    // A lightweight upstream probe (registries only, no downloads): it lights the
+-    // refresh dot when ryostore has advanced past what the user last pulled,
+-    // without touching the shown catalogue.
+-    function check() {
+-        if (checkProc.running)
+-            return;
+-        root._checkOutput = "";
+-        checkProc.running = true;
+-    }
+-
+     // Stop every child process before the window tears down, so no fetch is in
+     // flight when the QML engine is destroyed -- a shutdown-crash guard.
+     function shutdown() {
++        root._shuttingDown = true;
++        startupCheck.stop();
++        warmTimer.stop();
++        warmProc.running = false;
+         catalogProc.running = false;
+         installProc.running = false;
+         checkProc.running = false;
+@@ -284,9 +280,37 @@
+         Quickshell.execDetached(["ryostore", "settings", String(item.category), String(item.id)]);
+     }
+ 
+-    Component.onCompleted: {
+-        refresh(false);
+-        check();
++    Component.onCompleted: refresh(false)
++
++    Timer {
++        id: startupCheck
++        interval: 1800
++        onTriggered: {
++            root._checkPending = false;
++            if (root.loading || root.busyKey !== "")
++                return;
++            root._checkOutput = "";
++            checkProc.running = true;
++        }
++    }
++
++    Timer {
++        id: warmTimer
++        interval: 1500
++        onTriggered: {
++            if (root.loading || checkProc.running || root.busyKey !== "" || root.offline
++                    || root.revision === "" || root.revision === root._warmedRevision)
++                return;
++            warmProc.revision = root.revision;
++            warmProc.running = true;
++        }
++    }
++
++    Process {
++        id: warmProc
++        property string revision: ""
++        command: ["ryostore", "warm"]
++        onExited: code => { if (code === 0) root._warmedRevision = warmProc.revision; }
+     }
+ 
+     Process {
+@@ -295,6 +319,8 @@
+         stderr: StdioCollector { onStreamFinished: root._catalogError = text }
+         onExited: code => {
+             root.loading = false;
++            if (root._shuttingDown)
++                return;
+             if (code !== 0) {
+                 root.error = root._catalogError.trim() || I18n.tr("Catalogue failed");
+                 if (root._clearBusyAfterRefresh) {
+@@ -307,19 +333,23 @@
+                 const next = JSON.parse(root._catalogOutput);
+                 if (!Array.isArray(next.categories) || !Array.isArray(next.items))
+                     throw new Error("catalogue arrays are missing");
++                // Keep delegates, selection and scroll in place when the probe
++                // only changed the snapshot timestamp.
++                if (JSON.stringify(next.categories) !== JSON.stringify(root.categories))
++                    root.categories = next.categories;
++                if (JSON.stringify(next.items) !== JSON.stringify(root.items))
++                    root.items = next.items;
+                 root.catalog = next;
+-                root.categories = next.categories.slice();
+-                root.items = next.items.slice();
+                 root.offline = next.offline === true;
+                 root.generatedAt = String(next.generatedAt || "");
+                 root.error = "";
+                 root.revision = String(next.revision || "");
+                 if (root._forced)
+                     root.updateAvailable = false;
+-                Qt.callLater(() => root.refreshIfStale());
+-                // Fill the on-disk asset cache out of band so the next open (and
+-                // this session's later scrolling) renders previews from disk.
+-                Quickshell.execDetached(["ryostore", "warm"]);
++                if (root._checkPending)
++                    startupCheck.restart();
++                else
++                    warmTimer.restart();
+                 if (root._clearBusyAfterRefresh) {
+                     root._clearBusyAfterRefresh = false;
+                     root.installStage = "COMPLETE";
+@@ -333,10 +363,6 @@
+                 }
+             }
+             root._pumpQueue();
+-            if (root._reloadAfterCheck) {
+-                root._reloadAfterCheck = false;
+-                root.refresh(false);
+-            }
+         }
+     }
+ 
+@@ -407,26 +433,28 @@
+         command: ["ryostore", "check"]
+         stdout: StdioCollector { onStreamFinished: root._checkOutput = text }
+         onExited: code => {
+-            if (code !== 0)
+-                return;
+-            const reloading = catalogProc.running;
+-            try {
+-                const res = JSON.parse(root._checkOutput);
+-                root.updateAvailable = res.updateAvailable === true;
+-                root._checkRevision = res.offline === true ? "" : String(res.revision || "");
+-                root.refreshIfStale();
+-            } catch (e) {
+-                // A malformed probe never asserts an update.
+-            }
+-            // The probe rebuilt the catalogue live and refreshed the launch
+-            // snapshot. Installed state is local and not part of the revision,
+-            // so a part installed outside the store (Settings, a terminal) would
+-            // otherwise stay missing until a manual refresh. A stale rebuild
+-            // started just above is already live, so it needs no second read.
+-            if (reloading)
+-                root._reloadAfterCheck = true;
+-            else if (!catalogProc.running)
+-                root.refresh(false);
++            if (root._shuttingDown)
++                return;
++            if (root._forceAfterCheck) {
++                root._forceAfterCheck = false;
++                root.refresh(true);
++                return;
++            }
++            if (code === 0) {
++                try {
++                    const res = JSON.parse(root._checkOutput);
++                    root.updateAvailable = res.updateAvailable === true;
++                    if (res.offline !== true) {
++                        // check writes a fresh snapshot, including install state
++                        // that is intentionally excluded from the revision hash.
++                        root.refresh(false);
++                        return;
++                    }
++                } catch (e) {
++                    // A malformed probe never asserts an update.
++                }
++            }
++            warmTimer.restart();
+         }
+     }
+ }
