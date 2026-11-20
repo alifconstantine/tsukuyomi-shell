@@ -1,0 +1,77 @@
+--- a/hub/pages/GpuPage.qml
++++ b/hub/pages/GpuPage.qml
+@@ -83,5 +83,4 @@
+         return h || p || null;
+     }
+-    readonly property string renderName: pg.renderGpu ? pg.renderGpu.model : I18n.tr("your GPU")
+     readonly property string dgpuName: pg.caps.passthrough ? pg.caps.passthrough.model : I18n.tr("the discrete GPU")
+
+@@ -110,5 +109,11 @@
+     }
+     readonly property string statusLine: {
+-        var s = I18n.tr("%1 renders here").arg(pg.renderName);
++        if (pg.capsError !== "")
++            return "";
++        if (!pg.capsLoaded)
++            return I18n.tr("Detecting graphics hardware…");
++        if (!pg.renderGpu)
++            return I18n.tr("Graphics adapter details are unavailable in this session.");
++        var s = pg.renderGpu.model || pg.renderGpu.driver;
+         if (pg.liveOk)
+             s += "  ·  " + pg.liveTemp + "°C  ·  " + pg.liveUtil + I18n.tr("% GPU");
+@@ -268,4 +273,5 @@
+             }
+             pg.capsError = capsErr.text.trim() || ("ryoku-hub gpu caps exited " + code);
++            console.warn(pg.capsError);
+         }
+     }
+@@ -598,5 +604,5 @@
+         }
+         Text {
+-            text: I18n.tr("Machine"); color: Tokens.ink
++            text: I18n.tr("Graphics & Power"); color: Tokens.ink
+             font.family: Tokens.display; font.pixelSize: Tokens.fTitle
+         }
+@@ -609,4 +615,5 @@
+         // live status line: one glance at what is happening right now.
+         Text {
++            visible: pg.statusLine !== ""
+             text: pg.statusLine
+             color: Tokens.inkDim; font.family: Tokens.ui
+@@ -654,20 +661,15 @@
+                         font.pixelSize: Tokens.fBody; font.weight: Font.DemiBold
+                     }
+-                    Text {
+-                        width: parent.width; wrapMode: Text.WordWrap
+-                        text: pg.capsError
+-                        color: Tokens.inkMuted; font.family: Tokens.mono; font.pixelSize: Tokens.fMicro
+-                    }
+                     Btn { text: I18n.tr("Retry"); primary: true; onAct: pg.reload() }
+                 }
+
+-                // ── RYOKU RENDERS ON ──
++                // ── GRAPHICS MODE ──
+                 SettingCard {
+                     width: gfxCol.colWidth
+-                    title: I18n.tr("RYOKU RENDERS ON")
++                    title: I18n.tr("GRAPHICS MODE")
+                     // Hybrid/Performance/Passthrough only mean something with a
+                     // second GPU to switch between; a single-GPU box always renders
+                     // on its one GPU, so hide the switcher rather than lock it.
+-                    visible: !!(pg.caps && pg.caps.host)
++                    visible: !!(pg.caps.host && pg.caps.passthrough)
+
+                     SettingRow {
+@@ -1121,4 +1123,5 @@
+                 SettingCard {
+                     width: gfxCol.colWidth
++                    visible: pg.ptPackagesAvailable || pg.caps.enabled === true
+                     title: I18n.tr("GPU PASSTHROUGH · ADVANCED")
+
+@@ -1128,5 +1131,5 @@
+                         topPadding: Tokens.s3; bottomPadding: Tokens.s1
+                         wrapMode: Text.WordWrap
+-                        text: I18n.tr("Free %1 from the desktop and bind it to vfio so a virtual machine can own it for near-native performance. This sets up the host only; you run the VM yourself (libvirt + Looking Glass). Everyday VMs in ryovm need none of this.").arg(pg.dgpuName)
++                        text: I18n.tr("Reserve %1 for a virtual machine using VFIO. Configure the guest separately in libvirt.").arg(pg.dgpuName)
+                         color: Tokens.inkMuted; font.family: Tokens.ui; font.pixelSize: Tokens.fSmall
+                     }
