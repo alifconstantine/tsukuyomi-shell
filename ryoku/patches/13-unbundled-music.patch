@@ -1,0 +1,48 @@
+--- a/shell/modules/desktop/music/MusicWidget.qml
++++ b/shell/modules/desktop/music/MusicWidget.qml
+@@ -335,9 +335,8 @@
+     }
+
+-    // corner button: opens the music app (default ryotunes / YouTube Music, or
+-    // whatever the user picked in Desktop Widgets). Above the sheet, so it works
+-    // whether or not a track is playing.
++    // Open the music app selected in Desktop Widgets.
+     Item {
+         id: openBtn
++        visible: root.musicApp.trim().length > 0
+         width: 26 * root.s
+         height: width
+@@ -369,5 +368,5 @@
+             id: tapOpen
+             onTapped: {
+-                const cmd = (root.musicApp && root.musicApp.length > 0) ? root.musicApp : "ryotunes";
++                const cmd = root.musicApp.trim();
+                 Spawn.runApp(["sh", "-c", cmd], { label: cmd.split(/\s+/)[0] || "music" });
+             }
+--- a/hub/SettingsSheet.qml
++++ b/hub/SettingsSheet.qml
+@@ -944,5 +944,5 @@
+                                                 elide: Text.ElideRight
+                                                 readonly property string cmd: String(sheet.val(srow.r))
+-                                                text: cmd.length ? cmd : I18n.tr("ryotunes (YouTube Music)")
++                                                text: cmd.length ? cmd : I18n.tr("Choose a music app")
+                                                 color: cmd.length ? Tokens.ink : Tokens.inkMuted
+                                                 font.family: Tokens.ui
+--- a/ryostore/App.qml
++++ b/ryostore/App.qml
+@@ -87,5 +87,6 @@
+
+     readonly property var searchableItems: Store.items.concat(app.remoteExtras)
+-            .filter(item => String(item.category || "") !== "omarchy-plugins" || app.nomarchyActive)
++            .filter(item => item.category !== "ryotunes-skins"
++                    && (item.category !== "omarchy-plugins" || app.nomarchyActive))
+             .map(item => {
+                 const copy = {};
+@@ -104,5 +105,6 @@
+     readonly property var decorFamily: ["decors", "launcher-images", "fastfetch-emblems"]
+     readonly property var navigationCategories: StoreLogic.barCategories(Store.categories, Store.items)
+-            .filter(category => Number(category.count || 0) > 0
++            .filter(category => category.id !== "ryotunes-skins"
++                    && Number(category.count || 0) > 0
+                     && app.decorFamily.indexOf(String(category.id || "")) <= 0
+                     && (String(category.id || "") !== "omarchy-plugins" || app.nomarchyActive))
