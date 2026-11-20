@@ -1,0 +1,9 @@
+--- a/hub/Hub.qml
++++ b/hub/Hub.qml
+@@ -546,5 +546,5 @@
+             "updates": "UpdatesPage", "rashin": "RashinPage",
+             "recording": "RecordingPage", "performance": "PerformancePage",
+-            "launcher": "LauncherPage", "lockscreen": "LockscreenPage",
++            "launcher": "LauncherPage", "lockscreen": "SessionLockscreenPage",
+             "fastfetch": "FastfetchPage", "addons": "AddonsPage",
+             "credits": "CreditsPage", "gamebar": "GameBarPage"

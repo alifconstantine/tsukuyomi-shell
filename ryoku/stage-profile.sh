@@ -31,6 +31,7 @@ install -d "$draft/.config/quickshell" "$draft/.config/ryoku" "$draft/.local/sha
     "$draft/Pictures/Wallpapers"
 find "$quickshell" -mindepth 1 -maxdepth 1 \
     -exec cp -a -t "$draft/.config/quickshell/" -- {} +
+install -m 644 "$here/SessionLockscreenPage.qml" "$draft/.config/quickshell/hub/pages/"
 cp -a -- "$hypr" "$draft/.config/"
 sed -i 's/Ryoku Settings/Tsukuyomi Hub/g' "$draft/.config/hypr/modules/window_rules.lua"
 sed -i '/hl\.dsp\.global("ryoku:ask")/d; /ryoku-summon Rashin /d; s/ryoku-restart-audio/systemctl --user restart pipewire.service pipewire-pulse.service wireplumber.service/' \

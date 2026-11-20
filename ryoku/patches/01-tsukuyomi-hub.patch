@@ -25,8 +25,7 @@
              { key: "displays", name: "Displays", needs: { cap: "monitorConfig" } }, { key: "connections", name: "Connections" },
              { key: "input", name: "Input" }, { key: "gpu", name: "Graphics & Power" } ] },
          { name: "LOOK", items: [
--            { key: "animations", name: "Animations" }, { key: "lockscreen", name: "Lockscreen" } ] },
-+            { key: "animations", name: "Animations" } ] },
+             { key: "animations", name: "Animations" }, { key: "lockscreen", name: "Lockscreen" } ] },
          { name: "COMPOSITOR", items: [
              { key: "windowmanager", name: "Window Manager", needs: { provider: true } }, { key: "plugins", name: "Plugins", needs: { cap: "plugins" } },
 @@ -157,6 +157,5 @@
@@ -42,7 +41,7 @@
      }
 -    function sectionAvailable(s) { var it = hub.itemFor(s); return it ? hub.needsMet(it) : true; }
 +    function sectionAvailable(s) {
-+        if (["rashin", "lockscreen", "updates"].indexOf(s) !== -1)
++        if (["rashin", "updates"].indexOf(s) !== -1)
 +            return false;
 +        var it = hub.itemFor(s);
 +        return it ? hub.needsMet(it) : true;
