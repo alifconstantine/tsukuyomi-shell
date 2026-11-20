@@ -1,0 +1,10 @@
+--- a/shell/modules/launcher/variants/hero/LauncherSurface.qml
++++ b/shell/modules/launcher/variants/hero/LauncherSurface.qml
+@@ -111,5 +111,6 @@
+     anchors { top: true; bottom: true; left: true; right: true }
+     exclusionMode: ExclusionMode.Ignore
+-    WlrLayershell.namespace: "launcher"
++    // The optional frost in the result drawer is drawn from a frozen capture.
++    WlrLayershell.namespace: "launcher-noblur"
+     WlrLayershell.layer: WlrLayer.Overlay
+     WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
