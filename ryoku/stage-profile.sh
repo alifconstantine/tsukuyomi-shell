@@ -36,6 +36,14 @@ cp -a -- "$hypr" "$draft/.config/"
 sed -i 's/Ryoku Settings/Tsukuyomi Hub/g' "$draft/.config/hypr/modules/window_rules.lua"
 sed -i '/hl\.dsp\.global("ryoku:ask")/d; /ryoku-summon Rashin /d; /hl\.dsp\.exec_cmd("ryotunes")/d; s/ryoku-restart-audio/systemctl --user restart pipewire.service pipewire-pulse.service wireplumber.service/' \
     "$draft/.config/hypr/modules/binds.lua"
+sed -i '/hl\.dsp\.global("ryoku:launcher")/c\
+local launcher = K(mod .. " + Space")\
+if launcher == mod .. " + Space" then\
+    hl.bind(mod .. " + SUPER_L", hl.dsp.exec_cmd("ryoku-shell launcher"), { release = true })\
+    hl.bind(mod .. " + SUPER_R", hl.dsp.exec_cmd("ryoku-shell launcher"), { release = true })\
+else\
+    hl.bind(launcher, hl.dsp.exec_cmd("ryoku-shell launcher"))\
+end' "$draft/.config/hypr/modules/binds.lua"
 
 jq --arg browser "${browser%.desktop}" \
     '.dock.pinned = (["tsukuyomi-launcher", "org.kde.dolphin"] +

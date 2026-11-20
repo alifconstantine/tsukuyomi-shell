@@ -1,0 +1,39 @@
+--- a/hub/pages/LauncherPage.qml
++++ b/hub/pages/LauncherPage.qml
+@@ -62,5 +62,5 @@
+             ? pg.catalog.variants : [];
+     }
+-    // Every launcher Super+Space can open here: the shipped ones, then each one
++    // Every launcher Super can open here: the shipped ones, then each one
+     // installed from RyoStore that runs on this desktop.
+     function wearableVariants() {
+@@ -338,5 +338,5 @@
+         Text {
+             width: Math.min(parent.width, 720)
+-            text: I18n.tr("The command palette on Super+Space; nothing saves until you do.")
++            text: I18n.tr("Tap Super to open the app launcher.")
+             color: Tokens.inkMuted; font.family: Tokens.ui
+             font.pixelSize: Tokens.fBody; wrapMode: Text.WordWrap
+--- a/hub/pages/KeybindsPage.qml
++++ b/hub/pages/KeybindsPage.qml
+@@ -67,4 +67,9 @@
+                 try {
+                     var o = JSON.parse(this.text);
++                    for (const category of o.categories || []) {
++                        const launcher = (category.binds || []).find(bind => bind.id === "shell.launcher");
++                        if (launcher && !launcher.disabled && launcher.chord === launcher.default)
++                            launcher.keys = ["Super"];
++                    }
+                     pg.categories = o.categories || [];
+                 } catch (e) { console.log("keybinds: legend parse failed: " + e); }
+--- a/keys/shell.qml
++++ b/keys/shell.qml
+@@ -50,5 +50,7 @@
+                         return {
+                             name: c.name,
+-                            binds: (c.binds || []).filter(function (b) { return !b.disabled; })
++                            binds: (c.binds || []).filter(b => !b.disabled).map(b =>
++                                b.id === "shell.launcher" && b.chord === b.default
++                                    ? Object.assign({}, b, { keys: ["Super"] }) : b)
+                         };
+                     }).filter(function (c) { return c.binds.length > 0; });
