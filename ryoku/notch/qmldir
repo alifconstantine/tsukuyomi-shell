@@ -1,0 +1,10 @@
+singleton NotchConfig 1.0 NotchConfig.qml
+NotchIcon 1.0 NotchIcon.qml
+NotchTheme 1.0 NotchTheme.qml
+NotchCenterPill 1.0 NotchCenterPill.qml
+NotchPanel 1.0 NotchPanel.qml
+NotchHomeTab 1.0 NotchHomeTab.qml
+NotchMusicTab 1.0 NotchMusicTab.qml
+NotchClipboardTab 1.0 NotchClipboardTab.qml
+NotchSystemTab 1.0 NotchSystemTab.qml
+NotchSettingsView 1.0 NotchSettingsView.qml

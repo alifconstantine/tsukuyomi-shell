@@ -1,0 +1,487 @@
+import QtQuick
+import QtQuick.Effects
+import Quickshell
+import Quickshell.Wayland
+import shell.services
+import Ryoku.Ui.Singletons
+import "NotchRegistry.js" as Registry
+
+// Expanded Tsukuyomi Dynamic Notch (replaces DashboardPopup in VariantRoot).
+// Morphs width and height smoothly per active module, renders only the active
+// tab via Loader, and keeps the expanded header ultra-clean:
+// [Icon + Menu Name]  [Date · Clock]  [Settings]
+// (RAM ring and visualizer are intentionally omitted while expanded.)
+PanelWindow {
+    id: panel
+
+    required property var root
+    screen: panel.root ? panel.root.activePopupScreen : null
+
+    readonly property bool anim: !Perf.reduceMotion
+    readonly property bool isOpen: panel.root ? panel.root.dashboardVisible : false
+
+    color: "transparent"
+    anchors { top: true; bottom: true; left: true; right: true }
+    exclusionMode: ExclusionMode.Ignore
+    WlrLayershell.layer: WlrLayer.Overlay
+    WlrLayershell.namespace: "ryoku-dashboard"
+
+    property real reveal: panel.isOpen ? 1.0 : 0.0
+    Behavior on reveal {
+        enabled: panel.anim
+        NumberAnimation {
+            duration: panel.isOpen ? 230 : 160
+            easing.type: panel.isOpen ? Easing.OutCubic : Easing.InCubic
+        }
+    }
+    visible: reveal > 0.001
+    WlrLayershell.keyboardFocus: panel.isOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+
+    NotchTheme { id: nt; root: panel.root }
+
+    readonly property var tabs: Registry.visibleTabs(NotchConfig.hiddenTabs)
+    property string activeTabId: "home"
+    property bool settingsOpen: false
+    property bool switcherOpen: false
+    property int navDirection: 1   // +1 forward, -1 backward
+
+    readonly property var activeMeta: panel.settingsOpen
+        ? Registry.SETTINGS_META
+        : Registry.findTab(panel.activeTabId)
+
+    readonly property int barOffset: (panel.root ? panel.root.v2BarHeight : 34) + 6
+    readonly property int maxW: Math.max(320, panel.width - 32)
+    readonly property int maxH: Math.max(160, panel.height - panel.barOffset - 32)
+
+    readonly property real targetW: Math.min(panel.maxW, Number(panel.activeMeta.w || 432))
+    readonly property real targetH: Math.min(panel.maxH, Number(panel.activeMeta.h || 192))
+
+    function stepTab(delta) {
+        if (panel.settingsOpen) return;
+        panel.navDirection = delta >= 0 ? 1 : -1;
+        var next = Registry.nextTabId(panel.tabs, panel.activeTabId, delta);
+        panel.activeTabId = next;
+        NotchConfig.lastTab = next;
+        panel.switcherOpen = false;
+    }
+
+    function selectTab(id) {
+        var curIdx = Registry.indexOfTab(panel.tabs, panel.activeTabId);
+        var nextIdx = Registry.indexOfTab(panel.tabs, id);
+        panel.navDirection = nextIdx >= curIdx ? 1 : -1;
+        panel.activeTabId = id;
+        NotchConfig.lastTab = id;
+        panel.settingsOpen = false;
+        panel.switcherOpen = false;
+    }
+
+    onIsOpenChanged: {
+        if (panel.isOpen) {
+            panel.settingsOpen = false;
+            panel.switcherOpen = false;
+            var preferred = NotchConfig.defaultTab === "last" ? NotchConfig.lastTab : "home";
+            if (!NotchConfig.isTabEnabled(preferred)) preferred = "home";
+            panel.activeTabId = preferred;
+            card.forceActiveFocus();
+        }
+    }
+
+    onTabsChanged: {
+        if (!NotchConfig.isTabEnabled(panel.activeTabId))
+            panel.activeTabId = panel.tabs.length > 0 ? panel.tabs[0].id : "home";
+    }
+
+    SystemClock { id: sysClock; precision: SystemClock.Minutes }
+    readonly property string headerClock: {
+        var d = sysClock.date;
+        var day = Config.formatLoc.standaloneDayName(d.getDay(), 1);
+        var mon = Config.formatLoc.standaloneMonthName(d.getMonth(), 1);
+        var datePart = day + " " + d.getDate() + " " + mon;
+        var m = String(d.getMinutes()).padStart(2, "0");
+        var timePart = TimeFormat.is24h
+            ? String(d.getHours()).padStart(2, "0") + ":" + m
+            : ((d.getHours() % 12 || 12) + ":" + m + (d.getHours() >= 12 ? " PM" : " AM"));
+        return datePart + "  ·  " + timePart;
+    }
+
+    // Outside-click dismiss
+    MouseArea {
+        anchors.fill: parent
+        enabled: panel.isOpen && NotchConfig.autoCollapse
+        acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+        onClicked: if (panel.root) panel.root.dashboardVisible = false
+    }
+
+    // Main morphing Dynamic Island container
+    Rectangle {
+        id: card
+
+        // Morph from compact idle dimensions to active tab's adaptive size
+        readonly property real idleW: 176
+        readonly property real idleH: 34
+
+        property real morphedW: panel.targetW
+        property real morphedH: panel.targetH
+        Behavior on morphedW {
+            enabled: panel.anim
+            NumberAnimation { duration: 240; easing.type: Easing.OutCubic }
+        }
+        Behavior on morphedH {
+            enabled: panel.anim
+            NumberAnimation { duration: 240; easing.type: Easing.OutCubic }
+        }
+
+        width: Math.round(idleW + (morphedW - idleW) * panel.reveal)
+        height: Math.round(idleH + (morphedH - idleH) * panel.reveal)
+        x: Math.round((parent.width - width) / 2)
+        y: (panel.root && panel.root.barPosition === "bottom")
+            ? (parent.height - panel.barOffset - height) + 10 * (1 - panel.reveal)
+            : (panel.barOffset) - 10 * (1 - panel.reveal)
+
+        radius: Math.max(14, Math.min(26, NotchConfig.cornerRadius))
+        color: nt.surface
+        border.width: 1
+        border.color: nt.border
+        opacity: Math.min(1, panel.reveal * 1.15)
+        clip: true
+        focus: panel.isOpen
+
+        RectangularShadow {
+            anchors.fill: parent
+            radius: parent.radius
+            blur: 18
+            spread: 0
+            offset: Qt.vector2d(0, (panel.root && panel.root.barPosition === "bottom") ? -4 : 6)
+            color: Qt.rgba(0, 0, 0, 0.45)
+            visible: !Perf.softwareRenderer && panel.reveal > 0.2
+            z: -1
+        }
+
+        Keys.onPressed: e => {
+            if (e.key === Qt.Key_Escape) {
+                if (panel.switcherOpen) panel.switcherOpen = false;
+                else if (panel.settingsOpen) panel.settingsOpen = false;
+                else if (panel.root) panel.root.dashboardVisible = false;
+                e.accepted = true;
+            } else if (e.key === Qt.Key_Left && !panel.settingsOpen) {
+                panel.stepTab(-1);
+                e.accepted = true;
+            } else if (e.key === Qt.Key_Right && !panel.settingsOpen) {
+                panel.stepTab(1);
+                e.accepted = true;
+            }
+        }
+
+        // Swallow inner clicks so outside MouseArea doesn't dismiss
+        MouseArea { anchors.fill: parent; onClicked: {} }
+
+        // ── Expanded Header: [Icon + Title]  [Date · Clock]  [Settings] ──────
+        Item {
+            id: headerBar
+            anchors { top: parent.top; left: parent.left; right: parent.right; topMargin: 10; leftMargin: 14; rightMargin: 14 }
+            height: 28
+            opacity: panel.reveal > 0.35 ? 1 : 0
+            Behavior on opacity { enabled: panel.anim; NumberAnimation { duration: 140 } }
+
+            // Left: Back (in Settings) or Menu Icon + Menu Name (click for quick switcher)
+            Rectangle {
+                id: titleBtn
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                width: titleRow.implicitWidth + 14
+                height: 26
+                radius: 9
+                color: titleMa.containsMouse || panel.switcherOpen ? nt.cardHover : "transparent"
+                Behavior on color { enabled: panel.anim; ColorAnimation { duration: 130 } }
+
+                Row {
+                    id: titleRow
+                    anchors.centerIn: parent
+                    spacing: 6
+
+                    NotchIcon {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: panel.settingsOpen ? "arrow_back" : String(panel.activeMeta.icon || "tune")
+                        font.pixelSize: 15
+                        fill: 1
+                        color: nt.ink
+                    }
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: I18n.tr(String(panel.activeMeta.label || "Home"))
+                        color: nt.ink
+                        font.family: Tokens.ui
+                        font.pixelSize: 12
+                        font.weight: Font.DemiBold
+                    }
+
+                    NotchIcon {
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: !panel.settingsOpen
+                        text: panel.switcherOpen ? "expand_less" : "expand_more"
+                        font.pixelSize: 14
+                        color: nt.muted
+                    }
+                }
+
+                MouseArea {
+                    id: titleMa
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        if (panel.settingsOpen) panel.settingsOpen = false;
+                        else panel.switcherOpen = !panel.switcherOpen;
+                    }
+                }
+            }
+
+            // Center: Clean Date & Clock (no RAM ring, no visualizer)
+            Text {
+                anchors.centerIn: parent
+                text: panel.headerClock
+                color: nt.muted
+                font.family: panel.root ? panel.root.mono : Tokens.mono
+                font.pixelSize: 11
+                font.weight: Font.Medium
+            }
+
+            // Right: Settings Gear
+            Rectangle {
+                id: gearBtn
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                width: 26; height: 26; radius: 9
+                color: panel.settingsOpen
+                    ? Qt.rgba(nt.accent.r, nt.accent.g, nt.accent.b, 0.22)
+                    : (gearMa.containsMouse ? nt.cardHover : "transparent")
+                Behavior on color { enabled: panel.anim; ColorAnimation { duration: 130 } }
+
+                NotchIcon {
+                    anchors.centerIn: parent
+                    text: "settings"
+                    font.pixelSize: 16
+                    fill: panel.settingsOpen ? 1 : 0
+                    color: panel.settingsOpen ? nt.accent : nt.muted
+                    rotation: panel.settingsOpen ? 45 : (gearMa.containsMouse ? 25 : 0)
+                    Behavior on rotation { enabled: panel.anim; NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+                }
+
+                MouseArea {
+                    id: gearMa
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        panel.switcherOpen = false;
+                        panel.settingsOpen = !panel.settingsOpen;
+                    }
+                }
+            }
+        }
+
+        // Quick-Jump Tab Popover Bar (toggled by clicking Menu Name)
+        Rectangle {
+            id: quickBar
+            anchors { top: headerBar.bottom; left: parent.left; right: parent.right; topMargin: 4; leftMargin: 14; rightMargin: 14 }
+            height: panel.switcherOpen && !panel.settingsOpen ? 32 : 0
+            opacity: panel.switcherOpen && !panel.settingsOpen ? 1 : 0
+            visible: height > 1
+            radius: 10
+            color: nt.card
+            border.width: 1
+            border.color: nt.border
+            clip: true
+            z: 20
+
+            Behavior on height { enabled: panel.anim; NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+            Behavior on opacity { enabled: panel.anim; NumberAnimation { duration: 130 } }
+
+            Row {
+                anchors.centerIn: parent
+                spacing: 6
+                Repeater {
+                    model: panel.tabs
+                    delegate: Rectangle {
+                        required property var modelData
+                        readonly property bool on: modelData.id === panel.activeTabId
+                        width: qpRow.implicitWidth + 14
+                        height: 24
+                        radius: 7
+                        color: on ? Qt.rgba(nt.accent.r, nt.accent.g, nt.accent.b, 0.24)
+                            : (qpMa.containsMouse ? nt.cardHover : "transparent")
+                        Row {
+                            id: qpRow
+                            anchors.centerIn: parent
+                            spacing: 4
+                            NotchIcon {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: modelData.icon
+                                font.pixelSize: 13
+                                fill: on ? 1 : 0
+                                color: on ? nt.accent : nt.ink
+                            }
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: I18n.tr(modelData.label)
+                                color: nt.ink
+                                font.family: Tokens.ui
+                                font.pixelSize: 10
+                                font.weight: on ? Font.DemiBold : Font.Normal
+                            }
+                        }
+                        MouseArea {
+                            id: qpMa
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: panel.selectTab(modelData.id)
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── Body Area + Side < > Chevrons ────────────────────────────────────
+        Item {
+            id: bodyHost
+            anchors {
+                top: headerBar.bottom
+                topMargin: 8
+                bottom: dotsRow.top
+                bottomMargin: 6
+                left: parent.left
+                right: parent.right
+            }
+            opacity: panel.reveal > 0.4 ? 1 : 0
+            Behavior on opacity { enabled: panel.anim; NumberAnimation { duration: 150 } }
+
+            // Left < arrow
+            Rectangle {
+                id: prevBtn
+                visible: !panel.settingsOpen && panel.tabs.length > 1
+                anchors.left: parent.left
+                anchors.leftMargin: 8
+                anchors.verticalCenter: parent.verticalCenter
+                width: 24; height: 24; radius: 12
+                color: prevMa.containsMouse ? nt.cardHover : nt.card
+                border.width: 1; border.color: nt.border
+                scale: prevMa.pressed ? 0.88 : 1.0
+                Behavior on scale { enabled: panel.anim; NumberAnimation { duration: 100 } }
+                NotchIcon { anchors.centerIn: parent; text: "chevron_left"; font.pixelSize: 16; color: nt.ink }
+                MouseArea {
+                    id: prevMa
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: panel.stepTab(-1)
+                }
+            }
+
+            // Right > arrow
+            Rectangle {
+                id: nextBtn
+                visible: !panel.settingsOpen && panel.tabs.length > 1
+                anchors.right: parent.right
+                anchors.rightMargin: 8
+                anchors.verticalCenter: parent.verticalCenter
+                width: 24; height: 24; radius: 12
+                color: nextMa.containsMouse ? nt.cardHover : nt.card
+                border.width: 1; border.color: nt.border
+                scale: nextMa.pressed ? 0.88 : 1.0
+                Behavior on scale { enabled: panel.anim; NumberAnimation { duration: 100 } }
+                NotchIcon { anchors.centerIn: parent; text: "chevron_right"; font.pixelSize: 16; color: nt.ink }
+                MouseArea {
+                    id: nextMa
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: panel.stepTab(1)
+                }
+            }
+
+            // Active-only Loader (zero RAM for inactive tabs)
+            Item {
+                id: contentSlot
+                anchors {
+                    top: parent.top
+                    bottom: parent.bottom
+                    left: prevBtn.visible ? prevBtn.right : parent.left
+                    right: nextBtn.visible ? nextBtn.left : parent.right
+                    leftMargin: prevBtn.visible ? 8 : 16
+                    rightMargin: nextBtn.visible ? 8 : 16
+                }
+                clip: true
+
+                property real slideOffset: 0
+                property real contentFade: 1
+
+                function animateSwitch() {
+                    if (!panel.anim) return;
+                    slideOffset = panel.navDirection * 18;
+                    contentFade = 0.0;
+                    switchAnim.restart();
+                }
+
+                ParallelAnimation {
+                    id: switchAnim
+                    NumberAnimation { target: contentSlot; property: "slideOffset"; to: 0; duration: 210; easing.type: Easing.OutCubic }
+                    NumberAnimation { target: contentSlot; property: "contentFade"; to: 1.0; duration: 190; easing.type: Easing.OutCubic }
+                }
+
+                Loader {
+                    id: contentLoader
+                    width: parent.width
+                    height: parent.height
+                    x: contentSlot.slideOffset
+                    opacity: contentSlot.contentFade
+                    active: panel.reveal > 0.01
+                    source: active ? Qt.resolvedUrl(String(panel.activeMeta.file || "NotchHomeTab.qml")) : ""
+
+                    onSourceChanged: contentSlot.animateSwitch()
+                    onLoaded: {
+                        if (item) {
+                            item.root = panel.root;
+                            item.theme = nt;
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── Bottom Pagination Dots ───────────────────────────────────────────
+        Row {
+            id: dotsRow
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 8
+            height: !panel.settingsOpen && panel.tabs.length > 1 ? 8 : 0
+            visible: height > 0
+            spacing: 6
+            opacity: panel.reveal > 0.4 ? 1 : 0
+            Behavior on opacity { enabled: panel.anim; NumberAnimation { duration: 140 } }
+
+            Repeater {
+                model: panel.tabs
+                delegate: Rectangle {
+                    required property var modelData
+                    readonly property bool activeDot: modelData.id === panel.activeTabId
+                    width: activeDot ? 16 : 6
+                    height: 5
+                    radius: 2.5
+                    color: activeDot ? nt.ink : Qt.rgba(nt.ink.r, nt.ink.g, nt.ink.b, 0.25)
+                    Behavior on width { enabled: panel.anim; NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+                    Behavior on color { enabled: panel.anim; ColorAnimation { duration: 150 } }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        anchors.margins: -4
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: panel.selectTab(modelData.id)
+                    }
+                }
+            }
+        }
+    }
+}
