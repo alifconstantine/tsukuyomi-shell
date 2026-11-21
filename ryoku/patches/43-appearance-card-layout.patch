@@ -1,0 +1,128 @@
+--- a/hub/pages/BarStudioPage.qml
++++ b/hub/pages/BarStudioPage.qml
+@@ -198,7 +198,7 @@
+                 anchors.verticalCenter: parent.verticalCenter
+                 Rectangle { width: 16; height: 1; color: Tokens.ink; anchors.verticalCenter: parent.verticalCenter }
+                 Text {
+-                    text: I18n.tr("DESKTOP"); color: Tokens.inkMuted; font.family: Tokens.ui
++                    text: I18n.tr(page.subshellsOnly ? "DESKTOP" : "APPEARANCE"); color: Tokens.inkMuted; font.family: Tokens.ui
+                     font.pixelSize: 9; font.weight: Font.Medium; font.letterSpacing: Tokens.trackMark
+                     anchors.verticalCenter: parent.verticalCenter
+                 }
+@@ -260,35 +260,36 @@
+             spacing: Tokens.s5
+             fillTo: flick.height
+ 
+-            // ── BAR STYLE: which bar the desktop draws ───────────────────────
+-            SettingCard {
+-                id: styleSect
+-                // The primary choice of the page takes the band across the
+-                // columns: eight style tiles need the room, and a column-width
+-                // card crams them two to a row while the page's other half
+-                // sits empty.
++            Column {
+                 property bool fullWidth: true
+-                width: col.colWidth
+-                title: page.subshellsOnly ? I18n.tr("SUBSHELL") : I18n.tr("BAR STYLE")
+-
+-                StoreDesignGallery {
+-                    id: styleGallery
+-                    width: parent.width
+-                    category: "barstyles"
+-                    onlySubshells: page.subshellsOnly
+-                    browseCategory: page.subshellsOnly ? "subshells" : "barstyles"
+-                    wornId: page.activeStyle
+-                    shippedDesigns: []
+-                    onWear: designId => page.fedit("barStyle", designId)
+-                }
+-            }
+-
+-            Loader {
+-                width: col.colWidth
+-                height: item ? item.implicitHeight : 0
+-                active: page.showActiveDetails && page.activeStyle === "qsbar"
+-                visible: active
+-                source: active ? Qt.resolvedUrl("QsBarStudio.qml") : ""
++                width: col.width
++                spacing: Tokens.s5
++
++                // ── BAR STYLE: which bar the desktop draws ───────────────────────
++                SettingCard {
++                    id: styleSect
++                    width: parent.width
++                    title: page.subshellsOnly ? I18n.tr("SUBSHELL") : I18n.tr("BAR STYLE")
++
++                    StoreDesignGallery {
++                        id: styleGallery
++                        width: parent.width
++                        category: "barstyles"
++                        onlySubshells: page.subshellsOnly
++                        browseCategory: page.subshellsOnly ? "subshells" : "barstyles"
++                        wornId: page.activeStyle
++                        shippedDesigns: []
++                        onWear: designId => page.fedit("barStyle", designId)
++                    }
++                }
++
++                Loader {
++                    width: parent.width
++                    height: item ? item.implicitHeight : 0
++                    active: page.showActiveDetails && page.activeStyle === "qsbar"
++                    visible: active
++                    source: active ? Qt.resolvedUrl("QsBarStudio.qml") : ""
++                }
+             }
+ 
+             SettingCard {
+--- a/hub/pages/AppearancePage.qml
++++ b/hub/pages/AppearancePage.qml
+@@ -152,7 +152,9 @@
+                     }
+                 }
+                 Row {
++                    x: Tokens.s4
+                     spacing: Tokens.s3
++                    bottomPadding: Tokens.s3
+                     Btn {
+                         text: I18n.tr("Apply appearance")
+                         primary: true
+@@ -183,7 +185,8 @@
+                 SettingRow {
+                     width: parent.width
+                     label: I18n.tr("Theme")
+-                    desc: page.activeTheme !== "Default" ? I18n.tr("Active: %1").arg(
++                    desc: !UserSchemes.schemes.length ? I18n.tr("No themes installed")
++                        : page.activeTheme !== "Default" ? I18n.tr("Active: %1").arg(
+                         (UserSchemes.schemes.find(item => item.id === page.activeTheme) || {}).label || page.activeTheme) : ""
+                     controlWidth: themeChoice.width
+                     QQC.ComboBox {
+@@ -195,12 +198,12 @@
+                         textRole: "label"
+                         valueRole: "id"
+                         currentIndex: Math.max(0, UserSchemes.schemes.findIndex(item => item.id === page.activeTheme))
+-                        enabled: count > 0
+-                        displayText: count > 0 ? currentText : I18n.tr("No themes installed")
++                        visible: count > 0
+                         Accessible.name: I18n.tr("Installed theme")
+                     }
+                 }
+                 Row {
++                    x: Tokens.s4
+                     spacing: Tokens.s3
+                     Repeater {
+                         model: (UserSchemes.schemes[themeChoice.currentIndex] || {}).sw || []
+@@ -213,9 +216,12 @@
+                     }
+                 }
+                 Flow {
+-                    width: parent.width
++                    x: Tokens.s4
++                    width: parent.width - 2 * Tokens.s4
+                     spacing: Tokens.s3
+-                    Btn {
++                    bottomPadding: Tokens.s3
++                    Btn {
++                        visible: themeChoice.count > 0
+                         text: I18n.tr("Apply theme")
+                         enabled: themeChoice.count > 0 && Settings.ready && !page.saving
+                             && themeChoice.currentValue !== page.activeTheme
