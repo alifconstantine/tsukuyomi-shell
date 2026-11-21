@@ -51,7 +51,7 @@ jq --arg browser "${browser%.desktop}" \
     '.dock.pinned = (["tsukuyomi-launcher", "org.kde.dolphin"] +
         ([$browser] | map(select(length > 0))) + ["kitty"])' \
     "$here/shell.json" > "$draft/.config/ryoku/shell.json"
-printf '{"clockEnabled":false,"calendarEnabled":false}\n' > "$draft/.config/ryoku/widgets.json"
+printf '{"clockEnabled":true,"clockDesign":"digital","clock24h":true,"dateShow":true,"calendarEnabled":false}\n' > "$draft/.config/ryoku/widgets.json"
 jq -n --arg browser "$browser" '
     {desktop:{apps:{files:"dolphin", browser:(
         if $browser == "" then "xdg-open about:blank"
