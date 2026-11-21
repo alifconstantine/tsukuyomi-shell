@@ -1,0 +1,582 @@
+--- a/shell/modules/bar/barstyles/qsbar/modules/AiPanelSurface.qml
++++ b/shell/modules/bar/barstyles/qsbar/modules/AiPanelSurface.qml
+@@ -1,140 +1,30 @@
+ import QtQuick
+-import QtQuick.Shapes
+ import shell.services
++import "../../../../../tsukuyomi" as Tsukuyomi
+ 
+-// Shared AI/Volume prototype: one filled/stroked silhouette renders the complete
+-// card outline and caret. There are no masks or separately joined border objects.
+-Item {
++// The layer-shell window provides the frost. This surface only paints the card.
++Rectangle {
+     id: surface
+ 
+     required property var root
+     required property real targetX
+-    // Shared animated progress from Theme; default keeps hot-reload construction safe.
+     property real reveal: 0
+ 
+     anchors.fill: parent
+-    z: 0
++    radius: root.panelRadius
++    antialiasing: true
++    border.width: 1
++    border.color: Qt.alpha(Tsukuyomi.Style.text, 0.22)
+ 
+-    readonly property bool pointsUp: root.barPosition !== "bottom"
+-    readonly property real centerX: Math.max(10, Math.min(width - 10,
+-        Math.round(targetX - parent.x)))
+-    readonly property real r: root.panelRadius
+-    readonly property real progress: Math.max(0, Math.min(1, reveal))
+-    readonly property real maxCaretDepth: 5
+-    readonly property real caretHalfWidth: 6 * progress
+-    readonly property real caretDepth: maxCaretDepth * progress
+-    readonly property real caretTangentControl: 3.75 * progress
+-    readonly property real caretTipControl: 1.75 * progress
+-    readonly property real topBaseY: maxCaretDepth + 0.5
+-    readonly property real topTipY: topBaseY - caretDepth
+-    readonly property real bottomBaseY: height - 0.5
+-    readonly property real bottomTipY: bottomBaseY + caretDepth
+-    readonly property int renderScale: 4
+-
+-    Shape {
+-        x: 0
+-        y: -surface.maxCaretDepth
+-        width: surface.width
+-        height: surface.height + surface.maxCaretDepth
+-        visible: surface.pointsUp
+-        antialiasing: true
+-        preferredRendererType: Shape.CurveRenderer
+-        layer.enabled: true
+-        layer.samples: Perf.msaa
+-        layer.smooth: true
+-        layer.mipmap: true
+-        layer.textureSize: Qt.size(Math.ceil(width * surface.renderScale),
+-            Math.ceil(height * surface.renderScale))
+-
+-        ShapePath {
+-            strokeColor: surface.root.panelOuterBorderColor
+-            strokeWidth: surface.root.panelOuterBorderW
+-            fillColor: surface.root.bg
+-            capStyle: ShapePath.FlatCap
+-            joinStyle: ShapePath.MiterJoin
+-            startX: surface.r
+-            startY: surface.topBaseY
+-            PathLine {
+-                x: surface.centerX - surface.caretHalfWidth
+-                y: surface.topBaseY
+-            }
+-            PathCubic {
+-                x: surface.centerX; y: surface.topTipY
+-                control1X: surface.centerX - surface.caretTangentControl
+-                control1Y: surface.topBaseY
+-                control2X: surface.centerX - surface.caretTipControl
+-                control2Y: surface.topTipY
+-            }
+-            PathCubic {
+-                x: surface.centerX + surface.caretHalfWidth
+-                y: surface.topBaseY
+-                control1X: surface.centerX + surface.caretTipControl
+-                control1Y: surface.topTipY
+-                control2X: surface.centerX + surface.caretTangentControl
+-                control2Y: surface.topBaseY
+-            }
+-            PathLine { x: surface.width - surface.r; y: surface.topBaseY }
+-            PathArc { x: surface.width - 0.5; y: surface.r + surface.topBaseY; radiusX: surface.r; radiusY: surface.r }
+-            PathLine { x: surface.width - 0.5; y: surface.height + surface.maxCaretDepth - 0.5 - surface.r }
+-            PathArc { x: surface.width - surface.r; y: surface.height + surface.maxCaretDepth - 0.5; radiusX: surface.r; radiusY: surface.r }
+-            PathLine { x: surface.r; y: surface.height + surface.maxCaretDepth - 0.5 }
+-            PathArc { x: 0.5; y: surface.height + surface.maxCaretDepth - 0.5 - surface.r; radiusX: surface.r; radiusY: surface.r }
+-            PathLine { x: 0.5; y: surface.r + surface.topBaseY }
+-            PathArc { x: surface.r; y: surface.topBaseY; radiusX: surface.r; radiusY: surface.r }
++    readonly property bool frosted: root.barFrostEnabled && !Perf.blurDisabled
++    gradient: Gradient {
++        GradientStop {
++            position: 0
++            color: Qt.alpha(Tsukuyomi.Style.panel, surface.frosted ? 0.82 : 1)
+         }
+-    }
+-
+-    Shape {
+-        x: 0
+-        y: 0
+-        width: surface.width
+-        height: surface.height + surface.maxCaretDepth
+-        visible: !surface.pointsUp
+-        antialiasing: true
+-        preferredRendererType: Shape.CurveRenderer
+-        layer.enabled: true
+-        layer.samples: Perf.msaa
+-        layer.smooth: true
+-        layer.mipmap: true
+-        layer.textureSize: Qt.size(Math.ceil(width * surface.renderScale),
+-            Math.ceil(height * surface.renderScale))
+-
+-        ShapePath {
+-            strokeColor: surface.root.panelOuterBorderColor
+-            strokeWidth: surface.root.panelOuterBorderW
+-            fillColor: surface.root.bg
+-            capStyle: ShapePath.FlatCap
+-            joinStyle: ShapePath.MiterJoin
+-            startX: surface.r
+-            startY: 0.5
+-            PathLine { x: surface.width - surface.r; y: 0.5 }
+-            PathArc { x: surface.width - 0.5; y: surface.r + 0.5; radiusX: surface.r; radiusY: surface.r }
+-            PathLine { x: surface.width - 0.5; y: surface.height - surface.r - 0.5 }
+-            PathArc { x: surface.width - surface.r; y: surface.height - 0.5; radiusX: surface.r; radiusY: surface.r }
+-            PathLine {
+-                x: surface.centerX + surface.caretHalfWidth
+-                y: surface.bottomBaseY
+-            }
+-            PathCubic {
+-                x: surface.centerX
+-                y: surface.bottomTipY
+-                control1X: surface.centerX + surface.caretTangentControl
+-                control1Y: surface.bottomBaseY
+-                control2X: surface.centerX + surface.caretTipControl
+-                control2Y: surface.bottomTipY
+-            }
+-            PathCubic {
+-                x: surface.centerX - surface.caretHalfWidth
+-                y: surface.bottomBaseY
+-                control1X: surface.centerX - surface.caretTipControl
+-                control1Y: surface.bottomTipY
+-                control2X: surface.centerX - surface.caretTangentControl
+-                control2Y: surface.bottomBaseY
+-            }
+-            PathLine { x: surface.r; y: surface.height - 0.5 }
+-            PathArc { x: 0.5; y: surface.height - surface.r - 0.5; radiusX: surface.r; radiusY: surface.r }
+-            PathLine { x: 0.5; y: surface.r + 0.5 }
+-            PathArc { x: surface.r; y: 0.5; radiusX: surface.r; radiusY: surface.r }
++        GradientStop {
++            position: 1
++            color: Qt.alpha(Tsukuyomi.Style.surface, surface.frosted ? 0.91 : 1)
+         }
+     }
+ }
+--- a/shell/modules/bar/barstyles/qsbar/modules/ConnectedPanelSurface.qml
++++ b/shell/modules/bar/barstyles/qsbar/modules/ConnectedPanelSurface.qml
+@@ -1,39 +1,5 @@
+ import QtQuick
+ 
+-// Semantic shared name for the confirmed connected panel silhouette.
+-// AiPanelSurface remains the single rendering implementation so every panel
+-// uses exactly the same antialiased geometry. Publish the actually rendered
+-// tip position as well: at screen edges the surface clamps it away from the
+-// rounded card corner, and the bar notch must follow that resolved position.
+ AiPanelSurface {
+     required property bool ownerActive
+-    readonly property real resolvedTargetX: parent ? parent.x + centerX : targetX
+-    readonly property real hostWidth:
+-        parent && parent.parent ? parent.parent.width : 0
+-    readonly property bool hostGeometryCoversTarget:
+-        hostWidth > 0 && targetX > 0 && targetX <= hostWidth + 0.5
+-
+-    function publishResolvedTarget() {
+-        if (!ownerActive || !root) return
+-
+-        // A previously unmapped PanelWindow can still report a panel-sized host
+-        // during its first reveal. Use the already-current widget anchor until
+-        // the host is wide enough to resolve the panel's real clamped caret.
+-        if (reveal <= 0.001 || !hostGeometryCoversTarget) {
+-            if (isFinite(targetX) && targetX > 0)
+-                root.setPanelInsetX(targetX)
+-            return
+-        }
+-
+-        if (resolvedTargetX > 0) root.setPanelInsetX(resolvedTargetX)
+-    }
+-
+-    onResolvedTargetXChanged: publishResolvedTarget()
+-    // A bar-style change may move the parent before this inherited binding is
+-    // reevaluated. Retry once the raw owner anchor itself catches up so the
+-    // connected inset cannot remain at the previous style.
+-    onTargetXChanged: publishResolvedTarget()
+-    onHostGeometryCoversTargetChanged: publishResolvedTarget()
+-    onOwnerActiveChanged: publishResolvedTarget()
+-    onRevealChanged: publishResolvedTarget()
+ }
+--- a/shell/modules/bar/barstyles/qsbar/Theme.qml
++++ b/shell/modules/bar/barstyles/qsbar/Theme.qml
+@@ -883,7 +883,7 @@
+     readonly property int   barShellShadowOffset: barShadowEnabled ? 5 : 2
+     // Popovers, tooltips and their interactive tiles share the calmer V2 shape;
+     // bar-widget pills remain independently configurable below.
+-    readonly property int panelRadius: 6
++    readonly property int panelRadius: 14
+     readonly property int panelButtonRadius: 6
+     readonly property color panelBorder: v2BarBorder
+     readonly property int panelBorderW: 1
+--- a/shell/modules/sidebar/SidebarFrame.qml
++++ b/shell/modules/sidebar/SidebarFrame.qml
+@@ -2,14 +2,16 @@
+ 
+ import QtQuick
+ import Ryoku.Ui.Singletons
++import shell.services
++import "../../tsukuyomi" as Tsukuyomi
+ 
+ Rectangle {
+     id: root
+     property real s: 1
+-    radius: Tokens.radius * s * 2.5
+-    color: Tokens.paper
++    radius: Tokens.px(16) * s
++    color: Qt.alpha(Tsukuyomi.Style.panel, Perf.blurDisabled ? 1 : 0.90)
+     border.width: Tokens.border
+-    border.color: Tokens.line
++    border.color: Qt.alpha(Tsukuyomi.Style.text, 0.22)
+     Rectangle {
+         anchors.fill: parent
+         anchors.margins: Tokens.border
+--- a/shell/modules/sidebar/SidebarChrome.qml
++++ b/shell/modules/sidebar/SidebarChrome.qml
+@@ -37,7 +37,7 @@
+         anchors.right: parent.right
+         anchors.top: parent.top
+         anchors.margins: root.pad
+-        height: (Tokens.ctlH + Tokens.s1) * root.s
++        height: Tokens.px(38) * root.s
+ 
+         CornerButton {
+             id: back
+@@ -60,10 +60,10 @@
+             text: root.page === "wifi" ? I18n.tr("Wi-Fi")
+                 : root.page === "bluetooth" ? I18n.tr("Bluetooth")
+                 : root.page === "plugins" ? I18n.tr("Extensions")
+-                : I18n.tr("Controls")
++                : I18n.tr("System Controls")
+             color: Tokens.ink
+             font.family: Tokens.ui
+-            font.pixelSize: Tokens.fBody * root.s
++            font.pixelSize: Tokens.px(19) * root.s
+             font.weight: Font.DemiBold
+             elide: Text.ElideRight
+         }
+--- a/shell/modules/bar/barstyles/qsbar/panels/VolumePanel.qml
++++ b/shell/modules/bar/barstyles/qsbar/panels/VolumePanel.qml
+@@ -19,7 +19,7 @@
+     WlrLayershell.namespace: "ryoku-volume"
+ 
+     readonly property int barBottom: root.v2BarHeight
+-    readonly property int gap: 6
++    readonly property int gap: 10
+ 
+     AudioData { id: audio }
+     readonly property int    volume:   audio.volume
+@@ -98,8 +98,8 @@
+ 
+     Rectangle {
+         id: card
+-        width: 280
+-        height: col.implicitHeight + 24
++        width: Math.min(328, parent.width - 12)
++        height: col.implicitHeight + 32
+         radius: reveal > 0.001 ? root.panelRadius : 0
+         color: "transparent"
+         border.color: root.panelBorder
+@@ -131,22 +131,22 @@
+         Column {
+             id: col
+             anchors.fill: parent
+-            anchors.margins: 12
+-            spacing: 8
++            anchors.margins: 16
++            spacing: 9
+ 
+             // ── header ──
+             Item {
+                 width: parent.width
+-                height: 24
++                height: 32
+                 UiText {
+                     anchors.left: parent.left
+                     anchors.verticalCenter: parent.verticalCenter
+                     text: I18n.tr("Volume")
+                     color: root.ink
+-                    font.family: root.mono
+-                    font.pixelSize: 13
+-                    font.letterSpacing: 2
+-                    font.weight: Font.Medium
++                    font.family: Tokens.ui
++                    font.pixelSize: 18
++                    font.letterSpacing: 0
++                    font.weight: Font.DemiBold
+                 }
+                 UiText {
+                     anchors.right: parent.right
+@@ -171,7 +171,7 @@
+             UiText {
+                 text: I18n.tr("OUTPUT")
+                 color: root.sumiHi
+-                font.family: root.mono; font.pixelSize: 10; font.letterSpacing: 1
++                font.family: Tokens.ui; font.pixelSize: 10; font.letterSpacing: 0.55
+             }
+ 
+             // Drag anywhere on the track to set the volume. With BOOST on the track
+@@ -208,7 +208,7 @@
+                     color: volPanel.muted
+                         ? Qt.rgba(root.seal.r, root.seal.g, root.seal.b, 0.4)
+                         : (volSlider.over ? volSlider.overColor : root.seal)
+-                    font.family: root.mono; font.pixelSize: 11; font.weight: Font.Medium
++                    font.family: Tokens.ui; font.pixelSize: 11; font.weight: Font.Medium
+                     Behavior on color { ColorAnimation { duration: 160 } }
+                 }
+ 
+@@ -275,14 +275,14 @@
+                     anchors.verticalCenter: parent.verticalCenter
+                     text: I18n.tr("BOOST ABOVE 100%")
+                     color: root.seal
+-                    font.family: root.mono; font.pixelSize: 10; font.letterSpacing: 1
++                    font.family: Tokens.ui; font.pixelSize: 10; font.letterSpacing: 0.55
+                 }
+                 UiText {
+                     anchors.right: parent.right; anchors.rightMargin: 8
+                     anchors.verticalCenter: parent.verticalCenter
+                     text: boostTile.on ? I18n.tr("ON") : I18n.tr("OFF")
+                     color: boostTile.on ? root.seal : Qt.rgba(root.seal.r, root.seal.g, root.seal.b, 0.4)
+-                    font.family: root.mono; font.pixelSize: 10; font.weight: Font.Medium
++                    font.family: Tokens.ui; font.pixelSize: 10; font.weight: Font.Medium
+                 }
+                 MouseArea {
+                     id: boostMa
+@@ -303,7 +303,7 @@
+             UiText {
+                 text: I18n.tr("OUTPUT DEVICE")
+                 color: root.sumiHi
+-                font.family: root.mono; font.pixelSize: 10; font.letterSpacing: 1
++                font.family: Tokens.ui; font.pixelSize: 10; font.letterSpacing: 0.55
+             }
+             Column {
+                 width: parent.width
+@@ -330,14 +330,14 @@
+                                 anchors.verticalCenter: parent.verticalCenter
+                                 text: devTile.isDef ? "●" : "○"
+                                 color: devTile.isDef ? root.seal : root.sumi
+-                                font.family: root.mono; font.pixelSize: 10
++                                font.family: Tokens.ui; font.pixelSize: 10
+                             }
+                             UiText {
+                                 anchors.verticalCenter: parent.verticalCenter
+                                 width: parent.width - 22
+                                 text: Audio.nodeLabel(devTile.modelData)
+                                 color: (devTile.isDef || devTile.hovered) ? root.seal : root.ink
+-                                font.family: root.mono; font.pixelSize: 11
++                                font.family: Tokens.ui; font.pixelSize: 11
+                                 elide: Text.ElideRight
+                             }
+                         }
+@@ -370,7 +370,7 @@
+                     anchors.centerIn: parent
+                     text: volPanel.muted ? I18n.tr("Unmute volume") : I18n.tr("Mute volume")
+                     color: (muteMa.containsMouse || volPanel.muted) ? root.seal : root.sumi
+-                    font.family: root.mono; font.pixelSize: 11
++                    font.family: Tokens.ui; font.pixelSize: 11
+                 }
+                 MouseArea {
+                     id: muteMa
+@@ -389,7 +389,7 @@
+                 visible: Audio.streams.length > 0
+                 text: I18n.tr("APPS")
+                 color: root.sumiHi
+-                font.family: root.mono; font.pixelSize: 10; font.letterSpacing: 1
++                font.family: Tokens.ui; font.pixelSize: 10; font.letterSpacing: 0.55
+             }
+             Column {
+                 width: parent.width
+@@ -458,7 +458,7 @@
+                                 ? appRow.modelData.name + "  ×" + appRow.nodes.length
+                                 : appRow.modelData.name
+                             color: appRow.appMuted ? root.sumi : root.ink
+-                            font.family: root.mono; font.pixelSize: 11
++                            font.family: Tokens.ui; font.pixelSize: 11
+                             elide: Text.ElideRight
+                         }
+                         UiText {
+@@ -468,7 +468,7 @@
+                             anchors.verticalCenterOffset: 1
+                             text: appRow.liveVol + "%"
+                             color: appRow.over ? root.danger : root.seal
+-                            font.family: root.mono; font.pixelSize: 11; font.weight: Font.Medium
++                            font.family: Tokens.ui; font.pixelSize: 11; font.weight: Font.Medium
+                             Behavior on color { ColorAnimation { duration: 160 } }
+                         }
+ 
+@@ -526,7 +526,7 @@
+             UiText {
+                 text: I18n.tr("INPUT")
+                 color: root.sumiHi
+-                font.family: root.mono; font.pixelSize: 10; font.letterSpacing: 1
++                font.family: Tokens.ui; font.pixelSize: 10; font.letterSpacing: 0.55
+             }
+ 
+             Column {
+@@ -554,14 +554,14 @@
+                                 anchors.verticalCenter: parent.verticalCenter
+                                 text: inTile.isDef ? "●" : "○"
+                                 color: inTile.isDef ? root.seal : root.sumi
+-                                font.family: root.mono; font.pixelSize: 10
++                                font.family: Tokens.ui; font.pixelSize: 10
+                             }
+                             UiText {
+                                 anchors.verticalCenter: parent.verticalCenter
+                                 width: parent.width - 22
+                                 text: Audio.nodeLabel(inTile.modelData)
+                                 color: (inTile.isDef || inTile.hovered) ? root.seal : root.ink
+-                                font.family: root.mono; font.pixelSize: 11
++                                font.family: Tokens.ui; font.pixelSize: 11
+                                 elide: Text.ElideRight
+                             }
+                         }
+@@ -581,7 +581,7 @@
+                 UiText {
+                     text: I18n.tr("Microphone")
+                     color: root.sumiHi
+-                    font.family: root.mono; font.pixelSize: 11
++                    font.family: Tokens.ui; font.pixelSize: 11
+                     width: parent.width * 0.5
+                 }
+                 UiText {
+@@ -589,7 +589,7 @@
+                     color: volPanel.micMuted
+                         ? Qt.rgba(root.seal.r, root.seal.g, root.seal.b, 0.5)
+                         : Qt.rgba(root.ink.r, root.ink.g, root.ink.b, 0.7)
+-                    font.family: root.mono; font.pixelSize: 11
++                    font.family: Tokens.ui; font.pixelSize: 11
+                     width: parent.width * 0.5
+                     horizontalAlignment: Text.AlignRight
+                 }
+@@ -636,7 +636,7 @@
+                     anchors.centerIn: parent
+                     text: volPanel.micMuted ? I18n.tr("Unmute mic") : I18n.tr("Mute mic")
+                     color: (micMuteMa.containsMouse || volPanel.micMuted) ? root.seal : root.sumi
+-                    font.family: root.mono; font.pixelSize: 11
++                    font.family: Tokens.ui; font.pixelSize: 11
+                 }
+                 MouseArea {
+                     id: micMuteMa
+@@ -661,7 +661,7 @@
+                     anchors.centerIn: parent
+                     text: I18n.tr("Open audio")
+                     color: root.paper
+-                    font.family: root.mono; font.pixelSize: 11
++                    font.family: Tokens.ui; font.pixelSize: 11
+                 }
+                 MouseArea {
+                     id: audioBtnMa
+--- a/shell/modules/bar/barstyles/qsbar/panels/NetworkPanel.qml
++++ b/shell/modules/bar/barstyles/qsbar/panels/NetworkPanel.qml
+@@ -20,7 +20,7 @@
+     WlrLayershell.namespace: "ryoku-network"
+ 
+     readonly property int barBottom: root.v2BarHeight
+-    readonly property int gap: 6
++    readonly property int gap: 10
+ 
+     property string mode:  "none"   // wifi | ethernet | none
+     property string ssid:  ""
+@@ -519,8 +519,8 @@
+                 UiText {
+                     anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter
+                     text: I18n.tr("Network")
+-                    color: root.ink; font.family: root.mono; font.pixelSize: 13
+-                    font.letterSpacing: 2; font.weight: Font.Medium
++                    color: root.ink; font.family: Tokens.ui; font.pixelSize: 18
++                    font.letterSpacing: 0; font.weight: Font.DemiBold
+                 }
+                 UiText {
+                     anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
+--- a/shell/modules/bar/barstyles/qsbar/panels/BluetoothPanel.qml
++++ b/shell/modules/bar/barstyles/qsbar/panels/BluetoothPanel.qml
+@@ -21,7 +21,7 @@
+     WlrLayershell.namespace: "ryoku-bluetooth"
+ 
+     readonly property int barBottom: root.v2BarHeight
+-    readonly property int gap: 6
++    readonly property int gap: 10
+ 
+     readonly property var adapter: Bluetooth.defaultAdapter
+     readonly property bool btOn: adapter !== null && adapter.enabled
+@@ -181,8 +181,8 @@
+                     UiText {
+                         anchors.verticalCenter: parent.verticalCenter
+                         text: I18n.tr("Bluetooth")
+-                        color: root.ink; font.family: root.mono; font.pixelSize: 13
+-                        font.letterSpacing: 2; font.weight: Font.Medium
++                        color: root.ink; font.family: Tokens.ui; font.pixelSize: 18
++                        font.letterSpacing: 0; font.weight: Font.DemiBold
+                     }
+                     Row {
+                         anchors.verticalCenter: parent.verticalCenter
+--- a/shell/modules/bar/barstyles/qsbar/panels/BatteryPanel.qml
++++ b/shell/modules/bar/barstyles/qsbar/panels/BatteryPanel.qml
+@@ -20,7 +20,7 @@
+     WlrLayershell.namespace: "ryoku-battery"
+ 
+     readonly property int barBottom: root.v2BarHeight
+-    readonly property int gap: 6
++    readonly property int gap: 10
+ 
+     property int    percent: 0
+     property string status:  "unknown"
+@@ -102,8 +102,8 @@
+                 UiText {
+                     anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter
+                     text: I18n.tr("Battery")
+-                    color: root.ink; font.family: root.mono; font.pixelSize: 13
+-                    font.letterSpacing: 2; font.weight: Font.Medium
++                    color: root.ink; font.family: Tokens.ui; font.pixelSize: 18
++                    font.letterSpacing: 0; font.weight: Font.DemiBold
+                 }
+                 UiText {
+                     anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
+--- a/shell/modules/bar/barstyles/qsbar/panels/BrightnessPanel.qml
++++ b/shell/modules/bar/barstyles/qsbar/panels/BrightnessPanel.qml
+@@ -20,7 +20,7 @@
+     WlrLayershell.namespace: "ryoku-brightness"
+ 
+     readonly property int barBottom: root.v2BarHeight
+-    readonly property int gap: 6
++    readonly property int gap: 10
+ 
+     property int percent: 0
+     property int queuedSetPercent: -1
+@@ -111,8 +111,8 @@
+                 UiText {
+                     anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter
+                     text: I18n.tr("Brightness")
+-                    color: root.ink; font.family: root.mono; font.pixelSize: 13
+-                    font.letterSpacing: 2; font.weight: Font.Medium
++                    color: root.ink; font.family: Tokens.ui; font.pixelSize: 18
++                    font.letterSpacing: 0; font.weight: Font.DemiBold
+                 }
+                 UiText {
+                     anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
+--- a/shell/modules/bar/barstyles/qsbar/panels/MemoryPanel.qml
++++ b/shell/modules/bar/barstyles/qsbar/panels/MemoryPanel.qml
+@@ -19,7 +19,7 @@
+     WlrLayershell.namespace: "ryoku-memory"
+ 
+     readonly property int barBottom: root.v2BarHeight
+-    readonly property int gap: 6
++    readonly property int gap: 10
+ 
+     readonly property int memTotal: root.systemMemTotalMiB
+     readonly property int memAvail: root.systemMemAvailMiB
+@@ -94,10 +94,10 @@
+                     anchors.verticalCenter: parent.verticalCenter
+                     text: I18n.tr("Memory")
+                     color: root.ink
+-                    font.family: root.mono
+-                    font.pixelSize: 13
+-                    font.letterSpacing: 2
+-                    font.weight: Font.Medium
++                    font.family: Tokens.ui
++                    font.pixelSize: 18
++                    font.letterSpacing: 0
++                    font.weight: Font.DemiBold
+                 }
+                 UiText {
+                     anchors.right: parent.right

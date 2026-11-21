@@ -1,0 +1,32 @@
+--- a/modules/decoration.lua
++++ b/modules/decoration.lua
+@@ -173,20 +173,19 @@
+   ignore_alpha = 0.05,
+ })
+ 
+--- the wallpaper switcher (Super+W) is a translucent bottom-centre picker card on
+--- a full-screen layer: blur only the card (ignore_alpha keeps the frost off the
+--- clear surround), so it reads as frosted glass floating over the desktop with
+--- no full-screen dim. QML owns the open/close morph, so suppress the layer anim.
++-- Menus reserve transparent space for dismissal. Frost only the visible card.
++hl.layer_rule({
++  name         = "tsukuyomi-bar-menu-frost",
++  match        = { namespace = "^ryoku-(dashboard|volume|network|bluetooth|battery|brightness|power-profile|tray|traymenu|workspace|cpu|memory|gpu|thermals|storage|ai-usage|mpris|plugin-panel|sidebar-left)$" },
++  blur         = not no_blur,
++  ignore_alpha = 0.15,
++})
++
++-- The picker animates its own cards over the wallpaper.
+ hl.layer_rule({
+   name    = "wallpaper-picker-noanim",
+   match   = { namespace = "^ryogami-picker$" },
+   no_anim = true,
+-})
+-hl.layer_rule({
+-  name         = "wallpaper-picker-blur",
+-  match        = { namespace = "^ryogami-picker$" },
+-  blur         = not no_blur,
+-  ignore_alpha = 0.05,
+ })
+ 
+ -- Wallpaper surfaces (the in-shell backdrop ryoku-wallpaper and the ryoku-livewall
