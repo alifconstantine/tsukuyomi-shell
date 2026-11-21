@@ -1,0 +1,80 @@
+--- a/shell/components/BrandMark.qml
++++ b/shell/components/BrandMark.qml
+@@ -15,6 +15,11 @@
+     property real size: 13
+     property color color: Theme.primary
+     property int weight: Font.Medium
++    property bool archDefault: false
++
++    readonly property bool useArch: archDefault && (!Config.markText || Config.markText === "力")
++    readonly property string glyphText: useArch ? "\ue732" : Theme.mark
++    readonly property string glyphFont: useArch ? Theme.mono : Theme.fontJp
+     // recolour a single-colour image mark to `color` (matches the tinted 力
+     // idiom); off shows a full-colour logo as-is. no effect in text mode.
+     property bool tint: Theme.markTint
+@@ -31,9 +36,9 @@
+         id: glyph
+         visible: !mark.image
+         anchors.centerIn: parent
+-        text: Theme.mark
++        text: mark.glyphText
+         color: mark.color
+-        font.family: Theme.fontJp
++        font.family: mark.glyphFont
+         font.weight: mark.weight
+         font.pixelSize: mark.size
+     }
+--- a/shell/modules/bar/barstyles/orpheus/modules/Logo.qml
++++ b/shell/modules/bar/barstyles/orpheus/modules/Logo.qml
+@@ -12,7 +12,7 @@
+ 
+     readonly property real markSize: 18 * K.Style.scale
+     readonly property real sealSize: 28 * K.Style.scale
+-    readonly property real opticalOffset: markMetrics.imageMode ? 0
++    readonly property real opticalOffset: brand.image ? 0
+         : markMetrics.boundingRect.y + markMetrics.boundingRect.height / 2
+             - markMetrics.tightBoundingRect.y - markMetrics.tightBoundingRect.height / 2
+ 
+@@ -22,9 +22,8 @@
+ 
+     TextMetrics {
+         id: markMetrics
+-        readonly property bool imageMode: Theme.markSource.length > 0
+-        text: Theme.mark
+-        font.family: Theme.fontJp
++        text: brand.glyphText
++        font.family: brand.glyphFont
+         font.pixelSize: root.markSize
+         font.weight: Font.Black
+     }
+@@ -44,6 +43,9 @@
+         }
+ 
+         Pill.BrandMark {
++            id: brand
++
++            archDefault: true
+             anchors.centerIn: parent
+             anchors.verticalCenterOffset: root.opticalOffset
+             width: root.markSize
+--- a/shell/modules/bar/framebars/widgets/RailQuickSettings.qml
++++ b/shell/modules/bar/framebars/widgets/RailQuickSettings.qml
+@@ -4,9 +4,7 @@
+ import "../../../../components"
+ import shell.services
+ 
+-// Sidebar launch button: opens the left sidebar on click. The Ryoku brand mark
+-// distinguishes the shell at a glance; geometry stays the reference 16px icon
+-// box.
++// Sidebar launch button: the brand mark uses the same 16px icon box as other rail widgets.
+ Item {
+     id: root
+ 
+@@ -29,6 +27,7 @@
+             width: btn.glyphPx
+             height: btn.glyphPx
+             BrandMark {
++                archDefault: true
+                 anchors.centerIn: parent
+                 size: btn.glyphPx * (15 / Theme.iconSm)
+                 color: Theme.onSurface
