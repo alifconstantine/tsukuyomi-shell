@@ -1,0 +1,110 @@
+--- a/shell/modules/desktop/DesktopContextMenu.qml
++++ b/shell/modules/desktop/DesktopContextMenu.qml
+@@ -138,7 +138,7 @@
+                 menu.pendingApplicationPoint = null;
+         }
+         title: menu.page === "application" ? I18n.tr("New application") : I18n.tr("Desktop")
+-        gloss: "卓上"
++        gloss: ""
+         // ── quick row: the wallpaper picker and the launcher ──
+         MenuQuick {
+             visible: menu.page === ""
+--- a/shell/modules/desktop/DesktopMenu.qml
++++ b/shell/modules/desktop/DesktopMenu.qml
+@@ -108,7 +108,7 @@
+             spacing: Theme.s2
+             Text {
+                 id: seal
+-                visible: Ui.UiPreferences.showJapaneseGloss && menu.gloss.length > 0
++                visible: false
+                 anchors.verticalCenter: parent.verticalCenter
+                 text: menu.gloss
+                 color: Theme.faint
+--- a/shell/modules/desktop/MenuSection.qml
++++ b/shell/modules/desktop/MenuSection.qml
+@@ -42,7 +42,7 @@
+ 
+     Text {
+         id: gl
+-        visible: Ui.UiPreferences.showJapaneseGloss && sec.gloss.length > 0 && sec.label.length > 0
++        visible: false
+         x: tick.x + tick.width + 7
+         width: visible ? glossMetrics.advanceWidth : 0
+         anchors.verticalCenter: parent.verticalCenter
+--- a/shell/modules/confirm/RyokuConfirmationDialog.qml
++++ b/shell/modules/confirm/RyokuConfirmationDialog.qml
+@@ -91,8 +91,8 @@
+                     width: parent.width
+                     spacing: Tokens.s2
+                     Text {
+-                        visible: UiPreferences.showJapaneseGloss
+-                        text: "卓上"
++                        visible: false
++                        text: ""
+                         color: Tokens.inkFaint
+                         font.family: Tokens.jp
+                         font.pixelSize: Tokens.fBody
+--- a/shell/modules/stage/StageWidgetProvider.qml
++++ b/shell/modules/stage/StageWidgetProvider.qml
+@@ -42,7 +42,7 @@
+         const out = [];
+         for (const r of root.rows)
+             out.push({ widgetId: r.id, name: r.label, icon: r.icon,
+-                category: r.group === "" ? "Ryoku" : r.group, description: "" });
++                category: r.group === "" ? "Tsukuyomi" : r.group, description: "" });
+         return out;
+     }
+ 
+--- a/shell/modules/desktop/WidgetMenu.qml
++++ b/shell/modules/desktop/WidgetMenu.qml
+@@ -276,7 +276,7 @@
+         MenuRow {
+             visible: menu.isIris || menu.isPython
+             label: I18n.tr("Style")
+-            value: menu.isRyokuStyle ? "Ryoku" : "Original"
++            value: menu.isRyokuStyle ? "Tsukuyomi" : "Original"
+             on: menu.isRyokuStyle
+             closeOnTrigger: false
+             onTriggered: Config.set(menu.scope + "Style",
+--- a/shell/modules/desktop/WidgetInspector.qml
++++ b/shell/modules/desktop/WidgetInspector.qml
+@@ -593,7 +593,7 @@
+                     MenuRow {
+                         visible: insp.isIris || insp.isPython
+                         label: I18n.tr("Style")
+-                        value: insp.isRyokuStyle ? "Ryoku" : "Original"
++                        value: insp.isRyokuStyle ? "Tsukuyomi" : "Original"
+                         on: insp.isRyokuStyle
+                         closeOnTrigger: false
+                         onTriggered: Config.set(insp.scope + "Style",
+--- a/stage/modules/ii/editMode/EditDockDesignPicker.qml
++++ b/stage/modules/ii/editMode/EditDockDesignPicker.qml
+@@ -20,7 +20,7 @@
+     property string updatingId: ""
+ 
+     readonly property var designs: [
+-        { value: "ryoku", title: Translation.tr("Ryoku"), detail: Translation.tr("Paper islands"), glyph: "dock" },
++        { value: "ryoku", title: Translation.tr("Tsukuyomi"), detail: Translation.tr("Paper islands"), glyph: "dock" },
+         { value: "python", title: Translation.tr("Python"), detail: Translation.tr("Flowing glass"), glyph: "blur_on" },
+         { value: "shima", title: Translation.tr("Shima"), detail: Translation.tr("Notched capsule"), glyph: "line_curve" },
+         { value: "ii", title: Translation.tr("ii"), detail: Translation.tr("Islands, widgets, magnification"), glyph: "view_carousel" },
+@@ -28,7 +28,7 @@
+     ].concat(root.storeDocks.map(dock => ({
+         value: dock.id,
+         title: dock.name,
+-        detail: dock.installed ? dock.summary : Translation.tr("Install from RyoStore"),
++        detail: dock.installed ? dock.summary : Translation.tr("Install from Tsukuyomi Store"),
+         glyph: "storefront",
+         store: true,
+         installed: dock.installed,
+--- a/shell/modules/desktop/Singletons/Config.qml
++++ b/shell/modules/desktop/Singletons/Config.qml
+@@ -2262,7 +2262,7 @@
+             property string markText: "力"
+             property string markImage: ""
+             property bool markTint: true
+-            property string name: "Ryoku"
++            property string name: "Tsukuyomi"
+         }
+     }
+ 
