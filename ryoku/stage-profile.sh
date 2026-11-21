@@ -57,8 +57,8 @@ jq -n --arg browser "$browser" '
         else "gtk-launch " + $browser end
     )}}}' > "$draft/.config/ryoku/desktop.json"
 printf '{"enabled":false}\n' > "$draft/.config/ryoku/visualizer.json"
-printf '{"scheme":"dark","followWallpaper":false}\n' > "$draft/.config/ryoku/theme.json"
-printf '{"general":{"notifyOnWallpaperChange":false,"closeOnSelection":true},"keys":{"apply":"enter"},"selector":{"livePreview":false},"performance":{"maxThumbJobs":4}}\n' \
+printf '{"followWallpaper":true}\n' > "$draft/.config/ryoku/theme.json"
+printf '{"general":{"notifyOnWallpaperChange":false,"closeOnSelection":true},"keys":{"apply":"enter"},"selector":{"livePreview":false},"transition":{"shader":"crossfade","durationMs":200,"preview":false},"performance":{"maxThumbJobs":4}}\n' \
     > "$draft/.config/ryoku/ryogami.json"
 
 install -m 644 "$here"/wallpapers/* "$draft/Pictures/Wallpapers/"

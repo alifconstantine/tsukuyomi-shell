@@ -1,0 +1,13 @@
+--- a/modules/decoration.lua
++++ b/modules/decoration.lua
+@@ -7,8 +7,8 @@
+   return "rgb(" .. hex:gsub("#", "") .. ")"
+ end
+ 
+-local active   = border(wc and wc.active, "#e0563b")
+-local inactive = border(wc and wc.inactive, "#313a4d")
++local active   = border(wc and wc.active, "#b9b9b9")
++local inactive = border(wc and wc.inactive, "#393939")
+ 
+ -- Low-power switches, read from the shell's performance.json (the file Ryoku
+ -- Settings' Performance page writes). A flat-JSON pattern match keeps this

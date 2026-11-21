@@ -1,0 +1,38 @@
+--- a/shell/modules/wallpaper/Backdrop.qml
++++ b/shell/modules/wallpaper/Backdrop.qml
+@@ -371,18 +371,23 @@
+     onHeightChanged: view.publishGeometry(view.aFront ? imgA : imgB)
+ 
+     // Configure the shader + animation for the current transition and run it. A null
+-    // transition (init / live still-frame) or reduce-motion collapses to a plain
+-    // eased crossfade (instant when motion is reduced). A skwd catalog transition
++    // transition (init / live still-frame) gets a short eased crossfade.
++    // Reduced motion commits the frame without capturing either layer.
++    // A skwd catalog transition
+     // (t.shader set) loads its own ported fragment shader and eases inside it, so
+     // progress runs linear over the configured duration.
+     function startReveal() {
++        if (Motion.reduce) {
++            view.commit();
++            return;
++        }
+         view.transitioning = true;
+         // sourceItem bindings attach on this assignment. Explicit updates keep
+         // these non-live captures to exactly one frame per reveal.
+         srcA.scheduleUpdate();
+         srcB.scheduleUpdate();
+         const t = view.transition;
+-        if (Motion.reduce || !t) {
++        if (!t) {
+             reveal.fragmentShader = "reveal.frag.qsb";
+             reveal.kind = 0;
+             reveal.angle = 0;
+@@ -392,7 +397,7 @@
+             reveal.edgeSoftness = 0.002;
+             reveal.seed = 0;
+             revealAnim.easing.type = Easing.InOutQuad;
+-            revealAnim.duration = Motion.reduce ? 0 : Motion.wallpaperFade;
++            revealAnim.duration = Motion.wallpaperFade;
+             revealAnim.restart();
+             return;
+         }
