@@ -1,0 +1,112 @@
+--- a/shell/modules/bar/barstyles/qsbar/controlcenter/kit/Routes.js
++++ b/shell/modules/bar/barstyles/qsbar/controlcenter/kit/Routes.js
+@@ -5,21 +5,19 @@
+ // one-line summary the head prints (kept to a few words: it has one line), the
+ // words search matches on, and the rail section it sits in.
+ //
+-// The panel is about one thing, the bar, so the rail's first group is five
+-// routes: where the bar sits and how its panels look (Bar), the mark and
++// The panel is about one thing, the bar, so the rail holds five routes:
++// where the bar sits and how its panels look (Bar), the mark and
+ // workspaces that make it this user's (Identity), how its widgets are arranged
+ // (Layout), what each widget is and does (Widgets), and the dock that rides
+-// beside it (Dock). A second, parted group holds Community: every installed bar
+-// plugin that is not Ryoku's own, so a widget someone else wrote is never mixed
+-// in with the shipped set. Desktop widgets, mid-work switches and the session
++// beside it (Dock). Desktop widgets, mid-work switches and the session
+ // already have a home elsewhere.
+ var ROUTES = [
+     { id: "bars",    label: "Bar",     gloss: "\u5e2f", file: "BarsRoute", section: "bar",
+-      desc: "Position, shape, surface, gaps, motion and picker style.",
+-      keywords: "position top bottom form full fit dock notch islands surface border corners frost shadow depth tooltip gap gaps accent colour scale size motion animation auto hide picker pickers tanzaku hearthstone carousel" },
++      desc: "Position, surface, gaps, motion and picker style.",
++      keywords: "position top bottom islands surface border corners frost shadow depth tooltip gap gaps accent colour scale size motion animation auto hide picker pickers tanzaku hearthstone carousel" },
+     { id: "identity", label: "Identity", gloss: "\u5370", file: "IdentityRoute", section: "bar",
+       desc: "The launcher mark and the workspaces.",
+-      keywords: "identity logo mark wordmark word glyph icon kanji launcher brand ryoku arch hyprland workspaces spaces count marker style numbers kanji rings preview" },
++      keywords: "identity logo mark wordmark word glyph icon kanji launcher brand tsukuyomi arch hyprland workspaces spaces count marker style numbers kanji rings preview" },
+     { id: "layout",  label: "Layout",  gloss: "\u914d\u7f6e", file: "LayoutRoute", section: "bar",
+       desc: "Where each widget sits on the bar.",
+       keywords: "arrange order move reorder left center centre right lane add widget plugin unlock drag reset layout hide show" },
+@@ -28,10 +26,7 @@
+       keywords: "widget show hide on off density icon compact colour fill ai claude codex opencode volume boost clock weather sensor temperature plugin settings" },
+     { id: "dock",    label: "Dock",    gloss: "\u53f0", file: "DockRoute", section: "bar",
+       desc: "The app dock opposite the bar.",
+-      keywords: "dock app pinned pin edge autohide auto hide magnify frost depth shadow label media chip peek" },
+-    { id: "community", label: "Community", gloss: "\u6709\u5fd7", file: "CommunityRoute", section: "community",
+-      desc: "Bar widgets installed from outside Ryoku.",
+-      keywords: "community plugin plugins installed third party store ryostore git add remove widget" }
++      keywords: "dock app pinned pin edge autohide auto hide magnify frost depth shadow label media chip peek" }
+ ];
+ 
+ function byId(id) {
+@@ -84,7 +79,8 @@
+     case "pickers":
+         return "bars";
+     case "plugins":
+-        return "community";
++    case "community":
++        return "widgets";
+     case "system":
+     case "session":
+         return "bars";
+--- a/shell/modules/bar/barstyles/qsbar/controlcenter/CcRail.qml
++++ b/shell/modules/bar/barstyles/qsbar/controlcenter/CcRail.qml
+@@ -14,15 +14,6 @@
+     property string current: ""
+     signal chose(string id)
+ 
+-    // Installed bar plugins that are not Ryoku's own: the Community route's count.
+-    readonly property int communityCount: {
+-        var c = (rail.root && rail.root.barCatalog) ? rail.root.barCatalog : []
+-        var n = 0
+-        for (var i = 0; i < c.length; i++)
+-            if (c[i].kind === "plugin" && c[i].official !== true) n++
+-        return n
+-    }
+-
+     // The plate takes its height from whichever is taller, the rail or the page:
+     // the masthead and the routes, each with the gap it actually sits in.
+     implicitHeight: rail.tk
+@@ -80,17 +71,6 @@
+             model: Routes.inSection("bar")
+             delegate: NavItem {}
+         }
+-
+-        Rectangle {
+-            width: nav.width - rail.tk.gap * 4
+-            x: rail.tk.gap * 2
+-            height: 1
+-            color: Tsukuyomi.Style.line
+-        }
+-        Repeater {
+-            model: Routes.inSection("community")
+-            delegate: NavItem { count: rail.communityCount }
+-        }
+     }
+ 
+     Rectangle {
+--- a/shell/modules/bar/barstyles/qsbar/controlcenter/ControlCenter.qml
++++ b/shell/modules/bar/barstyles/qsbar/controlcenter/ControlCenter.qml
+@@ -82,7 +82,7 @@
+             { id: "layout.arrange", name: I18n.tr("Arrange widgets"), route: "layout", category: I18n.tr("Layout"),
+               searchTags: ["move", "reorder", "order", "left", "center", "right", "lane"], description: I18n.tr("Move widgets across the three lanes.") },
+             { id: "layout.add", name: I18n.tr("Add a widget"), route: "layout", category: I18n.tr("Layout"),
+-              searchTags: ["add", "hidden", "plugin", "ryostore", "more"], description: I18n.tr("Add a hidden built-in or an installed plugin to the bar.") },
++              searchTags: ["add", "hidden", "plugin", "store", "more"], description: I18n.tr("Add a hidden built-in or an installed plugin to the bar.") },
+             { id: "layout.unlock", name: I18n.tr("Unlock the bar"), route: "layout", category: I18n.tr("Layout"),
+               searchTags: ["unlock", "drag", "rearrange", "in place"], description: I18n.tr("Drag the widgets around on the bar itself.") },
+             { id: "layout.reset", name: I18n.tr("Reset layout"), route: "layout", category: I18n.tr("Layout"),
+@@ -106,11 +106,7 @@
+             { id: "dock.autohide", name: I18n.tr("Dock auto-hide"), route: "dock", category: I18n.tr("Dock"),
+               searchTags: ["hide", "peek", "reveal"], description: I18n.tr("Keep the dock as a peek strip until hovered.") },
+             { id: "dock.pinned", name: I18n.tr("Pinned apps"), route: "dock", category: I18n.tr("Dock"),
+-              searchTags: ["pin", "pinned", "app", "add", "remove"], description: I18n.tr("The apps the dock always shows.") },
+-            { id: "community.installed", name: I18n.tr("Community widgets"), route: "community", category: I18n.tr("Community"),
+-              searchTags: ["plugin", "plugins", "installed", "third", "party", "remove", "uninstall"], description: I18n.tr("Bar widgets installed from outside Ryoku.") },
+-            { id: "community.add", name: I18n.tr("Add from Git or Tsukuyomi Store"), route: "community", category: I18n.tr("Community"),
+-              searchTags: ["git", "url", "ryostore", "store", "install", "add"], description: I18n.tr("Install a community bar widget.") }
++              searchTags: ["pin", "pinned", "app", "add", "remove"], description: I18n.tr("The apps the dock always shows.") }
+         ]);
+     }
+ 
