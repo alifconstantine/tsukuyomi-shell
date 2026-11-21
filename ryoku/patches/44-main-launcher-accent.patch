@@ -1,0 +1,104 @@
+--- a/shell/modules/launcher/variants/main/ResultList.qml
++++ b/shell/modules/launcher/variants/main/ResultList.qml
+@@ -1,4 +1,5 @@
+ import QtQuick
++import "../../../../tsukuyomi" as Tsukuyomi
+ import Quickshell
+ import Ryoku.Ui.Singletons as Ui
+ import "../../shared/Singletons"
+@@ -140,7 +141,7 @@
+             anchors.bottom: parent.bottom
+             radius: MainMetrics.radiusRow * list.s
+             visible: row.selected || rowArea.containsMouse
+-            color: row.selected ? Theme.threadBg : Qt.rgba(0.94, 0.88, 0.84, 0.03)
++            color: row.selected ? Qt.alpha(Tsukuyomi.Style.accent, 0.14) : Tsukuyomi.Style.hover
+             border.width: row.selected ? 1 : 0
+             border.color: Theme.lineStrong
+         }
+@@ -217,7 +218,7 @@
+                 anchors.verticalCenter: parent.verticalCenter
+                 anchors.right: parent.right
+                 text: row.entry && row.entry.actions && row.entry.actions.length > 0 ? row.entry.actions[0].name : ""
+-                color: Theme.vermLit
++                color: Tsukuyomi.Style.accent
+                 font.family: Theme.font
+                 font.pixelSize: 11 * list.s
+                 visible: row.selected
+@@ -236,7 +237,7 @@
+             var sp = spans[i];
+             if (sp.start > last)
+                 out += list.escapeHtml(title.slice(last, sp.start));
+-            out += "<font color=\"" + Theme.vermLit + "\">" + list.escapeHtml(title.slice(sp.start, sp.start + sp.len)) + "</font>";
++            out += "<font color=\"" + Tsukuyomi.Style.accent + "\">" + list.escapeHtml(title.slice(sp.start, sp.start + sp.len)) + "</font>";
+             last = sp.start + sp.len;
+         }
+         if (last < title.length)
+--- a/shell/modules/launcher/variants/main/SearchRow.qml
++++ b/shell/modules/launcher/variants/main/SearchRow.qml
+@@ -1,4 +1,5 @@
+ import QtQuick
++import "../../../../tsukuyomi" as Tsukuyomi
+ import QtQuick.Controls
+ import Quickshell
+ import "../../shared/Singletons"
+@@ -59,7 +60,8 @@
+         Accessible.name: placeholderText
+         placeholderTextColor: Theme.faint
+         selectByMouse: true
+-        selectionColor: Theme.verm
++        selectionColor: Tsukuyomi.Style.accent
++        selectedTextColor: Tokens.paper
+         onTextChanged: root.text = text
+         Keys.onUpPressed: root.moved(-1)
+         Keys.onDownPressed: root.moved(1)
+@@ -91,7 +93,7 @@
+         height: 20 * root.s
+         radius: Theme.radius
+         visible: root.modeLabel.length > 0
+-        color: Theme.threadBg
++        color: Tsukuyomi.Style.hover
+         border.width: 1
+         border.color: Theme.lineStrong
+ 
+@@ -99,7 +101,7 @@
+             id: chipText
+             anchors.centerIn: parent
+             text: root.modeLabel
+-            color: Theme.vermLit
++            color: Tsukuyomi.Style.accent
+             font.family: Theme.mono
+             font.pixelSize: 9 * root.s
+             font.letterSpacing: 1
+@@ -128,12 +130,12 @@
+         width: 30 * root.s
+         height: 30 * root.s
+         radius: MainMetrics.radiusGlyph * root.s
+-        color: helpArea.containsMouse || root.helpActive ? Theme.threadBg : "transparent"
++        color: helpArea.containsMouse || root.helpActive ? Tsukuyomi.Style.hover : "transparent"
+ 
+         Text {
+             anchors.centerIn: parent
+             text: "?"
+-            color: helpArea.containsMouse || root.helpActive ? Theme.vermLit : Theme.iconDim
++            color: helpArea.containsMouse || root.helpActive ? Tsukuyomi.Style.accent : Theme.iconDim
+             font.family: Theme.font
+             font.pixelSize: 15 * root.s
+             font.weight: Font.DemiBold
+@@ -159,7 +161,7 @@
+         width: 30 * root.s
+         height: 30 * root.s
+         radius: MainMetrics.radiusGlyph * root.s
+-        color: gridArea.containsMouse || root.gridActive ? Theme.threadBg : "transparent"
++        color: gridArea.containsMouse || root.gridActive ? Tsukuyomi.Style.hover : "transparent"
+ 
+         Grid {
+             anchors.centerIn: parent
+@@ -172,7 +174,7 @@
+                     width: 3.5 * root.s
+                     height: 3.5 * root.s
+                     radius: 1 * root.s
+-                    color: gridArea.containsMouse || root.gridActive ? Theme.vermLit : Theme.iconDim
++                    color: gridArea.containsMouse || root.gridActive ? Tsukuyomi.Style.accent : Theme.iconDim
+                 }
+             }
+         }
