@@ -1,0 +1,69 @@
+--- a/hub/Hub.qml
++++ b/hub/Hub.qml
+@@ -27,7 +27,6 @@
+ import "schema/LauncherPage.js" as LauncherSchema
+ import "schema/FastfetchPage.js" as FastfetchSchema
+ import "schema/LockscreenPage.js" as LockscreenSchema
+-import "schema/AnimationsPage.js" as AnimationsSchema
+ import "schema/AddonsPage.js" as AddonsSchema
+ import "schema/WindowRulesPage.js" as WindowRulesSchema
+ import "schema/AppOverridesPage.js" as AppOverridesSchema
+@@ -76,6 +75,7 @@
+     function canonicalSection(s) {
+         if (s === "windows") return "windowmanager";
+         if (s === "cursor") return "input";
++        if (s === "animations") return "performance";
+         if (s === "autostart" || s === "environment") return "session";
+         if (s === "sidebar" || s === "sidebars-left" || s === "sidebars-right") return "controls";
+         return s;
+@@ -132,7 +132,7 @@
+             { key: "displays", name: "Displays", needs: { cap: "monitorConfig" } }, { key: "connections", name: "Connections" },
+             { key: "input", name: "Input" }, { key: "gpu", name: "Graphics & Power" } ] },
+         { name: "LOOK", items: [
+-            { key: "animations", name: "Animations" }, { key: "lockscreen", name: "Lockscreen" } ] },
++            { key: "lockscreen", name: "Lockscreen" } ] },
+         { name: "COMPOSITOR", items: [
+             { key: "windowmanager", name: "Window Manager", needs: { provider: true } }, { key: "plugins", name: "Plugins", needs: { cap: "plugins" } },
+             { key: "layerrules", name: "Layer Rules", adv: true, needs: { rows: true } } ] },
+@@ -192,13 +192,12 @@
+         "launcher": "launcher spotlight command palette greeting weather home",
+         "fastfetch": "fetch neofetch terminal system info logo ascii emblem readout",
+         "lockscreen": "lock screensaver signin greeter skin theme login",
+-        "animations": "animation animations motion transition bezier curve speed feel wobbly disable enable toggle",
+         "addons": "installed plugin addon extension manage enable remove update widget bundle extras store marketplace browse",
+         "windowrules": "window rule float pin size place opacity class title override",
+         "appoverrides": "app override per-app opacity blur corner class inherit opaque transparent",
+         "layerrules": "layer rule namespace blur dim bar notification surface",
+         "session": "session login startup autostart launch run command boot environment variable env var export",
+-        "performance": "performance battery power saving save lowpower potato lag cpu gpu ram memory idle freeze reduce motion fps",
++        "performance": "performance battery power saving save lowpower potato lag cpu gpu ram memory idle freeze reduce motion animation animations transition fps",
+         "rashin": "rashin agent ai assistant hermes vault memory skills chat code llm needle",
+         "updates": "update upgrade version channel commit behind check origin",
+         "import": "import bring migrate dotfiles config existing kitty fish fastfetch drop folder git backup undo restore adopt",
+@@ -219,7 +218,7 @@
+         "recording": RecordingSchema.rows, "dictation": DictationSchema.rows,
+         "launcher": LauncherSchema.rows, "fastfetch": FastfetchSchema.rows,
+         "lockscreen": LockscreenSchema.rows,
+-        "animations": AnimationsSchema.rows, "addons": AddonsSchema.rows,
++        "addons": AddonsSchema.rows,
+         "windowrules": WindowRulesSchema.rows, "appoverrides": AppOverridesSchema.rows,
+         "layerrules": LayerRulesSchema.rows, "session": SessionSchema.rows,
+         "performance": PerformanceSchema.rows,
+@@ -435,7 +434,7 @@
+     // `framed` pages keep the rail + bottom action bar; `ledger` pages also get
+     // the right write-ledger column. Everything else is full-bleed.
+     readonly property var framedSet: ({
+-        "subshells": true, "bar-studio": true, "desktop": true, "controls": true, "plugins": true, "input": true, "animations": true, "global": true, "windowmanager": true,
++        "subshells": true, "bar-studio": true, "desktop": true, "controls": true, "plugins": true, "input": true, "global": true, "windowmanager": true,
+         "windowrules": true, "appoverrides": true, "layerrules": true,
+         "session": true, "gamebar": true
+     })
+@@ -531,7 +530,7 @@
+             "plugins": "PluginsPage", "profile": "ProfilePage",
+             "subshells": "SubshellsPage", "bar-studio": "BarStudioPage", "desktop": "DesktopPage", "controls": "ControlsPage", "overlays": "OverlaysPage", "session": "SessionPage",
+             "layerrules": "LayerRulesPage", "windowrules": "WindowRulesPage",
+-            "appoverrides": "AppOverridesPage", "animations": "AnimationsPage",
++            "appoverrides": "AppOverridesPage",
+             "input": "InputPage", "keybinds": "KeybindsPage",
+             "dictation": "DictationPage", "displays": "DisplaysPage",
+             "connections": "ConnectionsPage", "gpu": "GpuPage",
