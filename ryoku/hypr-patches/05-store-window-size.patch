@@ -1,0 +1,29 @@
+--- a/modules/window_rules.lua
++++ b/modules/window_rules.lua
+@@ -35,7 +35,7 @@
+ -- page or custom fraction inside the work area with the same gaps and border a
+ -- tiled window gets.
+ local function fit_page_to_work_area(win)
+-    if not win or win.title ~= "Tsukuyomi Hub" then return end
++    if not win or (win.title ~= "Tsukuyomi Hub" and win.title ~= "Tsukuyomi Store") then return end
+     local mon = win.monitor
+     if not mon then return end
+     local scale = mon.scale or 1
+@@ -163,7 +163,7 @@
+     name   = "float-tsukuyomi-store",
+     match  = { title = "^(Tsukuyomi Store)$" },
+     float  = true,
+-    size   = fit(1180, 760),
++    size   = page(),
+     center = true,
+ })
+ 
+@@ -212,7 +212,7 @@
+     name   = "float-ryostore",
+     match  = { class = "ryostore" },
+     float  = true,
+-    size   = fit(900, 600),
++    size   = page(),
+     center = true,
+ })
+ 
