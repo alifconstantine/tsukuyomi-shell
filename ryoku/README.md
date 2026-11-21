@@ -16,6 +16,7 @@ Pass the desktop ID of an installed browser. Omit it for a dock without a browse
 - Click the clock to open the dashboard. The dock opens Applications, Dolphin, the supplied browser, and Kitty.
 - Open **Hub → Appearance → Theme & Accent** for Dark, Light, wallpaper brightness, and accent sources. Installed Store themes can be applied from the same page.
 - **Hub → Appearance → Bar Studio** shows live QS Bar style, layout, and widgets while QS Bar is selected. The QS Bar Settings shortcut opens the full editor.
+- **Hub → Appearance → Dock** controls visibility and auto-hide for the shared dock. The Dock shortcuts in Bar Studio and QS Bar Settings open the same page. **Customize dock** opens the Stage Editor for design, position, and pinned apps.
 - Press **Super+Space** to open the Main app launcher. Change the shortcut in **Hub → Keybinds → Shell → App Launcher**. **Super+Enter** opens Kitty, **Super+E** opens Dolphin, and **Super+W** opens the wallpaper picker. Use the arrow keys to highlight an item and **Space** for its preview. Press **Enter** to apply the selected wallpaper. New profiles start with Cloud Valley.
 - Press `Ctrl+Shift+F11` to open the Hub or `Ctrl+Shift+F12` to close the preview window.
 

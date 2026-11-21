@@ -1,0 +1,279 @@
+--- a/hub/Hub.qml
++++ b/hub/Hub.qml
+@@ -133,7 +133,7 @@
+             { key: "input", name: "Input" }, { key: "gpu", name: "Graphics & Power" } ] },
+         { name: "Appearance", items: [
+             { key: "appearance", name: "Theme & Accent" }, { key: "bar-studio", name: "Bar Studio", wired: true },
+-            { key: "lockscreen", name: "Lockscreen" } ] },
++            { key: "dock", name: "Dock" }, { key: "lockscreen", name: "Lockscreen" } ] },
+         { name: "Window Manager", items: [
+             { key: "windowmanager", name: "Window Manager", needs: { provider: true } }, { key: "plugins", name: "Plugins", needs: { cap: "plugins" } },
+             { key: "layerrules", name: "Layer Rules", adv: true, needs: { rows: true } } ] },
+@@ -174,6 +174,7 @@
+     // (transparency->opacity, startup->autostart, screensaver->lockscreen).
+     readonly property var sectionKeywords: ({
+         "appearance": "theme appearance colours colors accent hex dark light wallpaper palette installed",
++        "dock": "show hide autohide auto-hide dock pins pinned apps position design",
+         "global": "language locale region formats format date time number currency text size font scale icons icon theme appearance location city weather timezone international i18n l10n",
+         "profile": "dashboard status overview telemetry hostname cpu gpu memory uptime specs",
+         "displays": "monitor screen resolution refresh scale rotation arrange mirror hidpi dual second external multiple",
+@@ -538,7 +539,7 @@
+             "connections": "ConnectionsPage", "gpu": "GpuPage",
+             "updates": "UpdatesPage", "rashin": "RashinPage",
+             "recording": "RecordingPage", "performance": "PerformancePage",
+-            "launcher": "LauncherPage", "lockscreen": "SessionLockscreenPage", "appearance": "AppearancePage",
++            "launcher": "LauncherPage", "lockscreen": "SessionLockscreenPage", "appearance": "AppearancePage", "dock": "DockPage",
+             "fastfetch": "FastfetchPage", "addons": "AddonsPage",
+             "credits": "CreditsPage", "gamebar": "GameBarPage"
+         };
+--- a/hub/pages/BarStudioPage.qml
++++ b/hub/pages/BarStudioPage.qml
+@@ -139,10 +139,6 @@
+     function openOrpheusSettings() {
+         Spawn.run(["qs", "-c", "shell", "ipc", "call", "orpheus", "settings", ""]);
+     }
+-    function openDockSettings() {
+-        Quickshell.execDetached(["qs", "-c", "shell", "ipc", "call", "desktop", "editSection", "dock", ""]);
+-    }
+-
+     // The frame family opens its own settings overlay through the shell IPC.
+     function openIrisSettings() {
+         Quickshell.execDetached(["qs", "-c", "shell", "ipc", "call", "iris", "settings", ""]);
+@@ -289,37 +285,6 @@
+                     active: page.showActiveDetails && page.activeStyle === "qsbar"
+                     visible: active
+                     source: active ? Qt.resolvedUrl("QsBarStudio.qml") : ""
+-                }
+-            }
+-
+-            SettingCard {
+-                width: col.colWidth
+-                visible: page.activeStyle !== "qsbar"
+-                title: I18n.tr("Dock")
+-
+-                Item {
+-                    width: parent.width
+-                    height: dockHandoff.height + Tokens.s3 + Tokens.s4
+-                    Column {
+-                        id: dockHandoff
+-                        anchors { left: parent.left; right: parent.right; top: parent.top }
+-                        anchors.leftMargin: Tokens.s4
+-                        anchors.rightMargin: Tokens.s4
+-                        anchors.topMargin: Tokens.s3
+-                        spacing: Tokens.s3
+-                        Text {
+-                            width: parent.width
+-                            text: I18n.tr("The shared dock is configured in Stage Editor, regardless of which shell or bar is active.")
+-                            color: Tokens.inkMuted
+-                            font.family: Tokens.ui
+-                            font.pixelSize: Tokens.fBody
+-                            wrapMode: Text.WordWrap
+-                        }
+-                        Btn {
+-                            text: I18n.tr("OPEN DOCK SETTINGS")
+-                            onAct: page.openDockSettings()
+-                        }
+-                    }
+                 }
+             }
+ 
+--- a/hub/pages/QsBarStudio.qml
++++ b/hub/pages/QsBarStudio.qml
+@@ -60,7 +60,9 @@
+         editor.run(args);
+     }
+     function openSettings() {
+-        if (barActive)
++        if (editor.tab === "dock")
++            Quickshell.execDetached(["ryoku-shell", "hub", "open", "dock"]);
++        else if (barActive)
+             Quickshell.execDetached(["ryoku-shell", "bar", "settings", editor.tab]);
+     }
+ 
+@@ -245,33 +247,6 @@
+             }
+         }
+ 
+-        SettingRow {
+-            width: parent.width
+-            visible: editor.tab === "dock"
+-            label: I18n.tr("Show dock")
+-            controlWidth: 55
+-            Sw {
+-                anchors.right: parent.right
+-                anchors.verticalCenter: parent.verticalCenter
+-                on: Settings.get("dock.enabled") === true
+-                enabled: editor.barActive && !editor.saving
+-                onToggled: value => editor.patch("dock.enabled", value)
+-            }
+-        }
+-        SettingRow {
+-            width: parent.width
+-            visible: editor.tab === "dock"
+-            label: I18n.tr("Auto-hide")
+-            divider: true
+-            controlWidth: 55
+-            Sw {
+-                anchors.right: parent.right
+-                anchors.verticalCenter: parent.verticalCenter
+-                on: Settings.get("dock.autohide") === true
+-                enabled: editor.barActive && !editor.saving && Settings.get("dock.enabled") === true
+-                onToggled: value => editor.patch("dock.autohide", value)
+-            }
+-        }
+         Text {
+             width: parent.width
+             visible: editor.errorMessage !== ""
+@@ -281,7 +256,7 @@
+             text: editor.errorMessage
+         }
+         Btn {
+-            text: editor.tab === "dock" ? I18n.tr("Open advanced dock settings") : I18n.tr("Open full QS Bar settings")
++            text: editor.tab === "dock" ? I18n.tr("Open Dock settings") : I18n.tr("Open full QS Bar settings")
+             enabled: editor.barActive
+             onAct: editor.openSettings()
+         }
+--- a/shell/modules/bar/barstyles/qsbar/controlcenter/routes/DockRoute.qml
++++ b/shell/modules/bar/barstyles/qsbar/controlcenter/routes/DockRoute.qml
+@@ -13,10 +13,10 @@
+     readonly property real colW: Math.min(page.width, page.tk ? page.tk.contentW : 640)
+     implicitHeight: col.implicitHeight
+ 
+-    function openStageEditor() {
++    function openDockSettings() {
+         if (page.cc)
+             page.cc.close()
+-        Spawn.run(["qs", "-c", "shell", "ipc", "call", "desktop", "editSection", "dock", ""])
++        Spawn.run(["ryoku-shell", "hub", "open", "dock"])
+     }
+ 
+     Flickable {
+@@ -43,15 +43,15 @@
+                         anchors.left: parent.left
+                         anchors.right: parent.right
+                         block: true
+-                        label: I18n.tr("Dock settings moved to Stage Editor")
+-                        desc: I18n.tr("Choose the design, placement, behaviour and pinned apps in one place.")
+-                        source: I18n.tr("Stage Editor")
++                        label: I18n.tr("Dock settings")
++                        desc: I18n.tr("Manage dock visibility and auto-hide in Tsukuyomi Hub.")
++                        source: I18n.tr("Tsukuyomi Hub")
+                         Btn {
+                             anchors.left: parent.left
+                             anchors.verticalCenter: parent.verticalCenter
+-                            text: I18n.tr("OPEN STAGE EDITOR")
++                            text: I18n.tr("Open Dock settings")
+                             primary: true
+-                            onAct: page.openStageEditor()
++                            onAct: page.openDockSettings()
+                         }
+                     }
+                 }
+--- /dev/null
++++ b/hub/pages/DockPage.qml
+@@ -0,0 +1,105 @@
++pragma ComponentBehavior: Bound
++
++import QtQuick
++import Quickshell
++import Ryoku.Ui
++import Ryoku.Ui.Singletons
++import ".."
++import "../Singletons"
++
++Item {
++    id: page
++
++    property var hub
++    readonly property bool fullBleed: true
++    readonly property bool dockShown: Settings.get("dock.enabled") === true
++    property bool saving: false
++    property string errorMessage: ""
++
++    function updateSetting(key, value) {
++        if (!Settings.ready || saving)
++            return;
++        page.saving = true;
++        page.errorMessage = "";
++        Settings.patch("dock." + key, value, function(ok, error) {
++            page.saving = false;
++            if (!ok)
++                page.errorMessage = error || I18n.tr("Could not save the dock setting.");
++        });
++    }
++
++    SchemaPage {
++        anchors.fill: parent
++        anchors.margins: Tokens.s6
++        schema: []
++        draft: null
++        defaults: ({})
++        title: I18n.tr("Dock")
++        blurb: I18n.tr("Choose when the desktop dock appears.")
++
++        Column {
++            width: parent.width
++            spacing: Tokens.s4
++
++            SettingCard {
++                width: parent.width
++                title: I18n.tr("Visibility")
++                collapsible: false
++
++                SettingRow {
++                    width: parent.width
++                    label: I18n.tr("Show dock")
++                    controlWidth: 55
++
++                    Sw {
++                        objectName: "showDesktopDock"
++                        anchors.right: parent.right
++                        anchors.verticalCenter: parent.verticalCenter
++                        on: page.dockShown
++                        enabled: Settings.ready && !page.saving
++                        Accessible.role: Accessible.CheckBox
++                        Accessible.name: I18n.tr("Show dock")
++                        Accessible.checked: on
++                        Accessible.onToggleAction: activate()
++                        onToggled: value => page.updateSetting("enabled", value)
++                    }
++                }
++
++                SettingRow {
++                    width: parent.width
++                    label: I18n.tr("Auto-hide")
++                    desc: I18n.tr("Reveal the dock by moving the pointer to its screen edge.")
++                    divider: true
++                    controlWidth: 55
++
++                    Sw {
++                        anchors.right: parent.right
++                        anchors.verticalCenter: parent.verticalCenter
++                        on: Settings.get("dock.autohide") === true
++                        enabled: Settings.ready && !page.saving && page.dockShown
++                        Accessible.role: Accessible.CheckBox
++                        Accessible.name: I18n.tr("Auto-hide")
++                        Accessible.checked: on
++                        Accessible.onToggleAction: activate()
++                        onToggled: value => page.updateSetting("autohide", value)
++                    }
++                }
++            }
++
++            Text {
++                width: parent.width
++                visible: page.errorMessage !== ""
++                text: page.errorMessage
++                font.family: Tokens.ui
++                font.pixelSize: Tokens.fBody
++                color: Tokens.alert
++                wrapMode: Text.WordWrap
++            }
++
++            Btn {
++                text: I18n.tr("Customize dock")
++                onAct: Quickshell.execDetached(["qs", "-c", "shell", "ipc", "call", "desktop", "editSection", "dock", ""])
++            }
++        }
++    }
++}
