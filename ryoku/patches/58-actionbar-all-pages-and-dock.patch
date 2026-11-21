@@ -1,0 +1,96 @@
+diff -ruN a/hub/Hub.qml b/hub/Hub.qml
+--- a/hub/Hub.qml	2026-11-21 22:33:18.487192710 +0700
++++ b/hub/Hub.qml	2026-11-21 22:33:19.074452950 +0700
+@@ -438,7 +438,7 @@
+     // `framed` pages keep the rail + bottom action bar; `ledger` pages also get
+     // the right write-ledger column. Everything else is full-bleed.
+     readonly property var framedSet: ({
+-        "appearance": true, "subshells": true, "bar-studio": true, "desktop": true, "controls": true, "plugins": true, "input": true, "global": true, "windowmanager": true,
++        "appearance": true, "bar-studio": true, "dock": true, "subshells": true, "desktop": true, "controls": true, "plugins": true, "input": true, "global": true, "windowmanager": true,
+         "windowrules": true, "appoverrides": true, "layerrules": true,
+         "session": true, "gamebar": true
+     })
+@@ -584,7 +584,7 @@
+         "weatherLocation": "", "weatherUnit": "auto", "formatLocale": "",
+         "general.clock_format_24_h": false,
+         "reloadCover": ReloadCoverModel.empty(),
+-        "language": "Auto", "barStyle": "orpheus", "showJapaneseGloss": true, "obi": {}, "nacre": NacreConfig.defaultConfig(), "qsbar": {}, "dock": {},
++        "language": "Auto", "barStyle": "orpheus", "showJapaneseGloss": true, "obi": {}, "nacre": NacreConfig.defaultConfig(), "qsbar": {}, "dock": {}, "dock.enabled": true, "dock.autohide": true,
+         "theme.theme": "Default", "theme.appearance": ({ mode: "dark", accent: "neutral" }),
+         "notifications.show_images": false,
+         "deckFrostEnabled": true, "deckFrost": 0.45,
+@@ -717,7 +717,7 @@
+     // against liveBaseline: the state at open, re-snapshotted on every Save.
+     // Quit and Revert walk the desktop back to that baseline through the same
+     // channel, so an unsaved close leaves no residue.
+-    readonly property var liveKeys: ["frameBars", "frameEnabled", "frameOpacity", "frameThickness", "frameCorner", "fontFamily", "terminalFontFamily", "fontSize", "barStyle", "obi", "nacre", "qsbar", "dock", "theme.theme", "theme.appearance", "clipboard.widthPercent", "clipboard.heightPercent", "clipboard.bottomPercent", "clipboard.panelRadius", "clipboard.paneRadius", "clipboard.cardRadius"]
++    readonly property var liveKeys: ["frameBars", "frameEnabled", "frameOpacity", "frameThickness", "frameCorner", "fontFamily", "terminalFontFamily", "fontSize", "barStyle", "obi", "nacre", "qsbar", "dock", "dock.enabled", "dock.autohide", "theme.theme", "theme.appearance", "clipboard.widthPercent", "clipboard.heightPercent", "clipboard.bottomPercent", "clipboard.panelRadius", "clipboard.paneRadius", "clipboard.cardRadius"]
+     property var liveBaseline: null
+     property var livePending: ({})
+     function captureLiveBaseline() {
+@@ -1293,7 +1293,7 @@
+         // file) stays framed too.
+         readonly property bool full: hub.pageFile(hub.section) !== "" && !hub.framedSet[hub.section]
+         anchors.top: parent.top
+-        anchors.bottom: pageArea.full ? parent.bottom : bar.top
++        anchors.bottom: bar.top
+         anchors.topMargin: pageArea.full ? 0 : Tokens.s5
+         anchors.bottomMargin: pageArea.full ? 0 : Tokens.s3
+         // Framed pages fill the window beside the rail: the Hub opens
+@@ -1589,7 +1589,6 @@
+     // ── action bar ─────────────────────────────────────────────────────────
+     ActionBar {
+         id: bar
+-        visible: !pageArea.full
+         anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
+         dirty: hub.dirty
+         cleanText: pageHost.shown === "controls" && pageHost.front && pageHost.front.item
+diff -ruN a/hub/pages/DockPage.qml b/hub/pages/DockPage.qml
+--- a/hub/pages/DockPage.qml	2026-11-21 22:33:18.457504275 +0700
++++ b/hub/pages/DockPage.qml	2026-11-21 22:33:19.074551405 +0700
+@@ -11,16 +11,24 @@
+     id: page
+ 
+     property var hub
+-    readonly property bool fullBleed: true
+-    readonly property bool dockShown: Settings.get("dock.enabled") === true
++    readonly property bool dockShown: page.hub
++        ? page.hub.val("dock.enabled") === true
++        : Settings.get("dock.enabled") === true
++    readonly property bool dockAutohide: page.hub
++        ? page.hub.val("dock.autohide") === true
++        : Settings.get("dock.autohide") === true
+     property bool saving: false
+     property string errorMessage: ""
+ 
+     function updateSetting(key, value) {
+-        if (!Settings.ready || saving)
++        if (!Settings.ready || page.saving)
+             return;
+-        page.saving = true;
+         page.errorMessage = "";
++        if (page.hub) {
++            page.hub.stageLive("dock." + key, value);
++            return;
++        }
++        page.saving = true;
+         Settings.patch("dock." + key, value, function(ok, error) {
+             page.saving = false;
+             if (!ok)
+@@ -30,7 +38,6 @@
+ 
+     SchemaPage {
+         anchors.fill: parent
+-        anchors.margins: Tokens.s6
+         schema: []
+         draft: null
+         defaults: ({})
+@@ -75,7 +82,7 @@
+                     Sw {
+                         anchors.right: parent.right
+                         anchors.verticalCenter: parent.verticalCenter
+-                        on: Settings.get("dock.autohide") === true
++                        on: page.dockAutohide
+                         enabled: Settings.ready && !page.saving && page.dockShown
+                         Accessible.role: Accessible.CheckBox
+                         Accessible.name: I18n.tr("Auto-hide")
