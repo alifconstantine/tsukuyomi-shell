@@ -19,7 +19,7 @@ if [[ ! -S $parent ]]; then
     exit 1
 fi
 
-for command in bwrap dbus-run-session start-hyprland ryogami; do
+for command in bwrap dbus-run-session start-hyprland ryogami git go patch; do
     if ! command -v "$command" >/dev/null; then
         echo "Missing preview dependency: $command" >&2
         exit 1
@@ -40,6 +40,9 @@ here=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
 "$here/stage-preview.sh" "$work/profile" "${1:-}"
+cp -a /usr/lib/qt6/qml/Ryoku/Ryogami "$work/picker"
+"$here/stage-picker.sh" "$work/picker"
+"$here/build-shell.sh" "$work/ryoku-shell"
 mkdir -m 700 "$work/runtime"
 
 # Only the parent Wayland socket and GPU render nodes cross from the session.
@@ -49,6 +52,8 @@ bwrap --unshare-all --die-with-parent \
     --symlink usr/bin /bin --symlink usr/lib /lib --symlink usr/lib /lib64 \
     --proc /proc --dev /dev "${gpu[@]}" --tmpfs /run --tmpfs /tmp --tmpfs /var \
     --bind "$work" /preview --ro-bind "$parent" /preview/runtime/parent-wayland \
+    --ro-bind "$work/picker" /usr/lib/qt6/qml/Ryoku/Ryogami \
+    --ro-bind "$work/ryoku-shell" /usr/bin/ryoku-shell \
     --ro-bind "$here/preview.lua" /preview/hyprland.lua \
     --ro-bind "$here/preview-session.sh" /preview/session.sh \
     --clearenv --setenv PATH /usr/bin --setenv LANG C.UTF-8 \
