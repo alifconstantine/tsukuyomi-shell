@@ -1,0 +1,121 @@
+--- a/hub/pages/BarStudioPage.qml
++++ b/hub/pages/BarStudioPage.qml
+@@ -283,10 +283,18 @@
+                 }
+             }
+ 
+-            SettingCard {
+-                width: col.colWidth
+-                title: I18n.tr("DOCK")
+-                kana: "台"
++            Loader {
++                width: col.colWidth
++                height: item ? item.implicitHeight : 0
++                active: page.showActiveDetails && page.activeStyle === "qsbar"
++                visible: active
++                source: active ? Qt.resolvedUrl("QsBarStudio.qml") : ""
++            }
++
++            SettingCard {
++                width: col.colWidth
++                visible: page.activeStyle !== "qsbar"
++                title: I18n.tr("Dock")
+ 
+                 Item {
+                     width: parent.width
+@@ -312,14 +320,6 @@
+                         }
+                     }
+                 }
+-            }
+-
+-            Loader {
+-                width: col.colWidth
+-                height: item ? item.implicitHeight : 0
+-                active: page.showActiveDetails && page.activeStyle === "qsbar"
+-                visible: active
+-                source: active ? Qt.resolvedUrl("QsBarStudio.qml") : ""
+             }
+ 
+             // ── ORPHEUS: its layout, modules, form and sound live in its own settings
+--- a/hub/pages/QsBarStudio.qml
++++ b/hub/pages/QsBarStudio.qml
+@@ -37,7 +37,7 @@
+             return;
+         editor.saving = true;
+         editor.errorMessage = "";
+-        Settings.patch("qsbar." + key, value, (ok, error) => {
++        Settings.patch(key, value, (ok, error) => {
+             editor.saving = false;
+             if (!ok)
+                 editor.errorMessage = error || I18n.tr("The bar settings could not be saved.");
+@@ -138,7 +138,7 @@
+                 currentIndex: Math.max(0, editor.forms.findIndex(item =>
+                     item.id === (Settings.get("qsbar.barShellStyle") || "full")))
+                 enabled: editor.barActive && !editor.saving
+-                onActivated: editor.patch("barShellStyle", currentValue)
++                onActivated: editor.patch("qsbar.barShellStyle", currentValue)
+                 Accessible.name: I18n.tr("Bar form")
+             }
+         }
+@@ -156,7 +156,7 @@
+                 labels: ({ top: I18n.tr("Top"), bottom: I18n.tr("Bottom") })
+                 current: Settings.get("qsbar.barPosition") || "top"
+                 enabled: editor.barActive && !editor.saving
+-                onChose: value => editor.patch("barPosition", value)
++                onChose: value => editor.patch("qsbar.barPosition", value)
+             }
+         }
+         SettingRow {
+@@ -170,7 +170,7 @@
+                 anchors.verticalCenter: parent.verticalCenter
+                 on: Settings.get("qsbar.barFrostEnabled") === true
+                 enabled: editor.barActive && !editor.saving
+-                onToggled: value => editor.patch("barFrostEnabled", value)
++                onToggled: value => editor.patch("qsbar.barFrostEnabled", value)
+             }
+         }
+ 
+@@ -245,6 +245,33 @@
+             }
+         }
+ 
++        SettingRow {
++            width: parent.width
++            visible: editor.tab === "dock"
++            label: I18n.tr("Show dock")
++            controlWidth: 55
++            Sw {
++                anchors.right: parent.right
++                anchors.verticalCenter: parent.verticalCenter
++                on: Settings.get("dock.enabled") === true
++                enabled: editor.barActive && !editor.saving
++                onToggled: value => editor.patch("dock.enabled", value)
++            }
++        }
++        SettingRow {
++            width: parent.width
++            visible: editor.tab === "dock"
++            label: I18n.tr("Auto-hide")
++            divider: true
++            controlWidth: 55
++            Sw {
++                anchors.right: parent.right
++                anchors.verticalCenter: parent.verticalCenter
++                on: Settings.get("dock.autohide") === true
++                enabled: editor.barActive && !editor.saving && Settings.get("dock.enabled") === true
++                onToggled: value => editor.patch("dock.autohide", value)
++            }
++        }
+         Text {
+             width: parent.width
+             visible: editor.errorMessage !== ""
+@@ -254,7 +281,7 @@
+             text: editor.errorMessage
+         }
+         Btn {
+-            text: editor.tab === "dock" ? I18n.tr("Open dock settings") : I18n.tr("Open full QS Bar settings")
++            text: editor.tab === "dock" ? I18n.tr("Open advanced dock settings") : I18n.tr("Open full QS Bar settings")
+             enabled: editor.barActive
+             onAct: editor.openSettings()
+         }
