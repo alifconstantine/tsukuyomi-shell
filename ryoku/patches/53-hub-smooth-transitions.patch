@@ -1,0 +1,128 @@
+--- a/hub/Hub.qml
++++ b/hub/Hub.qml
+@@ -56,7 +56,8 @@
+     implicitHeight: 880
+     color: Tsukuyomi.Style.surface
+     focus: true
+-    readonly property bool reduceMotion: Tokens.reduceMotion || performance.reduceMotion || performance.lowPowerMode
++    readonly property bool softwareRenderer: Quickshell.env("TSUKUYOMI_SOFTWARE_RENDERER") === "1"
++    readonly property bool reduceMotion: Tokens.reduceMotion || performance.reduceMotion || performance.lowPowerMode || softwareRenderer
+ 
+     // ── which page ───────────────────────────────────────────────────────
+     property string section: "global"
+@@ -1327,7 +1328,7 @@
+             // crossfade put two half-transparent pages on screen at once, which
+             // read as the words flashing.
+             property int dir: 1
+-            readonly property int slide: Tokens.s6 * 2
++            readonly property int slide: Tokens.s4
+             // the rail/router set `section` before the async load lands, so the
+             // direction of travel is decided here, once, off the section the
+             // screen is still showing.
+@@ -1358,6 +1359,14 @@
+                 else
+                     incoming.source = pageHost.src;
+             }
++            function clearParked(loader) {
++                if (!loader)
++                    return;
++                loader.opacity = 0;
++                loader.x = 0;
++                if (loader.source != pageHost.src)
++                    loader.source = "";
++            }
+             function reveal(l) {
+                 if (l.source != pageHost.src)
+                     return;
+@@ -1366,48 +1375,64 @@
+                 outAnim.stop();
+                 pageHost.front = l;
+                 pageHost.shown = hub.section;
+-                // a superseded switch still mid-slide: snap the old exit home
+-                // before the new pair takes over, or a parked loader can be
+-                // left slid and half-visible under the new page.
+-                if (pageHost.parking && pageHost.parking !== out) {
+-                    pageHost.parking.opacity = 0;
+-                    pageHost.parking.x = 0;
++                if (pageHost.parking && pageHost.parking !== out && pageHost.parking !== l) {
++                    pageHost.clearParked(pageHost.parking);
+                     pageHost.parking = null;
+                 }
+                 l.z = 1;
+-                l.opacity = 1;
+                 if (hub.reduceMotion || !out || !out.item || out === l) {
++                    l.opacity = 1;
+                     l.x = 0;
+-                    if (out && out !== l) {
+-                        out.opacity = 0;
+-                        out.x = 0;
+-                    }
++                    if (out && out !== l)
++                        pageHost.clearParked(out);
+                     pageHost.parking = null;
+                     return;
+                 }
+-                inAnim.target = l; inAnim.from = pageHost.dir * pageHost.slide; inAnim.to = 0;
+-                inAnim.start();
+                 out.z = 0;
+                 pageHost.parking = out;
+-                outAnim.target = out; outAnim.from = out.x; outAnim.to = -pageHost.dir * pageHost.slide;
++                outFade.target = out;
++                outFade.from = out.opacity;
++                outFade.to = 0;
+                 outAnim.start();
++                l.opacity = 0;
++                l.x = pageHost.dir * pageHost.slide;
++                inSlide.target = l;
++                inSlide.from = pageHost.dir * pageHost.slide;
++                inSlide.to = 0;
++                inFade.target = l;
++                inFade.from = 0;
++                inFade.to = 1;
++                inAnim.start();
+             }
+-            NumberAnimation {
++            ParallelAnimation {
+                 id: inAnim
+-                property: "x"
+-                duration: Tokens.move
+-                easing.type: Tokens.ease
++                NumberAnimation {
++                    id: inSlide
++                    property: "x"
++                    duration: Tokens.dur(130)
++                    easing.type: Tokens.ease
++                }
++                NumberAnimation {
++                    id: inFade
++                    property: "opacity"
++                    duration: Tokens.dur(110)
++                    easing.type: Tokens.easeSnap
++                }
+             }
+-            NumberAnimation {
++            SequentialAnimation {
+                 id: outAnim
+-                property: "x"
+-                duration: Tokens.move
+-                easing.type: Tokens.ease
+-                onFinished: {
+-                    if (pageHost.parking) {
+-                        pageHost.parking.opacity = 0;
+-                        pageHost.parking.x = 0;
+-                        pageHost.parking = null;
++                NumberAnimation {
++                    id: outFade
++                    property: "opacity"
++                    duration: Tokens.dur(80)
++                    easing.type: Tokens.easeSnap
++                }
++                ScriptAction {
++                    script: {
++                        if (pageHost.parking) {
++                            pageHost.clearParked(pageHost.parking);
++                            pageHost.parking = null;
++                        }
+                     }
+                 }
+             }
