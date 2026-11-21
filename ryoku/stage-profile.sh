@@ -37,6 +37,7 @@ install -m 644 "$here/SessionLockscreenPage.qml" "$here/clockwork-orbital-previe
 for config in hub ryostore shell; do
     cp -a -- "$here/tsukuyomi" "$draft/.config/quickshell/$config/"
 done
+cp -a -- "$here/notch" "$draft/.config/quickshell/shell/modules/notch"
 cp -a -- "$hypr" "${hypr%/hypr}/matugen" "$draft/.config/"
 sed -i -e 's/Ryoku Settings/Tsukuyomi Hub/g' \
     -e '/name   = "float-ryostore",/{ N; s/name   = "float-ryostore",\n    match  = { title = "\^(Ryostore)/name   = "float-tsukuyomi-store",\n    match  = { title = "^(Tsukuyomi Store)/; }' \

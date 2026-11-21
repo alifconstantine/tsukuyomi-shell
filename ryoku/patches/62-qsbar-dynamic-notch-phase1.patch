@@ -1,0 +1,255 @@
+--- a/shell/modules/bar/barstyles/qsbar/VariantRoot.qml
++++ b/shell/modules/bar/barstyles/qsbar/VariantRoot.qml
+@@ -12,6 +12,7 @@
+ import Ryoku.Ui.Singletons
+ import "panels"
+ import "controlcenter"
++import "../../../notch" as Notch
+ import "../../../../services/lib/screens.js" as Screens
+ 
+ Item {
+@@ -238,7 +239,7 @@
+     }
+ 
+     TooltipOverlay { root: theme }
+-    LazyLoader { active: theme.dashboardVisible; DashboardPopup { root: theme } }
++    Notch.NotchPanel { root: theme }
+     PowerProfilePanel { root: theme }
+     LazyLoader { active: theme.memVisible; MemoryPanel { root: theme } }
+     LazyLoader { active: theme.cpuVisible; CpuPanel { root: theme } }
+--- a/shell/modules/bar/barstyles/qsbar/BarSlot.qml
++++ b/shell/modules/bar/barstyles/qsbar/BarSlot.qml
+@@ -11,6 +11,7 @@
+ import Quickshell.Wayland
+ import Quickshell.Io
+ import "modules"
++import "../../../notch" as Notch
+ import shell.services as Svc
+ import Ryoku.PluginKit
+ import shell.modules.stage.frame
+@@ -1044,153 +1045,26 @@
+     }
+ 
+     Component {
+-        id: compCenter                                   // G8: weather·clock·date·indicators
++        id: compCenter                                   // G8: Dynamic Notch center pill
+         Item {
+             id: g8
+             readonly property real barContentLeftInset: 9
+             readonly property real barContentRightInset: 9
+-            readonly property color contentColor:
+-                barSlot.root.widgetContentColor("G8", barSlot.root.ink)
+-            readonly property real dashboardCaretX:
+-                centerRow.x + clock.x + clock.width / 2
++            readonly property real dashboardCaretX: width / 2
+             function openDash() {
+                 barSlot.root.activatePopupScreen(barSlot.screen)
+                 barSlot.root.openDashboard()
+             }
+-            implicitWidth: Math.round(centerRow.implicitWidth) + 18
++            implicitWidth: centerPill.implicitWidth + 14
+             implicitHeight: 28
+ 
+-            // ── responsive stage (narrow-monitor overlap fix) ──
+-            // Presentation-only inside G8 - never touches root.mod* user toggles.
+-            // Mutable state with hysteresis, NOT a computed property: downshift when
+-            // the CURRENT stage no longer fits (24px slack), upshift only when the
+-            // LARGER stage would fit with 48px slack - measured against that stage's
+-            // own needed width, else minimal⇄compact oscillates.
+-            property int stage: 0                        // 0 normal · 1 compact · 2 minimal
+-            readonly property bool showWeather: stage <= 1
+-            readonly property bool showDate:    stage === 0
+-            readonly property bool showIcons:   iconsRow.hasActive
+-            // needed widths per stage: reactive bindings over the UNCOLLAPSED content
+-            // (the stage-gated wrapper widths shrink and would mislead the upshift
+-            // decision). 18 = pill padding, 8 = row spacing per visible neighbour.
+-            readonly property real needMinimal: 18 + clock.implicitWidth
+-                + (showIcons && iconsRow.implicitWidth > 0.5 ? 8 + iconsRow.implicitWidth : 0)
+-            readonly property real needCompact: needMinimal
+-                + (weather.implicitWidth > 0.5 ? 8 + weather.implicitWidth : 0)
+-            readonly property real needNormal: needCompact
+-                + (dateLabel.implicitWidth > 0.5 ? 8 + dateLabel.implicitWidth : 0)
+-            function updateStage() {
+-                // compact only while G8 actually occupies the center slot: after a
+-                // drag swap G8 can sit in a SIDE row - its own width then feeds the
+-                // very side-row width that centerAvail is measured from, and the
+-                // stage delta (~weather+date) exceeds the 24/48px hysteresis window
+-                // → boundary-width flutter. As a side widget G8 stays at normal.
+-                if (!barSlot.modelContains(centerModel, "G8")) {
+-                    if (stage !== 0) stage = 0
+-                    return
+-                }
+-                var avail = island.g8AvailableWidth
+-                var s = stage
+-                if (s === 0 && needNormal  + 24 > avail) s = 1
+-                if (s === 1 && needCompact + 24 > avail) s = 2
+-                if (s === 2 && needCompact + 48 <= avail) s = 1
+-                if (s === 1 && needNormal  + 48 <= avail) s = 0
+-                if (s !== stage) stage = s
+-            }
+-            // publish the clock + status-icon floor width for the side-row budget
+-            Binding { target: island; property: "g8FloorWidth"; value: g8.needMinimal }
+-            // 80ms one-shot coalesces width flutter (track changes, tray churn)
+-            Timer { id: restageTimer; interval: 80; repeat: false; onTriggered: g8.updateStage() }
+-            onNeedNormalChanged:  restageTimer.restart()
+-            onNeedCompactChanged: restageTimer.restart()
+-            Connections { target: island; function onG8AvailableWidthChanged() { restageTimer.restart() } }
+-            Component.onCompleted: restageTimer.restart()
+-
+-            // The whole G8 island (weather + clock + date) is one button: any click
+-            // opens the unified dashboard; right-click still flips 12h/24h. Sits
+-            // below centerRow so the status icons keep their own taps and the
+-            // weather/clock hover tooltips still fire (their MouseAreas are NoButton
+-            // and let the click fall through here).
+-            MouseArea {
+-                anchors.fill: parent
+-                hoverEnabled: true
+-                cursorShape: Qt.PointingHandCursor
+-                acceptedButtons: Qt.LeftButton | Qt.RightButton
+-                onClicked: (e) => {
+-                    if (e.button === Qt.RightButton) TimeFormat.set24h(barSlot.root.clock12h)
+-                    else g8.openDash()
+-                }
+-            }
+-            Row {
+-                id: centerRow
+-                anchors.verticalCenter: parent.verticalCenter
+-                x: Math.round((parent.width - width) / 2)   // integer center → sharp text
+-                spacing: barSlot.root.v2SectionSpacing
+-                Item {                                   // weather wrapper (stage-gated)
+-                    id: weatherSlot
+-                    visible: width > 0.5
+-                    width: g8.showWeather ? weather.implicitWidth : 0
+-                    height: 28
+-                    clip: true
+-                    opacity: g8.showWeather ? 1 : 0
+-                    Behavior on width   { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+-                    Behavior on opacity { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+-                    WeatherWidget {
+-                        id: weather
+-                        anchors.fill: parent
+-                        root: barSlot.root
+-                        onActivated: g8.openDash()
+-                    }
+-                }
+-                ClockWidget   { id: clock;   root: barSlot.root; onActivated: g8.openDash() }
+-                Item {                                   // date (stage-gated)
+-                    id: dateSlot
+-                    visible: width > 0.5
+-                    width: g8.showDate ? dateLabel.implicitWidth : 0
+-                    height: 28
+-                    clip: true
+-                    opacity: g8.showDate ? 1 : 0
+-                    Behavior on width   { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+-                    Behavior on opacity { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+-                    UiText {
+-                        id: dateLabel
+-                        anchors.verticalCenter: parent.verticalCenter
+-                        text: {
+-                            clock.now;
+-                            var d = new Date();
+-                            return Svc.Config.formatLoc.standaloneDayName(d.getDay(), 1) + " " + d.getDate();
+-                        }
+-                        color: Qt.rgba(g8.contentColor.r, g8.contentColor.g, g8.contentColor.b, 0.5)
+-                        font.family: barSlot.root.mono
+-                        font.pixelSize: 10
+-                        font.letterSpacing: 0.5
+-                    }
+-                }
+-                Item {                                   // indicator icons wrapper (stage-gated)
+-                    visible: g8.showIcons || width > 0.5
+-                    width: g8.showIcons ? iconsRow.implicitWidth : 0
+-                    height: 28
+-                    clip: true
+-                    opacity: g8.showIcons ? 1 : 0
+-                    Behavior on width   { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+-                    Behavior on opacity { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+-                    Row {
+-                        id: iconsRow
+-                        anchors.verticalCenter: parent.verticalCenter
+-                        spacing: barSlot.root.v2InlineSpacing
+-                        readonly property bool hasActive: idleInd.awake
+-                            || dndInd.silenced
+-                            || screenRecInd.recording
+-                            || voxInd.state === "recording"
+-                            || voxInd.state === "transcribing"
+-                            || omarchyUpdateInd.updateAvailable
+-                        IdleWidget               { id: idleInd;          root: barSlot.root; anchors.verticalCenter: parent.verticalCenter }
+-                        NotificationSilenceWidget{ id: dndInd;           root: barSlot.root; anchors.verticalCenter: parent.verticalCenter }
+-                        ScreenRecordWidget       { id: screenRecInd;     root: barSlot.root; anchors.verticalCenter: parent.verticalCenter }
+-                        VoxtypeWidget            { id: voxInd;           root: barSlot.root; anchors.verticalCenter: parent.verticalCenter }
+-                        UpdateWidget             { id: omarchyUpdateInd; root: barSlot.root; anchors.verticalCenter: parent.verticalCenter }
+-                    }
+-                }
++            Binding { target: island; property: "g8FloorWidth"; value: g8.implicitWidth }
++
++            Notch.NotchCenterPill {
++                id: centerPill
++                anchors.centerIn: parent
++                root: barSlot.root
++                screen: barSlot.screen
+             }
+         }
+     }
+--- a/shell/modules/bar/barstyles/qsbar/Theme.qml
++++ b/shell/modules/bar/barstyles/qsbar/Theme.qml
+@@ -949,8 +949,9 @@
+         }
+     }
+ 
+-    // ── Calendar state ──
++    // ── Calendar & Notch state ──
+     property bool dashboardVisible: false
++    property bool notchSystemActive: false
+     onDashboardVisibleChanged: popupOpened("dashboardVisible")
+     property int calendarMonthOffset: 0
+     property int calendarTick: 0
+@@ -1820,17 +1821,16 @@
+     }
+ 
+     Timer {
+-        interval: 2000 * Perf.pollFactor
+-        running: theme.modCpu || theme.cpuVisible || theme.modMemory || theme.memVisible
++        interval: ((theme.modCpu || theme.cpuVisible || theme.modMemory || theme.memVisible || theme.notchSystemActive) ? 2000 : 10000) * Perf.pollFactor
++        running: true
+         repeat: true
+         triggeredOnStart: true
+         onTriggered: {
+-            if (theme.modCpu || theme.cpuVisible) {
++            if (theme.modCpu || theme.cpuVisible || theme.notchSystemActive) {
+                 systemCpuFile.reload()
+                 systemLoadFile.reload()
+             }
+-            if (theme.modMemory || theme.memVisible)
+-                systemMemProc.running = true
++            systemMemProc.running = true
+         }
+     }
+ 
+@@ -1852,7 +1852,7 @@
+ 
+     Timer {
+         interval: 2500 * Perf.pollFactor
+-        running: theme.modGpu || theme.gpuVisible || theme.thermalVisible
++        running: theme.modGpu || theme.gpuVisible || theme.thermalVisible || theme.notchSystemActive
+         repeat: true
+         triggeredOnStart: true
+         onTriggered: if (!gpuTelemetryProc.running) gpuTelemetryProc.running = true
+@@ -1860,7 +1860,7 @@
+ 
+     Timer {
+         interval: 5000 * Perf.pollFactor
+-        running: theme.modCpuTemperature || theme.cpuVisible || theme.thermalVisible
++        running: theme.modCpuTemperature || theme.cpuVisible || theme.thermalVisible || theme.notchSystemActive
+         repeat: true
+         triggeredOnStart: true
+         onTriggered: if (!cpuTemperatureProc.running) cpuTemperatureProc.running = true
+@@ -1868,7 +1868,7 @@
+ 
+     Timer {
+         interval: 30000 * Perf.pollFactor
+-        running: theme.modStorage || theme.storageVisible
++        running: theme.modStorage || theme.storageVisible || theme.notchSystemActive
+         repeat: true
+         triggeredOnStart: true
+         onTriggered: if (!storageTelemetryProc.running) storageTelemetryProc.running = true
