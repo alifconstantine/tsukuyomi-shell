@@ -36,7 +36,7 @@ install -m 644 "$here/SessionLockscreenPage.qml" "$draft/.config/quickshell/hub/
 for config in hub ryostore shell; do
     cp -a -- "$here/tsukuyomi" "$draft/.config/quickshell/$config/"
 done
-cp -a -- "$hypr" "$draft/.config/"
+cp -a -- "$hypr" "${hypr%/hypr}/matugen" "$draft/.config/"
 sed -i -e 's/Ryoku Settings/Tsukuyomi Hub/g' \
     -e '/name   = "float-ryostore",/{ N; s/name   = "float-ryostore",\n    match  = { title = "\^(Ryostore)/name   = "float-tsukuyomi-store",\n    match  = { title = "^(Tsukuyomi Store)/; }' \
     "$draft/.config/hypr/modules/window_rules.lua"
