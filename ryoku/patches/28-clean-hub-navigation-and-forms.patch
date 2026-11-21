@@ -99,7 +99,7 @@
 -                    }
 -                }
 -            }
-+            Tsukuyomi.PanelTitle { width: parent.width; text: I18n.tr("Tsukuyomi Hub") }
++            Tsukuyomi.PanelTitle { width: parent.width; text: I18n.tr("Hub") }
              Field {
                  id: searchField
                  width: parent.width
