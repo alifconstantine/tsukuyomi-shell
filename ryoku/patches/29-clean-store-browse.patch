@@ -1,0 +1,645 @@
+--- a/ryostore/App.qml
++++ b/ryostore/App.qml
+@@ -4,6 +4,7 @@
+ import Quickshell.Io
+ import Ryoku.Ui
+ import Ryoku.Ui.Singletons
++import "tsukuyomi" as Tsukuyomi
+ import "Singletons"
+ import "lib/store.js" as StoreLogic
+ 
+@@ -12,7 +13,7 @@
+ 
+     implicitWidth: 1180
+     implicitHeight: 760
+-    color: Tokens.paper
++    color: Tsukuyomi.Style.surface
+     focus: true
+ 
+     property string view: "discover"
+@@ -196,8 +197,6 @@
+     property string appsQuery: ""
+     readonly property bool appsFiltered: app.appsBrowse && (app.appsTag !== "" || app.appsQuery !== "")
+     readonly property var appTabs: StoreLogic.appCategories(Store.items)
+-    readonly property var featured: app.appsBrowse && !app.appsFiltered
+-            ? StoreLogic.featuredApps(collection, 5, app.discoverSeed) : []
+     readonly property var currentCategory: categoryID === "subshells"
+         ? app.navigationCategories.find(category => category.id === "subshells")
+         : (categoryID !== "" ? Store.category(categoryID) : null)
+@@ -626,7 +625,7 @@
+         id: pageHead
+         objectName: "ryostore-page-head"
+         anchors { left: header.right; top: parent.top; right: parent.right }
+-        height: 116
++        height: Tokens.px(88)
+ 
+         Column {
+             anchors {
+@@ -637,19 +636,12 @@
+             spacing: Tokens.s1
+ 
+             Text {
+-                text: UiPreferences.brandMark("力") + "  " + app.pageGroup
+-                color: Tokens.inkDim
+-                font.family: Tokens.mono
+-                font.pixelSize: Tokens.fMicro
+-                font.letterSpacing: Tokens.trackLabel
+-            }
+-            Text {
+                 width: parent.width
+                 text: app.pageTitle
+                 color: Tokens.ink
+-                font.family: Tokens.display
+-                font.pixelSize: Tokens.fTitle
+-                font.weight: Font.Medium
++                font.family: Tokens.ui
++                font.pixelSize: Tokens.px(28)
++                font.weight: Font.DemiBold
+                 elide: Text.ElideRight
+             }
+             Text {
+@@ -664,25 +656,13 @@
+             }
+         }
+ 
+-        Column {
++        Text {
+             id: headReadout
+             anchors { right: parent.right; rightMargin: Tokens.s6; verticalCenter: parent.verticalCenter }
+-            spacing: Tokens.s1
+-            Text {
+-                anchors.right: parent.right
+-                text: String(app.collection.length).padStart(2, "0")
+-                color: Tokens.ink
+-                font.family: Tokens.mono
+-                font.pixelSize: Tokens.fValue
+-            }
+-            Text {
+-                anchors.right: parent.right
+-                text: Store.offline ? I18n.tr("OFFLINE CACHE") : I18n.tr("PIECES")
+-                color: Store.offline ? Tokens.alert : Tokens.inkMuted
+-                font.family: Tokens.mono
+-                font.pixelSize: Tokens.fTiny
+-                font.letterSpacing: Tokens.trackLabel
+-            }
++            text: Store.offline ? I18n.tr("Offline cache") : I18n.tr("%1 results").arg(app.collection.length)
++            color: Tsukuyomi.Style.secondary
++            font.family: Tokens.ui
++            font.pixelSize: Tokens.fSmall
+         }
+ 
+         Rectangle {
+@@ -809,29 +789,10 @@
+         onRemoveRequested: item => Store.remove(item)
+     }
+ 
+-    AppsHero {
+-        id: appsHero
+-        objectName: "ryostore-apps-hero"
+-        anchors {
+-            left: header.right; leftMargin: Tokens.s6
+-            right: parent.right; rightMargin: Tokens.s6
+-            top: categoryTools.bottom
+-        }
+-        visible: app.appsBrowse && !app.appsFiltered
+-        enabled: !app.detailOpen
+-        height: visible ? Tokens.px(192) : 0
+-        items: app.featured
+-        reducedMotion: app.reducedMotion
+-        onActivated: item => {
+-            app.selectKey(StoreLogic.itemKey(item));
+-            app.openSelectedDetail();
+-        }
+-    }
+-
+     ProviderTabs {
+         id: appsTabs
+         objectName: "ryostore-apps-tabs"
+-        anchors { left: header.right; right: parent.right; top: appsHero.bottom }
++        anchors { left: header.right; right: parent.right; top: categoryTools.bottom }
+         visible: app.appsBrowse
+         height: visible ? implicitHeight : 0
+         enabled: !app.detailOpen
+@@ -925,6 +886,7 @@
+ 
+     ProductGrid {
+         id: productGrid
++        showUnavailable: flatpakState !== "missing" && flatpakState !== "remote"
+         objectName: "ryostore-grid"
+         anchors {
+             left: header.right; leftMargin: Tokens.s6
+--- a/ryostore/StoreHeader.qml
++++ b/ryostore/StoreHeader.qml
+@@ -2,6 +2,7 @@
+ import QtQuick.Controls
+ import Ryoku.Ui
+ import Ryoku.Ui.Singletons
++import "tsukuyomi" as Tsukuyomi
+ 
+ Item {
+     id: header
+@@ -25,151 +26,44 @@
+     signal searchActivated()
+     signal searchEscaped()
+ 
+-    implicitWidth: Tokens.railW
++    implicitWidth: Tokens.px(228)
+ 
+     function activateDiscover() { routeRequested("discover", ""); }
+     function activateCategory(id) { routeRequested("discover", id); }
+     function activateLibrary() { routeRequested("library", ""); }
+     function focusSearch() { searchField.forceActiveFocus(); }
+-    function sealFor(id) {
+-        const seals = {
+-            "lockscreens": "施錠",
+-            "rices": "飯",
+-            "colorschemes": "色",
+-            "themes": "色",
+-            "subshells": "殻",
+-            "barstyles": "棒",
+-            "docks": "台",
+-            "launchers": "起",
+-            "fastfetch": "速",
+-            "plugins": "部品",
+-            "omarchy-plugins": "部品",
+-            "bundles": "束",
+-            "flatpak": "応",
+-            "decors": "飾",
+-            "launcher-images": "起動",
+-            "fastfetch-emblems": "徽"
+-        };
+-        return UiPreferences.text(seals[String(id)] || "品", "");
+-    }
+-
+-    component RailItem: Rectangle {
++    function revealCurrent(row) {
++        if (row && row.current)
++            navScroll.reveal(row);
++    }
++
++    component RailItem: Tsukuyomi.NavRow {
+         id: plate
+-        property string label: ""
+-        property string note: ""
+-        property string seal: ""
+-        property bool current: false
++        property string note
+         property bool flagged: false
+         signal chose()
+ 
+         width: navColumn.width
+-        height: Tokens.rowH
+-        radius: Tokens.radius
+-        color: plate.current ? "transparent"
+-              : (plateTap.pressed ? Tokens.tint16 : (pointer.hovered ? Tokens.tint5 : "transparent"))
+-        activeFocusOnTab: true
+-        Accessible.role: Accessible.Button
+-        Accessible.name: note === "" ? I18n.tr(label) : I18n.tr(label) + ", " + note
+-        Accessible.onPressAction: chose()
++        height: implicitHeight
++        detail: note
++        onActivated: chose()
+         onActiveFocusChanged: if (activeFocus) navScroll.reveal(plate)
+-        onCurrentChanged: if (current) Qt.callLater(function() { navScroll.reveal(plate); })
+-
+-        Behavior on color {
+-            enabled: !header.reducedMotion
+-            ColorAnimation { duration: Tokens.snap }
+-        }
+-
+-        Keys.onPressed: event => {
+-            if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
+-                chose();
+-                event.accepted = true;
+-            }
+-        }
+-
+-        Row {
+-            anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter }
+-            anchors.leftMargin: Tokens.s3
+-            anchors.rightMargin: Tokens.s3
+-            spacing: Tokens.s2
+-
+-            Text {
+-                id: lead
+-                text: "//"
+-                visible: plate.current
+-                color: Tokens.inkOnBoneDim
+-                font.family: Tokens.mono
+-                font.pixelSize: Tokens.fMicro
+-                anchors.verticalCenter: parent.verticalCenter
+-            }
+-
+-            Column {
+-                width: parent.width - sealText.implicitWidth - parent.spacing
+-                        - (lead.visible ? lead.implicitWidth + parent.spacing : 0)
+-                anchors.verticalCenter: parent.verticalCenter
+-                spacing: 0
+-
+-                Text {
+-                    width: parent.width
+-                    text: I18n.tr(plate.label)
+-                    color: plate.current ? Tokens.inkOnBone : (plate.activeFocus ? Tokens.ink : Tokens.inkDim)
+-                    font.family: Tokens.ui
+-                    font.pixelSize: Tokens.fRow
+-                    font.weight: Font.Medium
+-                    elide: Text.ElideRight
+-                    Behavior on color {
+-                        enabled: !header.reducedMotion
+-                        ColorAnimation { duration: Tokens.snap }
+-                    }
+-                }
+-
+-                Text {
+-                    width: parent.width
+-                    visible: plate.note !== ""
+-                    text: I18n.tr(plate.note)
+-                    color: plate.current ? Tokens.inkOnBoneDim : Tokens.inkMuted
+-                    font.family: Tokens.ui
+-                    font.pixelSize: Tokens.fTiny
+-                    elide: Text.ElideRight
+-                    Behavior on color {
+-                        enabled: !header.reducedMotion
+-                        ColorAnimation { duration: Tokens.snap }
+-                    }
+-                }
+-            }
+-
+-            Text {
+-                id: sealText
+-                text: plate.seal
+-                color: plate.current ? Tokens.inkOnBoneDim : Tokens.inkFaint
+-                font.family: Tokens.jp
+-                font.pixelSize: Tokens.fBody
+-                anchors.verticalCenter: parent.verticalCenter
+-                Behavior on color {
+-                    enabled: !header.reducedMotion
+-                    ColorAnimation { duration: Tokens.snap }
+-                }
+-            }
+-        }
++        onCurrentChanged: if (current) Qt.callLater(header.revealCurrent, plate)
+ 
+         Rectangle {
+-            visible: plate.flagged
++            anchors { right: parent.right; rightMargin: Tokens.s3; verticalCenter: parent.verticalCenter }
+             width: 6
+             height: 6
+             radius: 3
+-            color: Tokens.alert
+-            anchors { top: parent.top; right: parent.right; margins: Tokens.s2 }
+-        }
+-
+-        HoverHandler { id: pointer; cursorShape: Qt.PointingHandCursor }
+-        TapHandler { id: plateTap; onTapped: plate.chose() }
++            visible: plate.flagged
++            color: Tsukuyomi.Style.accent
++        }
+     }
+ 
+     Rectangle {
+         objectName: "ryostore-rail"
+         anchors.fill: parent
+-        color: Tokens.paperLift
+-        border.width: Tokens.border
+-        border.color: Tokens.line
++        color: Tsukuyomi.Style.sidebar
+     }
+ 
+     Column {
+@@ -178,34 +72,8 @@
+         anchors.margins: Tokens.s5
+         spacing: Tokens.s1
+ 
+-        Row {
+-            spacing: Tokens.s3
+-            Text {
+-                text: UiPreferences.brandMark("月")
+-                color: Tokens.sun
+-                font.family: Tokens.jp
+-                font.pixelSize: 24
+-            }
+-            Column {
+-                anchors.verticalCenter: parent.verticalCenter
+-                spacing: 0
+-                Text {
+-                    text: I18n.tr("TSUKUYOMI")
+-                    color: Tokens.ink
+-                    font.family: Tokens.mono
+-                    font.pixelSize: Tokens.fBody
+-                    font.weight: Font.Medium
+-                    font.letterSpacing: Tokens.trackMark
+-                }
+-                Text {
+-                    text: I18n.tr("STORE")
+-                    color: Tokens.inkMuted
+-                    font.family: Tokens.mono
+-                    font.pixelSize: Tokens.fMicro
+-                    font.letterSpacing: Tokens.trackLabel
+-                }
+-            }
+-        }
++        Tsukuyomi.Brand { title: I18n.tr("Tsukuyomi Store") }
++        Item { width: 1; height: Tokens.s2 }
+ 
+         Rectangle {
+             id: searchBox
+@@ -243,7 +111,7 @@
+                 clip: true
+                 activeFocusOnTab: true
+                 Accessible.role: Accessible.EditableText
+-                Accessible.name: header.offline ? I18n.tr("Search RyoStore (offline)") : I18n.tr("Search RyoStore")
++                Accessible.name: header.offline ? I18n.tr("Search the store (offline)") : I18n.tr("Search the store")
+                 onTextEdited: header.queryEdited(text)
+                 onActiveFocusChanged: if (activeFocus) header.searchActivated()
+                 Keys.onEscapePressed: event => { header.searchEscaped(); event.accepted = true; }
+@@ -300,9 +168,7 @@
+         anchors.leftMargin: Tokens.s4
+         anchors.rightMargin: Tokens.s4
+         contentWidth: width
+-        contentHeight: navColumn.implicitHeight > height
+-                ? navColumn.implicitHeight + Tokens.rowH + Tokens.s1
+-                : navColumn.implicitHeight
++        contentHeight: navColumn.implicitHeight
+         boundsBehavior: Flickable.StopAtBounds
+         function reveal(item) {
+             if (navColumn.implicitHeight <= height) {
+@@ -332,53 +198,6 @@
+             contentY = Math.max(0, Math.min(contentHeight - height, target));
+         }
+         clip: true
+-        readonly property real selectedY: {
+-            header.view;
+-            header.categoryID;
+-            header.searchActive;
+-            header.categories;
+-            const rows = navColumn.children;
+-            for (let i = 0; i < rows.length; i++) {
+-                if (rows[i].current === true)
+-                    return rows[i].y;
+-            }
+-            return 0;
+-        }
+-        readonly property bool hasSelection: {
+-            header.view;
+-            header.categoryID;
+-            header.searchActive;
+-            const rows = navColumn.children;
+-            for (let i = 0; i < rows.length; i++) {
+-                if (rows[i].current === true)
+-                    return true;
+-            }
+-            return false;
+-        }
+-
+-        Rectangle {
+-            id: selectionPlate
+-            objectName: "ryostore-category-selection"
+-            x: 0
+-            y: navScroll.selectedY
+-            z: 0
+-            width: navColumn.width
+-            height: Tokens.rowH
+-            radius: Tokens.radius
+-            color: Tokens.bone
+-            opacity: navScroll.hasSelection ? 1 : 0
+-
+-            Behavior on y {
+-                enabled: !header.reducedMotion
+-                NumberAnimation { duration: Tokens.move; easing.type: Tokens.ease }
+-            }
+-            Behavior on opacity {
+-                enabled: !header.reducedMotion
+-                NumberAnimation { duration: Tokens.snap; easing.type: Tokens.easeSnap }
+-            }
+-        }
+-
+-
+         Column {
+             id: navColumn
+             width: navScroll.width
+@@ -386,7 +205,7 @@
+             z: 1
+ 
+             Text {
+-                text: I18n.tr("01 BROWSE")
++                text: I18n.tr("Browse")
+                 color: header.view === "discover" ? Tokens.inkDim : Tokens.inkFaint
+                 font.family: Tokens.mono
+                 font.pixelSize: Tokens.fMicro
+@@ -397,8 +216,7 @@
+             RailItem {
+                 objectName: "ryostore-header-discover"
+                 label: I18n.tr("Discover")
+-                note: I18n.tr("A changing edit")
+-                seal: UiPreferences.text("発見", "")
++                section: "discover"
+                 current: header.view === "discover" && header.categoryID === "" && !header.searchActive
+                 onChose: header.activateDiscover()
+             }
+@@ -409,15 +227,14 @@
+                     required property var modelData
+                     objectName: "ryostore-category-" + String(modelData.id)
+                     label: String(modelData.name || modelData.id)
+-                    note: I18n.tr("%1 pieces").arg(Number(modelData.count || 0))
+-                    seal: header.sealFor(modelData.id)
++                    section: String(modelData.id)
+                     current: header.view === "discover" && header.categoryID === String(modelData.id) && !header.searchActive
+                     onChose: header.activateCategory(String(modelData.id))
+                 }
+             }
+ 
+             Text {
+-                text: I18n.tr("02 YOUR STORE")
++                text: I18n.tr("Your collection")
+                 color: header.view === "library" ? Tokens.inkDim : Tokens.inkFaint
+                 font.family: Tokens.mono
+                 font.pixelSize: Tokens.fMicro
+@@ -434,7 +251,7 @@
+                         : (header.updateCount > 1
+                            ? I18n.tr("%1 installed, %2 updates ready").arg(header.libraryCount).arg(header.updateCount)
+                            : I18n.tr("%1 installed").arg(header.libraryCount))
+-                seal: UiPreferences.text("蔵", "")
++                section: "library"
+                 current: header.view === "library" && !header.searchActive
+                 flagged: header.updateCount > 0
+                 onChose: header.activateLibrary()
+--- a/ryostore/ProductGrid.qml
++++ b/ryostore/ProductGrid.qml
+@@ -15,6 +15,7 @@
+     property string selectedKey: ""
+     property bool reducedMotion: false
+     property bool compact: false
++    property bool showUnavailable: true
+ 
+     signal previewRequested(var item)
+     signal selectionRequested(var item)
+@@ -169,6 +170,7 @@
+                 id: appTile
+                 AppsTile {
+                     item: tile.modelData
++                    showUnavailable: grid.showUnavailable
+                     selected: tile.isSelected
+                     focusVisible: grid.activeFocus && tile.isSelected
+                     reducedMotion: grid.reducedMotion
+--- a/ryostore/ProviderTabs.qml
++++ b/ryostore/ProviderTabs.qml
+@@ -1,6 +1,7 @@
+ import QtQuick
+ import Ryoku.Ui
+ import Ryoku.Ui.Singletons
++import "tsukuyomi" as Tsukuyomi
+ 
+ // A subtab strip under the page head. Themes uses it to browse colour schemes
+ // per provider; the Decor category switches between its picture catalogues.
+@@ -33,10 +34,10 @@
+                 + Tokens.s4
+         height: 30
+         radius: Tokens.radius
+-        color: plate.on ? Tokens.bone
++        color: plate.on ? Tsukuyomi.Style.selected
+               : (plateTap.pressed ? Tokens.tint16 : (ph.hovered ? Tokens.tint5 : "transparent"))
+         border.width: Tokens.border
+-        border.color: plate.on ? Tokens.bone : (ph.hovered ? Tokens.lineStrong : Tokens.line)
++        border.color: plate.on ? Tsukuyomi.Style.selected : (ph.hovered ? Tokens.lineStrong : Tokens.line)
+         scale: plateTap.pressed ? 0.97 : 1
+         activeFocusOnTab: true
+         Accessible.role: Accessible.Button
+@@ -67,11 +68,11 @@
+             Text {
+                 id: plateText
+                 text: I18n.tr(plate.label)
+-                color: plate.on ? Tokens.inkOnBone : (plate.activeFocus ? Tokens.ink : Tokens.inkDim)
++                color: plate.on ? Tsukuyomi.Style.text : (plate.activeFocus ? Tokens.ink : Tokens.inkDim)
+                 font.family: Tokens.ui
+                 font.pixelSize: 11
+                 font.weight: Font.Medium
+-                font.letterSpacing: Tokens.trackLabel
++                font.letterSpacing: 0
+                 Behavior on color {
+                     enabled: !tabs.reducedMotion
+                     ColorAnimation { duration: Tokens.snap }
+@@ -81,10 +82,10 @@
+                 id: noteText
+                 visible: plate.note !== ""
+                 text: plate.note
+-                color: plate.on ? Tokens.inkOnBone : Tokens.inkMuted
+-                font.family: Tokens.mono
++                color: plate.on ? Tsukuyomi.Style.text : Tokens.inkMuted
++                font.family: Tokens.ui
+                 font.pixelSize: Tokens.fTiny
+-                font.letterSpacing: Tokens.trackLabel
++                font.letterSpacing: 0
+             }
+         }
+         HoverHandler { id: ph; cursorShape: Qt.PointingHandCursor }
+--- a/ryostore/AppsTile.qml
++++ b/ryostore/AppsTile.qml
+@@ -1,5 +1,6 @@
+ import QtQuick
+ import Ryoku.Ui.Singletons
++import "tsukuyomi" as Tsukuyomi
+ import "lib/store.js" as StoreLogic
+ 
+ // The compact app card: an icon and its name read at a glance, so a marketplace
+@@ -9,6 +10,7 @@
+ 
+     required property var item
+     property bool selected: false
++    property bool showUnavailable: true
+     property bool focusVisible: false
+     property bool reducedMotion: false
+     property bool hovered: hover.hovered
+@@ -20,7 +22,7 @@
+     readonly property string summary: String(item && item.summary || "")
+     readonly property bool verified: String(item && item.verificationStatus || "").toLowerCase() === "verified"
+     readonly property var status: StoreLogic.statusLabels(item)
+-    readonly property string statusTag: StoreLogic.statusTag(item)
++    readonly property string statusTag: !showUnavailable && StoreLogic.isUnavailable(item) ? "" : StoreLogic.statusTag(item)
+     readonly property color fallbackSurface: item && item.surface ? item.surface : Tokens.paperLift
+     readonly property string initials: StoreLogic.initials(item, title)
+ 
+@@ -32,12 +34,10 @@
+         id: frame
+         anchors.fill: parent
+         anchors.margins: Tokens.s2
+-        radius: Tokens.radius
+-        color: card.selected ? Tokens.tint5
+-              : (card.pressed ? Tokens.tint16 : (card.hovered ? Tokens.tint5 : Tokens.paper))
+-        border.width: card.focusVisible || card.selected ? Tokens.border * 2 : Tokens.border
+-        border.color: card.focusVisible ? Tokens.bone
+-                      : (card.selected || card.hovered ? Tokens.lineStrong : Tokens.line)
++        radius: Tokens.px(11)
++        color: card.selected || card.hovered ? Tsukuyomi.Style.hover : Tsukuyomi.Style.panel
++        border.width: card.focusVisible ? 2 : 1
++        border.color: card.focusVisible ? Tsukuyomi.Style.accent : Tsukuyomi.Style.line
+         scale: card.pressed ? 0.994 : 1
+ 
+         Behavior on color {
+@@ -59,8 +59,8 @@
+             spacing: Tokens.s3
+ 
+             ProductMedia {
+-                width: Tokens.px(56)
+-                height: Tokens.px(56)
++                width: Tokens.px(44)
++                height: Tokens.px(44)
+                 anchors.verticalCenter: parent.verticalCenter
+                 source: card.item && card.item.art || ""
+                 mode: "icon"
+@@ -71,7 +71,7 @@
+             }
+ 
+             Column {
+-                width: parent.width - Tokens.px(56) - parent.spacing
++                width: parent.width - Tokens.px(44) - parent.spacing
+                 anchors.verticalCenter: parent.verticalCenter
+                 spacing: Tokens.s1
+ 
+@@ -88,8 +88,8 @@
+                             verticalCenter: parent.verticalCenter
+                         }
+                         text: card.title
+-                        color: Tokens.ink
+-                        font.family: Tokens.display
++                        color: Tsukuyomi.Style.text
++                        font.family: Tokens.ui
+                         font.pixelSize: Tokens.fRow
+                         font.weight: Font.Medium
+                         elide: Text.ElideRight
+@@ -104,7 +104,7 @@
+                         }
+                         text: "✓"
+                         visible: card.verified
+-                        color: Tokens.inkDim
++                        color: Tsukuyomi.Style.secondary
+                         font.family: Tokens.ui
+                         font.pixelSize: Tokens.fMicro
+                     }
+@@ -125,7 +125,7 @@
+                     width: parent.width
+                     text: card.summary
+                     visible: text !== ""
+-                    color: Tokens.inkDim
++                    color: Tsukuyomi.Style.secondary
+                     font.family: Tokens.ui
+                     font.pixelSize: Tokens.fSmall
+                     maximumLineCount: 2
+--- a/ryostore/ProductCard.qml
++++ b/ryostore/ProductCard.qml
+@@ -1,5 +1,6 @@
+ import QtQuick
+ import Ryoku.Ui.Singletons
++import "tsukuyomi" as Tsukuyomi
+ 
+ Item {
+     id: card
+@@ -74,7 +75,7 @@
+                     width: parent.width - position.implicitWidth - parent.spacing
+                     text: String(card.item && (card.item.name || card.item.id) || I18n.tr("Untitled"))
+                     color: Tokens.ink
+-                    font.family: Tokens.display
++                    font.family: Tokens.ui
+                     font.pixelSize: Tokens.fRow
+                     font.weight: Font.Medium
+                     elide: Text.ElideRight
