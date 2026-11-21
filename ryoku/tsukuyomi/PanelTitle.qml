@@ -5,6 +5,7 @@ Column {
     id: panel
 
     property string text
+    property int titleSize: Tokens.px(22)
     spacing: Tokens.px(3)
     Accessible.role: Accessible.Heading
     Accessible.name: "Tsukuyomi " + text
@@ -25,7 +26,7 @@ Column {
         text: panel.text
         color: Style.text
         font.family: Tokens.ui
-        font.pixelSize: Tokens.px(22)
+        font.pixelSize: panel.titleSize
         font.weight: Font.DemiBold
         elide: Text.ElideRight
     }

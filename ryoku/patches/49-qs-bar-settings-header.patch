@@ -1,0 +1,46 @@
+--- a/shell/modules/bar/barstyles/qsbar/controlcenter/kit/CcTokens.qml
++++ b/shell/modules/bar/barstyles/qsbar/controlcenter/kit/CcTokens.qml
+@@ -15,7 +15,7 @@
+     // The plate is exactly the rail plus the form column plus their insets: no
+     // dead gutter to the right of a card, and a route that needs less scrolls
+     // less, because the height comes from the page too (see ControlCenter).
+-    readonly property int railW: Tokens.px(192)
++    readonly property int railW: Tokens.px(228)
+     readonly property int contentW: Tokens.px(640) // the form column
+     readonly property int plateW: t.railW + t.contentW + t.pad * 2
+     readonly property int plateH: Tokens.px(940)   // the cap; the page decides
+--- a/shell/modules/bar/barstyles/qsbar/controlcenter/CcRail.qml
++++ b/shell/modules/bar/barstyles/qsbar/controlcenter/CcRail.qml
+@@ -53,11 +53,12 @@
+     Item {
+         id: masthead
+         anchors { top: parent.top; left: parent.left; right: parent.right }
+-        height: rail.tk.headH
++        height: rail.tk.pad + rail.tk.headH
+ 
+         Tsukuyomi.PanelTitle {
+-            anchors { left: parent.left; right: parent.right; margins: rail.tk.gap; verticalCenter: parent.verticalCenter }
++            anchors { left: parent.left; right: parent.right; leftMargin: rail.tk.pad; rightMargin: rail.tk.gap; verticalCenter: parent.verticalCenter }
+             text: I18n.tr("QS Bar Settings")
++            titleSize: Tokens.px(20)
+         }
+         Rectangle {
+             anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
+--- a/shell/modules/bar/barstyles/qsbar/controlcenter/CcHead.qml
++++ b/shell/modules/bar/barstyles/qsbar/controlcenter/CcHead.qml
+@@ -25,13 +25,13 @@
+         text: head.title
+         color: Tsukuyomi.Style.text
+         font.family: Tokens.ui
+-        font.pixelSize: Tokens.px(26)
++        font.pixelSize: Tokens.px(28)
+         font.weight: Font.DemiBold
+         elide: Text.ElideRight
+     }
+ 
+     Text {
+-        anchors { left: parent.left; right: parent.right; top: name.bottom; topMargin: Tokens.s1 }
++        anchors { left: parent.left; right: shut.left; rightMargin: Tokens.s3; top: name.bottom; topMargin: Tokens.s1 }
+         text: head.desc
+         color: Tsukuyomi.Style.secondary
+         font.family: Tokens.ui
