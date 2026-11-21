@@ -1,0 +1,309 @@
+--- a/hub/Hub.qml
++++ b/hub/Hub.qml
+@@ -112,7 +112,6 @@
+     readonly property bool showJapaneseGloss: Settings.ready
+         ? Settings.get("showJapaneseGloss") !== false
+         : UiPreferences.showJapaneseGloss
+-    readonly property string brandMark: showJapaneseGloss ? "月" : "T"
+ 
+     // The full catalogue. `wired` marks the pages whose content and
+     // persistence are ported; the rest render an honest porting plate rather
+@@ -1453,7 +1452,6 @@
+             Row {
+                 spacing: Tokens.s2
+                 Rectangle { width: 16; height: 1; color: Tokens.ink; anchors.verticalCenter: parent.verticalCenter }
+-                Text { text: hub.brandMark; color: Tokens.ink; font.family: Tokens.jp; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
+                 Text {
+                     text: I18n.tr(hub.groupFor(hub.section)); color: Tokens.inkMuted
+                     font.family: Tokens.ui; font.pixelSize: 9; font.weight: Font.Medium
+--- a/hub/pages/AddonsPage.qml
++++ b/hub/pages/AddonsPage.qml
+@@ -835,10 +835,6 @@
+             Rectangle {
+                 width: 16; height: 1; color: Tokens.ink
+                 anchors.verticalCenter: parent.verticalCenter
+-            }
+-            Text {
+-                text: UiPreferences.brandMark("力"); color: Tokens.ink; font.family: Tokens.jp
+-                font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter
+             }
+             Text {
+                 text: I18n.tr("ADD-ONS"); color: Tokens.inkMuted; font.family: Tokens.ui
+--- a/hub/pages/AppOverridesPage.qml
++++ b/hub/pages/AppOverridesPage.qml
+@@ -100,10 +100,6 @@
+             Rectangle {
+                 width: 16; height: 1; color: Tokens.ink
+                 anchors.verticalCenter: parent.verticalCenter
+-            }
+-            Text {
+-                text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp
+-                font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter
+             }
+             Text {
+                 text: I18n.tr("APPS & KEYS"); color: Tokens.inkMuted; font.family: Tokens.ui
+--- a/hub/pages/BarStudioPage.qml
++++ b/hub/pages/BarStudioPage.qml
+@@ -221,10 +221,6 @@
+                 spacing: Tokens.s2
+                 anchors.verticalCenter: parent.verticalCenter
+                 Rectangle { width: 16; height: 1; color: Tokens.ink; anchors.verticalCenter: parent.verticalCenter }
+-                Text {
+-                    text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp
+-                    font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter
+-                }
+                 Text {
+                     text: I18n.tr("DESKTOP"); color: Tokens.inkMuted; font.family: Tokens.ui
+                     font.pixelSize: 9; font.weight: Font.Medium; font.letterSpacing: Tokens.trackMark
+--- a/hub/pages/ConnectionsPage.qml
++++ b/hub/pages/ConnectionsPage.qml
+@@ -2447,10 +2447,6 @@
+                     anchors.verticalCenter: parent.verticalCenter
+                 }
+                 Text {
+-                    text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp
+-                    font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter
+-                }
+-                Text {
+                     text: I18n.tr("DEVICES"); color: Tokens.inkMuted; font.family: Tokens.ui
+                     font.pixelSize: 9; font.weight: Font.Medium; font.letterSpacing: Tokens.trackMark
+                     anchors.verticalCenter: parent.verticalCenter
+--- a/hub/pages/ControlsPage.qml
++++ b/hub/pages/ControlsPage.qml
+@@ -162,7 +162,6 @@
+                 anchors.verticalCenter: parent.verticalCenter
+                 spacing: Tokens.s2
+                 Rectangle { width: 16; height: Tokens.border; color: Tokens.ink; anchors.verticalCenter: parent.verticalCenter }
+-                Text { text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp; font.pixelSize: Tokens.fMicro; anchors.verticalCenter: parent.verticalCenter }
+                 Text {
+                     text: I18n.tr("DESKTOP")
+                     color: Tokens.inkMuted
+--- a/hub/pages/CreditsPage.qml
++++ b/hub/pages/CreditsPage.qml
+@@ -162,13 +162,6 @@
+                         anchors.verticalCenter: parent.verticalCenter
+                     }
+                     Text {
+-                        text: UiPreferences.brandMark("力")
+-                        color: Tokens.ink
+-                        font.family: Tokens.jp
+-                        font.pixelSize: Tokens.fMicro
+-                        anchors.verticalCenter: parent.verticalCenter
+-                    }
+-                    Text {
+                         text: "·"
+                         color: Tokens.inkFaint
+                         font.family: Tokens.ui
+--- a/hub/pages/DictationPage.qml
++++ b/hub/pages/DictationPage.qml
+@@ -286,10 +286,6 @@
+             Rectangle {
+                 width: 16; height: 1; color: Tokens.ink
+                 anchors.verticalCenter: parent.verticalCenter
+-            }
+-            Text {
+-                text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp
+-                font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter
+             }
+             Text {
+                 text: I18n.tr("TOOLS"); color: Tokens.inkMuted; font.family: Tokens.ui
+--- a/hub/pages/DisplaysPage.qml
++++ b/hub/pages/DisplaysPage.qml
+@@ -895,10 +895,6 @@
+                 anchors.verticalCenter: parent.verticalCenter
+             }
+             Text {
+-                text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp
+-                font.pixelSize: Tokens.fMicro; anchors.verticalCenter: parent.verticalCenter
+-            }
+-            Text {
+                 text: I18n.tr("DEVICES"); color: Tokens.inkMuted; font.family: Tokens.ui
+                 font.pixelSize: Tokens.fTiny; font.weight: Font.Medium; font.letterSpacing: Tokens.trackMark
+                 anchors.verticalCenter: parent.verticalCenter
+--- a/hub/pages/FastfetchPage.qml
++++ b/hub/pages/FastfetchPage.qml
+@@ -707,10 +707,6 @@
+             Rectangle {
+                 width: 16; height: 1; color: Tokens.ink
+                 anchors.verticalCenter: parent.verticalCenter
+-            }
+-            Text {
+-                text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp
+-                font.pixelSize: Tokens.fMicro; anchors.verticalCenter: parent.verticalCenter
+             }
+             Text {
+                 text: I18n.tr("TOOLS"); color: Tokens.inkMuted; font.family: Tokens.ui
+--- a/hub/pages/GpuPage.qml
++++ b/hub/pages/GpuPage.qml
+@@ -592,10 +592,6 @@
+             height: Tokens.s5
+             spacing: Tokens.s2
+             Rectangle { width: 16; height: 1; color: Tokens.ink; anchors.verticalCenter: parent.verticalCenter }
+-            Text {
+-                text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp
+-                font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter
+-            }
+             Text {
+                 text: I18n.tr("DEVICES"); color: Tokens.inkMuted; font.family: Tokens.ui
+                 font.pixelSize: 9; font.weight: Font.Medium; font.letterSpacing: Tokens.trackMark
+--- a/hub/pages/ImportPage.qml
++++ b/hub/pages/ImportPage.qml
+@@ -461,10 +461,6 @@
+             Rectangle {
+                 width: 16; height: 1; color: Tokens.ink
+                 anchors.verticalCenter: parent.verticalCenter
+-            }
+-            Text {
+-                text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp
+-                font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter
+             }
+             Text {
+                 text: I18n.tr("TOOLS"); color: Tokens.inkMuted; font.family: Tokens.ui
+--- a/hub/pages/InputPage.qml
++++ b/hub/pages/InputPage.qml
+@@ -1006,10 +1006,6 @@
+             Rectangle {
+                 width: 16; height: 1; color: Tokens.ink
+                 anchors.verticalCenter: parent.verticalCenter
+-            }
+-            Text {
+-                text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp
+-                font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter
+             }
+             Text {
+                 text: I18n.tr("DEVICES"); color: Tokens.inkMuted; font.family: Tokens.ui
+--- a/hub/pages/KeybindsPage.qml
++++ b/hub/pages/KeybindsPage.qml
+@@ -842,10 +842,6 @@
+             Rectangle {
+                 width: 16; height: 1; color: Tokens.ink
+                 anchors.verticalCenter: parent.verticalCenter
+-            }
+-            Text {
+-                text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp
+-                font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter
+             }
+             Text {
+                 text: I18n.tr("APPS & KEYS"); color: Tokens.inkMuted; font.family: Tokens.ui
+--- a/hub/pages/LauncherPage.qml
++++ b/hub/pages/LauncherPage.qml
+@@ -320,10 +320,6 @@
+             Rectangle {
+                 width: 16; height: 1; color: Tokens.ink
+                 anchors.verticalCenter: parent.verticalCenter
+-            }
+-            Text {
+-                text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp
+-                font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter
+             }
+             Text {
+                 text: I18n.tr("DESKTOP"); color: Tokens.inkMuted; font.family: Tokens.ui
+--- a/hub/pages/LayerRulesPage.qml
++++ b/hub/pages/LayerRulesPage.qml
+@@ -155,10 +155,6 @@
+             Rectangle {
+                 width: 16; height: 1; color: Tokens.ink
+                 anchors.verticalCenter: parent.verticalCenter
+-            }
+-            Text {
+-                text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp
+-                font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter
+             }
+             Text {
+                 text: I18n.tr("COMPOSITOR"); color: Tokens.inkMuted; font.family: Tokens.ui
+--- a/hub/pages/LockscreenPage.qml
++++ b/hub/pages/LockscreenPage.qml
+@@ -1000,10 +1000,6 @@
+             Rectangle {
+                 width: 16; height: 1; color: Tokens.ink
+                 anchors.verticalCenter: parent.verticalCenter
+-            }
+-            Text {
+-                text: UiPreferences.brandMark("力"); color: Tokens.ink; font.family: Tokens.jp
+-                font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter
+             }
+             Text {
+                 text: I18n.tr("DESKTOP"); color: Tokens.inkMuted; font.family: Tokens.ui
+--- a/hub/pages/PerformancePage.qml
++++ b/hub/pages/PerformancePage.qml
+@@ -305,10 +305,6 @@
+                 anchors.verticalCenter: parent.verticalCenter
+             }
+             Text {
+-                text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp
+-                font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter
+-            }
+-            Text {
+                 text: I18n.tr("SYSTEM"); color: Tokens.inkMuted; font.family: Tokens.ui
+                 font.pixelSize: 9; font.weight: Font.Medium; font.letterSpacing: Tokens.trackMark
+                 anchors.verticalCenter: parent.verticalCenter
+--- a/hub/pages/ProfilePage.qml
++++ b/hub/pages/ProfilePage.qml
+@@ -688,14 +688,7 @@
+                 spacing: Tokens.s2
+                 Text {
+                     anchors.verticalCenter: parent.verticalCenter
+-                    text: UiPreferences.showJapaneseGloss ? "月" : "T"
+-                    color: Tokens.inkDim
+-                    font.family: Tokens.jp
+-                    font.pixelSize: Tokens.fMicro
+-                }
+-                Text {
+-                    anchors.verticalCenter: parent.verticalCenter
+-                    text: I18n.tr("·  SYSTEM DOSSIER")
++                    text: I18n.tr("SYSTEM DOSSIER")
+                     color: Tokens.inkMuted
+                     font.family: Tokens.ui
+                     font.pixelSize: Tokens.fTiny
+--- a/hub/pages/RecordingPage.qml
++++ b/hub/pages/RecordingPage.qml
+@@ -558,10 +558,6 @@
+             Rectangle {
+                 width: 16; height: 1; color: Tokens.ink
+                 anchors.verticalCenter: parent.verticalCenter
+-            }
+-            Text {
+-                text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp
+-                font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter
+             }
+             Text {
+                 text: I18n.tr("TOOLS"); color: Tokens.inkMuted; font.family: Tokens.ui
+--- a/hub/pages/SessionPage.qml
++++ b/hub/pages/SessionPage.qml
+@@ -189,10 +189,6 @@
+             Rectangle {
+                 width: 16; height: 1; color: Tokens.ink
+                 anchors.verticalCenter: parent.verticalCenter
+-            }
+-            Text {
+-                text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp
+-                font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter
+             }
+             Text {
+                 text: I18n.tr("SYSTEM"); color: Tokens.inkMuted; font.family: Tokens.ui
+--- a/hub/pages/UpdatesPage.qml
++++ b/hub/pages/UpdatesPage.qml
+@@ -618,10 +618,6 @@
+                 anchors.verticalCenter: parent.verticalCenter
+             }
+             Text {
+-                text: UiPreferences.brandMark("力"); color: Tokens.ink; font.family: Tokens.jp
+-                font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter
+-            }
+-            Text {
+                 text: I18n.tr("SYSTEM"); color: Tokens.inkMuted; font.family: Tokens.ui
+                 font.pixelSize: 9; font.weight: Font.Medium; font.letterSpacing: Tokens.trackMark
+                 anchors.verticalCenter: parent.verticalCenter
+--- a/hub/pages/WindowRulesPage.qml
++++ b/hub/pages/WindowRulesPage.qml
+@@ -171,10 +171,6 @@
+                 anchors.verticalCenter: parent.verticalCenter
+             }
+             Text {
+-                text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp
+-                font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter
+-            }
+-            Text {
+                 text: I18n.tr("APPS & KEYS"); color: Tokens.inkMuted; font.family: Tokens.ui
+                 font.pixelSize: 9; font.weight: Font.Medium; font.letterSpacing: Tokens.trackMark
+                 anchors.verticalCenter: parent.verticalCenter

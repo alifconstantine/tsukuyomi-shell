@@ -1,5 +1,5 @@
 singleton Style 1.0 Style.qml
-Brand 1.0 Brand.qml
 NavRow 1.0 NavRow.qml
+PanelTitle 1.0 PanelTitle.qml
 SectionCard 1.0 SectionCard.qml
 Tabs 1.0 Tabs.qml

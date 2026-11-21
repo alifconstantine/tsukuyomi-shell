@@ -339,7 +339,7 @@
 -                }
 -            }
 -        }
-+        Tsukuyomi.Brand { title: I18n.tr("Tsukuyomi Store") }
++        Tsukuyomi.PanelTitle { width: parent.width; text: I18n.tr("Tsukuyomi Store") }
 +        Item { width: 1; height: Tokens.s2 }
  
          Rectangle {

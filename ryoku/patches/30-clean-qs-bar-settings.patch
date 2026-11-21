@@ -319,9 +319,9 @@
 -                font.pixelSize: Tokens.fTiny
 -                font.letterSpacing: Tokens.trackLabel
 -            }
-+        Tsukuyomi.Brand {
-+            anchors { left: parent.left; leftMargin: rail.tk.gap; verticalCenter: parent.verticalCenter }
-+            title: I18n.tr("QS Bar Settings")
++        Tsukuyomi.PanelTitle {
++            anchors { left: parent.left; right: parent.right; margins: rail.tk.gap; verticalCenter: parent.verticalCenter }
++            text: I18n.tr("QS Bar Settings")
          }
          Rectangle {
              anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
