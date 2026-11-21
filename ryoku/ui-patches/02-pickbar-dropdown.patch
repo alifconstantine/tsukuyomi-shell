@@ -1,0 +1,65 @@
+diff -ruN ui-orig/Picker.qml ui-new/Picker.qml
+--- a/Picker.qml	2026-11-21 22:30:40.726833939 +0700
++++ b/Picker.qml	2026-11-21 22:30:40.759484125 +0700
+@@ -46,10 +46,11 @@
+     function _syncGeometry() {
+         if (!pick.parent)
+             return;
+-        var chromeH = (!pick.anchored ? 28 : 0) + (pick.searchable ? 40 : 0);
++        var hasHeader = !pick.anchored && pick.title !== "";
++        var chromeH = 12 + (hasHeader ? 28 : 0) + (pick.searchable ? 38 : 0);
+         var listRows = Math.max(1, pick.shown.length);
+         var maxListH = pick.anchored ? 256 : 248;
+-        var idealH = chromeH + Math.min(maxListH, listRows * 32) + 12;
++        var idealH = chromeH + Math.min(maxListH, listRows * 32);
+         if (pick.anchored) {
+             var pt = pick._anchor.mapToItem(pick.parent, 0, 0);
+             var dw = Math.max(220, Math.min(pick.parent.width - 16, pick._anchor.width));
+@@ -102,6 +103,7 @@
+         }
+     }
+     onOptionsChanged: if (visible) Qt.callLater(pick._syncGeometry)
++    onShownChanged: if (visible) Qt.callLater(pick._syncGeometry)
+     Connections {
+         target: pick.parent
+         function onWidthChanged() { if (pick.visible) pick._syncGeometry(); }
+@@ -126,6 +128,7 @@
+         spacing: 6
+ 
+         Row {
++            id: headerRow
+             width: parent.width
+             visible: !pick.anchored && pick.title !== ""
+             height: visible ? 22 : 0
+@@ -154,6 +157,7 @@
+         }
+ 
+         Rectangle {
++            id: filterBox
+             width: parent.width
+             visible: pick.searchable
+             height: visible ? 32 : 0
+@@ -200,9 +204,9 @@
+ 
+         Flickable {
+             width: parent.width
+-            height: Math.max(32, parent.height
+-                - (pick.anchored || pick.title === "" ? 0 : 28)
+-                - (pick.searchable ? 38 : 0))
++            height: Math.max(32, layoutCol.height
++                - (headerRow.visible ? headerRow.height + layoutCol.spacing : 0)
++                - (filterBox.visible ? filterBox.height + layoutCol.spacing : 0))
+             contentHeight: col.height
+             clip: true
+             boundsBehavior: Flickable.StopAtBounds
+diff -ruN ui-orig/Singletons/Tokens.qml ui-new/Singletons/Tokens.qml
+--- a/Singletons/Tokens.qml	2026-11-21 22:30:40.727097803 +0700
++++ b/Singletons/Tokens.qml	2026-11-21 22:30:40.759279582 +0700
+@@ -153,6 +153,7 @@
+     // dur() scales every duration by motionScale (shell.json theme.motion) and
+     // zeroes it under reduceMotion, so the Hub retimes the desktop live.
+     property var pickAnchor: null
++    property var pickAnchor: null
+     readonly property bool softwareRenderer: Quickshell.env("TSUKUYOMI_SOFTWARE_RENDERER") === "1"
+     property real motionScale: 1.0
+     property bool reduceMotion: softwareRenderer

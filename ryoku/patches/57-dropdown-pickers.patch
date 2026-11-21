@@ -1,0 +1,17 @@
+diff -ruN qs-orig-dir/hub/Hub.qml qs-new-dir/hub/Hub.qml
+--- a/hub/Hub.qml	2026-11-21 22:30:41.493167228 +0700
++++ b/hub/Hub.qml	2026-11-21 22:30:42.111708738 +0700
+@@ -1635,12 +1635,11 @@
+         Rectangle {
+             anchors.fill: parent
+             color: "black"
+-            opacity: 0.55
++            opacity: pick.anchored ? 0 : 0.45
+             TapHandler { onTapped: picker.close() }
+         }
+         Picker {
+             id: pick
+-            anchors.centerIn: parent
+             title: pickState.row ? I18n.tr(pickState.row.label) : ""
+             // a `set` row reads its list from the singleton that owns the
+             // table (languages, locales) instead of the schema's own opts.
