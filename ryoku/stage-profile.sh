@@ -61,8 +61,7 @@ printf '{"scheme":"dark","followWallpaper":false}\n' > "$draft/.config/ryoku/the
 printf '{"general":{"notifyOnWallpaperChange":false,"closeOnSelection":true},"keys":{"apply":"enter"},"selector":{"livePreview":false},"performance":{"maxThumbJobs":4}}\n' \
     > "$draft/.config/ryoku/ryogami.json"
 
-install -m 644 "$here/../dots/.config/quickshell/ii/assets/images/default_wallpaper.webp" \
-    "$draft/Pictures/Wallpapers/Black Hole.webp"
+install -m 644 "$here"/wallpapers/* "$draft/Pictures/Wallpapers/"
 install -m 644 "$here/tsukuyomi-launcher.desktop" "$draft/.local/share/applications/"
 install -m 644 "$here/tsukuyomi-store.desktop" "$draft/.local/share/applications/"
 install -m 644 "$here/ryoku-hub.desktop" "$draft/.local/share/applications/"

@@ -6,7 +6,7 @@ dbus-update-activation-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_
 ryogami &
 ryoku-shell daemon &
 
-wallpaper="$HOME/Pictures/Wallpapers/Black Hole.webp"
+wallpaper="$HOME/Pictures/Wallpapers/cloud-valley.webp"
 for attempt in {1..40}; do
     if ryogami wallpaper set "$wallpaper" 2>/dev/null; then
         exit 0
