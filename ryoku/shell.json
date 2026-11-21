@@ -19,7 +19,7 @@
       "version": 1,
       "left": ["launcher", "workspaces"],
       "center": ["clock"],
-      "right": ["quick", "network", "volume", "battery", "brightness"]
+      "right": ["quick", "network", "volume", "memory", "battery", "brightness"]
     },
     "widgets": {
       "quick": true,
@@ -28,7 +28,7 @@
       "battery": true,
       "brightness": true,
       "status": false,
-      "memory": false,
+      "memory": true,
       "cpu": false,
       "weather": false,
       "media": false,
