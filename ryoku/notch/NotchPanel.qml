@@ -298,45 +298,59 @@ PanelWindow {
             Behavior on height { enabled: panel.anim; NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
             Behavior on opacity { enabled: panel.anim; NumberAnimation { duration: 130 } }
 
-            Row {
-                anchors.centerIn: parent
-                spacing: 6
-                Repeater {
-                    model: panel.tabs
-                    delegate: Rectangle {
-                        required property var modelData
-                        readonly property bool on: modelData.id === panel.activeTabId
-                        width: qpRow.implicitWidth + 14
-                        height: 24
-                        radius: 7
-                        color: on ? Qt.rgba(nt.accent.r, nt.accent.g, nt.accent.b, 0.24)
-                            : (qpMa.containsMouse ? nt.cardHover : "transparent")
-                        Row {
-                            id: qpRow
-                            anchors.centerIn: parent
-                            spacing: 4
-                            NotchIcon {
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: modelData.icon
-                                font.pixelSize: 13
-                                fill: on ? 1 : 0
-                                color: on ? nt.accent : nt.ink
+            Flickable {
+                id: qpFlick
+                anchors.fill: parent
+                anchors.leftMargin: 6
+                anchors.rightMargin: 6
+                contentWidth: qpRowWrap.implicitWidth
+                contentHeight: height
+                flickableDirection: Flickable.HorizontalFlick
+                boundsBehavior: Flickable.StopAtBounds
+                clip: true
+
+                Row {
+                    id: qpRowWrap
+                    x: Math.max(0, (qpFlick.width - implicitWidth) / 2)
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 5
+                    Repeater {
+                        model: panel.tabs
+                        delegate: Rectangle {
+                            required property var modelData
+                            readonly property bool on: modelData.id === panel.activeTabId
+                            width: qpRow.implicitWidth + 14
+                            height: 24
+                            radius: 7
+                            color: on ? Qt.rgba(nt.accent.r, nt.accent.g, nt.accent.b, 0.24)
+                                : (qpMa.containsMouse ? nt.cardHover : "transparent")
+                            Row {
+                                id: qpRow
+                                anchors.centerIn: parent
+                                spacing: 4
+                                NotchIcon {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: modelData.icon
+                                    font.pixelSize: 13
+                                    fill: on ? 1 : 0
+                                    color: on ? nt.accent : nt.ink
+                                }
+                                Text {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: I18n.tr(modelData.label)
+                                    color: nt.ink
+                                    font.family: Tokens.ui
+                                    font.pixelSize: 10
+                                    font.weight: on ? Font.DemiBold : Font.Normal
+                                }
                             }
-                            Text {
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: I18n.tr(modelData.label)
-                                color: nt.ink
-                                font.family: Tokens.ui
-                                font.pixelSize: 10
-                                font.weight: on ? Font.DemiBold : Font.Normal
+                            MouseArea {
+                                id: qpMa
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: panel.selectTab(modelData.id)
                             }
-                        }
-                        MouseArea {
-                            id: qpMa
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: panel.selectTab(modelData.id)
                         }
                     }
                 }
@@ -445,6 +459,15 @@ PanelWindow {
                             item.root = panel.root;
                             item.theme = nt;
                         }
+                    }
+                }
+
+                Connections {
+                    target: contentLoader.item
+                    ignoreUnknownSignals: true
+                    function onOpenSettingsRequested() {
+                        panel.switcherOpen = false;
+                        panel.settingsOpen = true;
                     }
                 }
             }

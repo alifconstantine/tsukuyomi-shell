@@ -21,7 +21,7 @@ Item {
 
     // Live Activity transient state
     property bool liveActive: false
-    property string liveKind: ""      // "battery" | "bt" | "record" | "focus" | "coffee"
+    property string liveKind: ""      // "battery" | "bt" | "record" | "focus" | "coffee" | "notif" | "timer"
     property string liveTitle: ""
     property string liveDetail: ""
     property color liveColor: nt.accent
@@ -35,6 +35,8 @@ Item {
     property bool _prevDnd: Flags.dnd
     property bool _prevAwake: Flags.keepAwake
     property bool _prevRec: Recorder.active
+    property double _prevNotifMs: Notifs.arrivalMs
+    property bool _prevTimerPulse: NotchTimerState.finishedPulse
 
     readonly property var btConnectedNames: {
         var list = BluetoothPower.devices || [];
@@ -95,6 +97,8 @@ Item {
             pill._prevDnd = Flags.dnd;
             pill._prevAwake = Flags.keepAwake;
             pill._prevRec = Recorder.active;
+            pill._prevNotifMs = Notifs.arrivalMs;
+            pill._prevTimerPulse = NotchTimerState.finishedPulse;
             pill._ready = true;
             if (Recorder.active && NotchConfig.liveActivities) {
                 pill.triggerLive("record", "radio_button_checked", I18n.tr("REC"), Recorder.elapsedText, nt.danger, true);
@@ -163,6 +167,36 @@ Item {
         function onElapsedTextChanged() {
             if (pill.liveActive && pill.liveKind === "record" && Recorder.active)
                 pill.liveDetail = Recorder.elapsedText;
+        }
+    }
+
+    Connections {
+        target: Notifs
+        function onArrivalMsChanged() {
+            if (!pill._ready) return;
+            if (Notifs.arrivalMs <= pill._prevNotifMs) return;
+            pill._prevNotifMs = Notifs.arrivalMs;
+            if (!NotchConfig.notifInNotch) return;
+            if (Notifs.dnd && !NotchConfig.notifShowWhileDnd) return;
+            var hist = Notifs.history || [];
+            if (hist.length === 0) return;
+            var latest = hist[0];
+            var app = String((latest && (latest.appName || latest.app)) || I18n.tr("Notification"));
+            var body = String((latest && (latest.summary || latest.body)) || "");
+            if (app.length > 16) app = app.slice(0, 15) + "…";
+            if (body.length > 26) body = body.slice(0, 25) + "…";
+            pill.triggerLive("notif", "notifications", app, body, nt.accent, false);
+        }
+    }
+
+    Connections {
+        target: NotchTimerState
+        function onFinishedPulseChanged() {
+            if (!pill._ready) return;
+            if (NotchTimerState.finishedPulse && !pill._prevTimerPulse) {
+                pill.triggerLive("timer", "timer", I18n.tr("Timer"), I18n.tr("Time's up!"), nt.accent, false);
+            }
+            pill._prevTimerPulse = NotchTimerState.finishedPulse;
         }
     }
 
@@ -306,6 +340,35 @@ Item {
             font.family: pill.root ? pill.root.mono : "JetBrainsMono Nerd Font"
             font.pixelSize: 12
             font.weight: Font.DemiBold
+        }
+
+        // 2b. Compact Timer countdown pill while running in background
+        Rectangle {
+            visible: NotchTimerState.running
+            anchors.verticalCenter: parent.verticalCenter
+            width: timerMiniRow.implicitWidth + 10
+            height: 18
+            radius: 9
+            color: Qt.rgba(nt.accent.r, nt.accent.g, nt.accent.b, 0.20)
+            Row {
+                id: timerMiniRow
+                anchors.centerIn: parent
+                spacing: 3
+                NotchIcon {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "timer"
+                    font.pixelSize: 11
+                    color: nt.accent
+                }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: NotchTimerState.formatted
+                    color: nt.ink
+                    font.family: pill.root ? pill.root.mono : "JetBrainsMono Nerd Font"
+                    font.pixelSize: 10
+                    font.weight: Font.DemiBold
+                }
+            }
         }
 
         // 3. Now Playing visualizer OR music icon

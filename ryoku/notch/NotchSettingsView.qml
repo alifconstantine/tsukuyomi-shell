@@ -252,6 +252,11 @@ Item {
                         onToggled: NotchConfig.notifInNotch = !NotchConfig.notifInNotch
                     }
                     ToggleChip {
+                        label: I18n.tr("Show While DND")
+                        checked: NotchConfig.notifShowWhileDnd
+                        onToggled: NotchConfig.notifShowWhileDnd = !NotchConfig.notifShowWhileDnd
+                    }
+                    ToggleChip {
                         label: I18n.tr("Remember Last Tab")
                         checked: NotchConfig.defaultTab === "last"
                         onToggled: NotchConfig.defaultTab = (NotchConfig.defaultTab === "last" ? "home" : "last")
@@ -290,6 +295,11 @@ Item {
                         label: I18n.tr("Album Gradient")
                         checked: NotchConfig.musicDynamicGradient
                         onToggled: NotchConfig.musicDynamicGradient = !NotchConfig.musicDynamicGradient
+                    }
+                    ToggleChip {
+                        label: I18n.tr("Weather Gradient")
+                        checked: NotchConfig.weatherDynamicGradient
+                        onToggled: NotchConfig.weatherDynamicGradient = !NotchConfig.weatherDynamicGradient
                     }
                     ToggleChip {
                         label: Config.weatherUnit === "imperial" ? "°F / mph" : "°C / km/h"
@@ -367,7 +377,99 @@ Item {
                 }
             }
 
-            // ── 4. Tabs Visibility ───────────────────────────────────────────
+            // ── 4. Health & Timer ────────────────────────────────────────────
+            Column {
+                width: parent.width
+                spacing: 6
+
+                Text {
+                    text: I18n.tr("HEALTH & TIMER")
+                    color: cfgView.theme.muted
+                    font.family: Tokens.mono
+                    font.pixelSize: 9
+                    font.letterSpacing: 1.2
+                }
+
+                Flow {
+                    width: parent.width
+                    spacing: 6
+
+                    Rectangle {
+                        height: 26
+                        width: waterGoalRow.implicitWidth + 14
+                        radius: 8
+                        color: cfgView.theme.card
+                        border.width: 1
+                        border.color: cfgView.theme.border
+                        Row {
+                            id: waterGoalRow
+                            anchors.centerIn: parent
+                            spacing: 6
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: I18n.tr("Water Goal") + ":"
+                                color: cfgView.theme.muted
+                                font.family: Tokens.ui
+                                font.pixelSize: 10
+                            }
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: "−"
+                                color: cfgView.theme.ink
+                                font.family: Tokens.mono
+                                font.pixelSize: 12
+                                font.weight: Font.Bold
+                                MouseArea {
+                                    anchors.fill: parent
+                                    anchors.margins: -4
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        NotchHealthStore.waterGoal = Math.max(4, NotchHealthStore.waterGoal - 1);
+                                        NotchHealthStore.persist();
+                                    }
+                                }
+                            }
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: NotchHealthStore.waterGoal + " (" + (NotchHealthStore.waterGoal * 0.25).toFixed(1) + "L)"
+                                color: cfgView.theme.ink
+                                font.family: Tokens.mono
+                                font.pixelSize: 10
+                                font.weight: Font.DemiBold
+                            }
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: "+"
+                                color: cfgView.theme.ink
+                                font.family: Tokens.mono
+                                font.pixelSize: 12
+                                font.weight: Font.Bold
+                                MouseArea {
+                                    anchors.fill: parent
+                                    anchors.margins: -4
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        NotchHealthStore.waterGoal = Math.min(16, NotchHealthStore.waterGoal + 1);
+                                        NotchHealthStore.persist();
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Repeater {
+                        model: [25, 45, 50]
+                        delegate: ToggleChip {
+                            required property int modelData
+                            label: "Pomodoro " + modelData + "m"
+                            checked: NotchTimerState.focusMinutes === modelData
+                            onToggled: NotchTimerState.setFocusMinutes(modelData)
+                        }
+                    }
+                }
+            }
+
+            // ── 5. Tabs Visibility ───────────────────────────────────────────
             Column {
                 width: parent.width
                 spacing: 6
