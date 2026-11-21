@@ -1,0 +1,397 @@
+--- a/hub/Hub.qml
++++ b/hub/Hub.qml
+@@ -132,12 +132,13 @@
+             { key: "displays", name: "Displays", needs: { cap: "monitorConfig" } }, { key: "connections", name: "Connections" },
+             { key: "input", name: "Input" }, { key: "gpu", name: "Graphics & Power" } ] },
+         { name: "Appearance", items: [
+-            { key: "appearance", name: "Theme & Accent" }, { key: "lockscreen", name: "Lockscreen" } ] },
++            { key: "appearance", name: "Theme & Accent" }, { key: "bar-studio", name: "Bar Studio", wired: true },
++            { key: "lockscreen", name: "Lockscreen" } ] },
+         { name: "Window Manager", items: [
+             { key: "windowmanager", name: "Window Manager", needs: { provider: true } }, { key: "plugins", name: "Plugins", needs: { cap: "plugins" } },
+             { key: "layerrules", name: "Layer Rules", adv: true, needs: { rows: true } } ] },
+         { name: "Desktop", items: [
+-            { key: "subshells", name: "Subshells", wired: true }, { key: "bar-studio", name: "Bar Studio", wired: true }, { key: "desktop", name: "Desktop", wired: true },
++            { key: "subshells", name: "Subshells", wired: true }, { key: "desktop", name: "Desktop", wired: true },
+             { key: "controls", name: "Controls", wired: true }, { key: "overlays", name: "Overlays", wired: true },
+             { key: "gamebar", name: "Game Bar" },
+             { key: "launcher", name: "App Launcher" } ] },
+--- a/hub/pages/BarStudioPage.qml
++++ b/hub/pages/BarStudioPage.qml
+@@ -10,14 +10,7 @@
+ import Ryoku.FrameBars
+ import "../barstudio/BarStudioModel.js" as Model
+ 
+-// Bar Studio (DESKTOP). Choose which bar the desktop draws, and tune the
+-// built-in styles. QS Bar keeps its layout, widgets and form in QS Bar Settings
+-// (the bar logo opens it, or the OPEN QS BAR SETTINGS card here); the universal
+-// dock has one Stage Editor handoff regardless of bar style. Sumi is
+-// edited in place: the frame's draw toggle and opacity, each rail's on/off and
+-// thickness, and the widgets in its three zones (add via a per-zone drawer,
+-// remove, reorder). Obi and Nacre carry their own small editors.
+-//
++// Choose the active bar and show that style's editor below the gallery.
+ // Everything Sumi stages through the shared draft (hub.stageLive), which applies
+ // to the RUNNING desktop as you work and rides the Hub's Save and Revert like
+ // every other framed page.
+@@ -124,22 +117,10 @@
+         page.fedit("obi", o);
+     }
+ 
+-    // ── QS Bar layout summary ─────────────────────────────────────────────────
+-    // The QS Bar's layout, widgets and form are arranged in QS Bar Settings
+-    // (the bar logo opens it, or `ryoku-shell bar settings`). This page keeps
+-    // only a read-only summary of the order, watched off shell.json so it tracks a
+-    // move made from the panel or the CLI without a Hub reload.
+-    property var qsbarLayout: ({})
+     // The iRiS family's frontend (paper-and-ink "ryoku" or the upstream "inir"
+     // look) lives at inir.iris.appearance.frontend in shell.json; watched here so
+     // the toggle below tracks a flip made from the iRiS settings overlay too.
+     property string irisFrontend: "ryoku"
+-    readonly property string qsbarLayoutSummary: {
+-        const layout = page.qsbarLayout || ({});
+-        const lane = a => Array.isArray(a) ? a.join(" \u00b7 ") : "";
+-        const lanes = [lane(layout.left), lane(layout.center), lane(layout.right)].filter(s => s.length > 0);
+-        return lanes.join("  |  ");
+-    }
+     FileView {
+         id: shellJsonFile
+         path: (Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")) + "/ryoku/shell.json"
+@@ -149,16 +130,11 @@
+         onLoaded: {
+             try {
+                 const cfg = JSON.parse(shellJsonFile.text() || "{}");
+-                page.qsbarLayout = (cfg.qsbar && cfg.qsbar.layout) ? cfg.qsbar.layout : ({});
+                 page.irisFrontend = (cfg.inir && cfg.inir.iris && cfg.inir.iris.appearance
+                     && cfg.inir.iris.appearance.frontend) || "ryoku";
+             } catch (e) {
+-                page.qsbarLayout = ({});
+             }
+         }
+-    }
+-    function openQsBarSettings() {
+-        Quickshell.execDetached(["ryoku-shell", "bar", "settings"]);
+     }
+     function openOrpheusSettings() {
+         Spawn.run(["qs", "-c", "shell", "ipc", "call", "orpheus", "settings", ""]);
+@@ -338,45 +314,12 @@
+                 }
+             }
+ 
+-            // ── QS BAR: its layout, widgets and form live in QS Bar Settings
+-            SettingCard {
+-                id: qsbarSect
+-                width: col.colWidth
+-                visible: page.showActiveDetails && page.activeStyle === "qsbar"
+-                title: I18n.tr("QS BAR")
+-                kana: "帯"
+-
+-                Item {
+-                    width: parent.width
+-                    height: qsbarBody.height + Tokens.s3 + Tokens.s4
+-                    Column {
+-                        id: qsbarBody
+-                        anchors { left: parent.left; right: parent.right; top: parent.top }
+-                        anchors.leftMargin: Tokens.s4; anchors.rightMargin: Tokens.s4; anchors.topMargin: Tokens.s3
+-                        spacing: Tokens.s3
+-                        Text {
+-                            width: parent.width
+-                            text: I18n.tr("The QS Bar arranges its own layout, widgets and form in QS Bar Settings. The bar logo opens it, or the button below.")
+-                            color: Tokens.inkMuted
+-                            font.family: Tokens.ui
+-                            font.pixelSize: Tokens.fBody
+-                            wrapMode: Text.WordWrap
+-                        }
+-                        Text {
+-                            width: parent.width
+-                            visible: page.qsbarLayoutSummary.length > 0
+-                            text: page.qsbarLayoutSummary
+-                            color: Tokens.inkDim
+-                            font.family: Tokens.mono
+-                            font.pixelSize: Tokens.fSmall
+-                            wrapMode: Text.WordWrap
+-                        }
+-                        Btn {
+-                            text: I18n.tr("OPEN QS BAR SETTINGS")
+-                            onAct: page.openQsBarSettings()
+-                        }
+-                    }
+-                }
++            Loader {
++                width: col.colWidth
++                height: item ? item.implicitHeight : 0
++                active: page.showActiveDetails && page.activeStyle === "qsbar"
++                visible: active
++                source: active ? Qt.resolvedUrl("QsBarStudio.qml") : ""
+             }
+ 
+             // ── ORPHEUS: its layout, modules, form and sound live in its own settings
+--- /dev/null
++++ b/hub/pages/QsBarStudio.qml
+@@ -0,0 +1,266 @@
++pragma ComponentBehavior: Bound
++
++import QtQuick
++import QtQuick.Controls as QQC
++import Quickshell
++import Quickshell.Io
++import Ryoku.Ui
++import Ryoku.Ui.Singletons
++import "../Singletons"
++import "../tsukuyomi" as Tsukuyomi
++
++Column {
++    id: editor
++
++    property string tab: "bars"
++    property string selectedId: ""
++    property var widgets: []
++    property string errorMessage: ""
++    property bool saving: false
++    readonly property bool barActive: Settings.ready && Settings.get("barStyle") === "qsbar"
++    readonly property string qsConfig: JSON.stringify(Settings.get("qsbar") || ({}))
++    readonly property var selected: widgets.find(widget => widget.id === selectedId) || null
++    readonly property var lanes: [
++        { name: I18n.tr("Left"), id: "left" }, { name: I18n.tr("Center"), id: "center" },
++        { name: I18n.tr("Right"), id: "right" }
++    ]
++    readonly property var forms: [
++        { name: I18n.tr("Islands"), id: "islands" }, { name: I18n.tr("Full width"), id: "full" },
++        { name: I18n.tr("Fit"), id: "fit" }, { name: I18n.tr("Dock"), id: "dock" },
++        { name: I18n.tr("Notch"), id: "notch" }
++    ]
++
++    spacing: Tokens.s4
++
++    function loadWidgets() {
++        if (editor.visible && editor.barActive && !readWidgets.running)
++            readWidgets.running = true;
++    }
++    function patch(key, value) {
++        if (!barActive || saving)
++            return;
++        editor.saving = true;
++        editor.errorMessage = "";
++        Settings.patch("qsbar." + key, value, (ok, error) => {
++            editor.saving = false;
++            if (!ok)
++                editor.errorMessage = error || I18n.tr("The bar settings could not be saved.");
++        });
++    }
++    function run(args) {
++        if (!barActive || saving)
++            return;
++        editor.errorMessage = "";
++        editor.saving = true;
++        runBar.command = ["ryoku-shell", "bar"].concat(args);
++        runBar.running = true;
++    }
++    function move(lane, index) {
++        if (!editor.selected)
++            return;
++        const args = ["move", editor.selected.id, "--section", lane];
++        if (index >= 0)
++            args.push("--index", String(index));
++        editor.run(args);
++    }
++    function openSettings() {
++        if (barActive)
++            Quickshell.execDetached(["ryoku-shell", "bar", "settings", editor.tab]);
++    }
++
++    onQsConfigChanged: refresh.restart()
++    onBarActiveChanged: if (barActive) refresh.restart()
++    onVisibleChanged: if (visible) refresh.restart()
++    Component.onCompleted: refresh.start()
++
++    Timer { id: refresh; interval: 70; onTriggered: editor.loadWidgets() }
++
++    Process {
++        id: readWidgets
++        command: ["ryoku-shell", "bar", "list", "--json"]
++        stdout: StdioCollector { id: widgetData }
++        onExited: code => {
++            if (code !== 0)
++                return;
++            try {
++                const list = JSON.parse(widgetData.text);
++                if (!Array.isArray(list))
++                    return;
++                editor.widgets = list;
++                if (!editor.selected)
++                    editor.selectedId = list.length ? list[0].id : "";
++            } catch (error) {
++                editor.errorMessage = I18n.tr("Could not read the bar layout.");
++            }
++        }
++    }
++    Process {
++        id: runBar
++        stdout: StdioCollector { id: barResult }
++        stderr: StdioCollector { id: barError }
++        onExited: code => {
++            editor.saving = false;
++            const reply = barResult.text.trim();
++            if (code !== 0 || reply.startsWith("err"))
++                editor.errorMessage = barError.text.trim() || reply || I18n.tr("Could not update the bar.");
++            refresh.restart();
++        }
++    }
++    FileView {
++        path: editor.visible ? (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config")
++              + "/ryoku/plugins.json" : ""
++        watchChanges: editor.visible
++        printErrors: false
++        onFileChanged: { reload(); refresh.restart(); }
++    }
++
++    SettingCard {
++        width: parent.width
++        title: I18n.tr("QS Bar")
++        collapsible: false
++
++        Seg {
++            options: ["bars", "layout", "widgets", "dock"]
++            labels: ({ bars: I18n.tr("Style"), layout: I18n.tr("Layout"),
++                widgets: I18n.tr("Widgets"), dock: I18n.tr("Dock") })
++            current: editor.tab
++            onChose: value => editor.tab = value
++        }
++
++        SettingRow {
++            width: parent.width
++            visible: editor.tab === "bars"
++            label: I18n.tr("Bar form")
++            controlWidth: form.width
++            QQC.ComboBox {
++                id: form
++                anchors.right: parent.right
++                anchors.verticalCenter: parent.verticalCenter
++                model: editor.forms
++                textRole: "name"
++                valueRole: "id"
++                currentIndex: Math.max(0, editor.forms.findIndex(item =>
++                    item.id === (Settings.get("qsbar.barShellStyle") || "full")))
++                enabled: editor.barActive && !editor.saving
++                onActivated: editor.patch("barShellStyle", currentValue)
++                Accessible.name: I18n.tr("Bar form")
++            }
++        }
++        SettingRow {
++            width: parent.width
++            visible: editor.tab === "bars"
++            label: I18n.tr("Position")
++            divider: true
++            controlWidth: position.implicitWidth
++            Seg {
++                id: position
++                anchors.right: parent.right
++                anchors.verticalCenter: parent.verticalCenter
++                options: ["top", "bottom"]
++                labels: ({ top: I18n.tr("Top"), bottom: I18n.tr("Bottom") })
++                current: Settings.get("qsbar.barPosition") || "top"
++                enabled: editor.barActive && !editor.saving
++                onChose: value => editor.patch("barPosition", value)
++            }
++        }
++        SettingRow {
++            width: parent.width
++            visible: editor.tab === "bars"
++            label: I18n.tr("Frosted material")
++            divider: true
++            controlWidth: 55
++            Sw {
++                anchors.right: parent.right
++                anchors.verticalCenter: parent.verticalCenter
++                on: Settings.get("qsbar.barFrostEnabled") === true
++                enabled: editor.barActive && !editor.saving
++                onToggled: value => editor.patch("barFrostEnabled", value)
++            }
++        }
++
++        SettingRow {
++            width: parent.width
++            visible: editor.tab === "layout" || editor.tab === "widgets"
++            label: I18n.tr("Widget")
++            controlWidth: widget.width
++            QQC.ComboBox {
++                id: widget
++                anchors.right: parent.right
++                anchors.verticalCenter: parent.verticalCenter
++                width: Math.min(230, editor.width * 0.43)
++                model: editor.widgets
++                textRole: "label"
++                valueRole: "id"
++                currentIndex: Math.max(0, editor.widgets.findIndex(item => item.id === editor.selectedId))
++                enabled: editor.barActive && !editor.saving && count > 0
++                onActivated: editor.selectedId = currentValue
++                Accessible.name: I18n.tr("Bar widget")
++            }
++        }
++        SettingRow {
++            width: parent.width
++            visible: editor.tab === "layout" && editor.selected !== null
++            label: I18n.tr("Section")
++            divider: true
++            controlWidth: sectionChoice.implicitWidth
++            Seg {
++                id: sectionChoice
++                anchors.right: parent.right
++                anchors.verticalCenter: parent.verticalCenter
++                options: editor.lanes.map(lane => lane.id)
++                labels: Object.fromEntries(editor.lanes.map(lane => [lane.id, lane.name]))
++                current: editor.selected ? editor.selected.section : ""
++                enabled: editor.barActive && !editor.saving
++                onChose: value => {
++                    if (value !== current)
++                        editor.move(value, -1);
++                }
++            }
++        }
++        Flow {
++            width: parent.width
++            visible: editor.tab === "layout" && editor.selected !== null
++            spacing: Tokens.s3
++            Btn {
++                text: I18n.tr("Move earlier")
++                enabled: editor.barActive && !editor.saving && editor.selected && editor.selected.index > 0
++                onAct: editor.move(editor.selected.section, editor.selected.index - 1)
++            }
++            Btn {
++                text: I18n.tr("Move later")
++                enabled: editor.barActive && !editor.saving && editor.selected && editor.widgets.some(widget =>
++                    widget.section === editor.selected.section && widget.index > editor.selected.index)
++                onAct: editor.move(editor.selected.section, editor.selected.index + 1)
++            }
++        }
++        SettingRow {
++            width: parent.width
++            visible: editor.tab === "widgets" && editor.selected !== null
++            label: I18n.tr("Show on bar")
++            divider: true
++            controlWidth: 55
++            Sw {
++                anchors.right: parent.right
++                anchors.verticalCenter: parent.verticalCenter
++                on: editor.selected ? editor.selected.shown : false
++                enabled: editor.barActive && !editor.saving && editor.selected
++                    && !["launcher", "workspaces", "clock"].includes(editor.selected.id)
++                onToggled: value => editor.run([value ? "show" : "hide", editor.selected.id])
++            }
++        }
++
++        Text {
++            width: parent.width
++            visible: editor.errorMessage !== ""
++            color: Tokens.alert
++            font.family: Tokens.ui
++            wrapMode: Text.WordWrap
++            text: editor.errorMessage
++        }
++        Btn {
++            text: editor.tab === "dock" ? I18n.tr("Open dock settings") : I18n.tr("Open full QS Bar settings")
++            enabled: editor.barActive
++            onAct: editor.openSettings()
++        }
++    }
++}
