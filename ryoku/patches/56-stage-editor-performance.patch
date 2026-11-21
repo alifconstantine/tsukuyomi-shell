@@ -1,0 +1,169 @@
+--- a/stage/modules/ii/background/EditModeCard.qml
++++ b/stage/modules/ii/background/EditModeCard.qml
+@@ -1,6 +1,7 @@
+ import QtQuick
+ import QtQuick.Effects
+ import Qt5Compat.GraphicalEffects
++import Quickshell
+ import stage.modules.common
+ import stage.modules.common.widgets
+ import stage.modules.common.functions as CF
+@@ -39,6 +40,8 @@
+ Item {
+     id: root
+ 
++    readonly property bool softwareRenderer: Quickshell.env("TSUKUYOMI_SOFTWARE_RENDERER") === "1"
++
+     // The wallpaper plane to blur - an item, never a path, so it is sampled in
+     // its OWN coordinates and the backdrop stays full-screen while the plane
+     // it samples is transformed into the card.
+@@ -70,8 +73,9 @@
+     Item {
+         id: surround
+         anchors.fill: parent
++        visible: !root.softwareRenderer
+ 
+-        layer.enabled: true
++        layer.enabled: !root.softwareRenderer
+         layer.effect: OpacityMask {
+             maskSource: cardShapeMask
+             invert: true
+@@ -79,7 +83,7 @@
+ 
+         Loader {
+             anchors.fill: parent
+-            active: root.wallpaperLayer !== null
++            active: !root.softwareRenderer && root.wallpaperLayer !== null
+             sourceComponent: MultiEffect {
+                 source: root.wallpaperLayer
+                 // Fullscreen, like WindowBlur: clamp the edges instead of fading into transparent padding.
+@@ -123,6 +127,7 @@
+         // the card, which the cut removes.
+         RectangularShadow {
+             anchors.fill: cardShape
++            visible: !root.softwareRenderer
+             radius: cardShape.radius
+             blur: Appearance.sizes.elevationMargin * 3.5
+             spread: Appearance.sizes.elevationMargin * 0.5
+@@ -132,6 +137,44 @@
+         }
+     }
+ 
++    // Software renderers (llvmpipe) skip the 64px full-screen blur FBO and mask
++    // pass and frame the card with four flat scrim rectangles instead.
++    Item {
++        anchors.fill: parent
++        visible: root.softwareRenderer
++        readonly property color scrimColor: Qt.alpha(Appearance.colors.colLayer0, 0.78)
++
++        Rectangle {
++            x: 0; y: 0; width: parent.width; height: Math.max(0, root.card.y)
++            color: parent.scrimColor
++        }
++        Rectangle {
++            x: 0; y: root.card.y + root.card.height
++            width: parent.width; height: Math.max(0, parent.height - y)
++            color: parent.scrimColor
++        }
++        Rectangle {
++            x: 0; y: root.card.y
++            width: Math.max(0, root.card.x); height: root.card.height
++            color: parent.scrimColor
++        }
++        Rectangle {
++            x: root.card.x + root.card.width; y: root.card.y
++            width: Math.max(0, parent.width - x); height: root.card.height
++            color: parent.scrimColor
++        }
++        Rectangle {
++            x: root.card.x
++            y: root.card.y
++            width: root.card.width
++            height: root.card.height
++            radius: root.cardRadius
++            color: "transparent"
++            border.width: 1
++            border.color: Qt.rgba(1, 1, 1, 0.14)
++        }
++    }
++
+     // The cut. OpacityMask reads nothing but alpha, so any opaque colour does;
+     // `antialiasing` is what makes the corner smooth - the mask's own edge is
+     // the card's edge. Nothing is drawn INSIDE the card on purpose: an outline
+--- a/stage/modules/common/widgets/StaggeredEntrance.qml
++++ b/stage/modules/common/widgets/StaggeredEntrance.qml
+@@ -34,7 +34,7 @@
+     /** Caps the wait for the last row of a long list. */
+     property int maximumDelay: 320
+     /** Set false to leave the row settled — a reduced-motion preference. */
+-    property bool active: !Config.options.sidebar.ai.reducedMotion
++    property bool active: !Config.options.sidebar.ai.reducedMotion && !Appearance.reducedMotion
+     /** How small a row starts. Near 1: this is entry, not a pop. */
+     property real fromScale: 0.965
+ 
+--- a/stage/modules/common/widgets/StyledListView.qml
++++ b/stage/modules/common/widgets/StyledListView.qml
+@@ -193,7 +193,7 @@
+     }
+ 
+     Behavior on contentY {
+-        enabled: !root._suppressScrollAnim && root._wheelScrolling && !bounceAnim.running && !root.dragging && !root.flicking
++        enabled: !Appearance.reducedMotion && !root._suppressScrollAnim && root._wheelScrolling && !bounceAnim.running && !root.dragging && !root.flicking
+         NumberAnimation {
+             id: scrollAnim
+             alwaysRunToEnd: true
+@@ -218,7 +218,7 @@
+     }
+ 
+     add: Transition {
+-        enabled: root.animateAppearance
++        enabled: root.animateAppearance && !Appearance.reducedMotion
+         ParallelAnimation {
+             // Slide Animation
+             NumberAnimation {
+@@ -243,14 +243,14 @@
+ 
+     populate: Transition {
+         id: populateTransition
+-        enabled: root.animateAppearance && root.animatePopulate
++        enabled: root.animateAppearance && root.animatePopulate && !Appearance.reducedMotion
+ 
+         SequentialAnimation {
+             // Each row waits its turn, so a page fills top-down instead of
+             // appearing all at once. `ViewTransition.index` is the row's place
+             // in the fill, which is the only thing a Transition knows about it.
+             PauseAnimation {
+-                duration: root.staggerStep <= 0 ? 0
++                duration: (Appearance.reducedMotion || root.staggerStep <= 0) ? 0
+                     : Math.min(root.staggerMaximum, populateTransition.ViewTransition.index * root.staggerStep)
+             }
+ 
+--- a/shell/modules/stage/StagePreviewCard.qml
++++ b/shell/modules/stage/StagePreviewCard.qml
+@@ -49,7 +49,7 @@
+         visible: card.subjectUrl !== ""
+         opacity: status === Image.Ready ? 1 : 0
+         Behavior on opacity { NumberAnimation { duration: Motion.crossfade } }
+-        layer.enabled: subj.visible
++        layer.enabled: subj.visible && !Perf.shadowsDisabled
+         layer.effect: MultiEffect {
+             shadowEnabled: true
+             shadowColor: Qt.rgba(0, 0, 0, 0.5)
+--- a/shell/modules/stage/StageLayer.qml
++++ b/shell/modules/stage/StageLayer.qml
+@@ -143,12 +143,12 @@
+ 
+                 // Edge feather and the angled cast shadow set the cut-out into
+                 // the scene; the FBO stays off when both are zero.
+-                layer.enabled: root._edge > 0.001 || root._shStrength > 0.001
++                layer.enabled: (!Perf.blurDisabled && root._edge > 0.001) || (!Perf.shadowsDisabled && root._shStrength > 0.001)
+                 layer.effect: MultiEffect {
+-                    blurEnabled: root._edge > 0.001
++                    blurEnabled: !Perf.blurDisabled && root._edge > 0.001
+                     blurMax: 16
+                     blur: root._edge
+-                    shadowEnabled: root._shStrength > 0.001
++                    shadowEnabled: !Perf.shadowsDisabled && root._shStrength > 0.001
+                     shadowColor: Qt.rgba(0, 0, 0, 0.72 * root._shStrength)
+                     shadowBlur: 0.55 + 0.45 * root._shStrength
+                     shadowHorizontalOffset: Math.round(Math.cos(root._shAngle) * 20 * root._shStrength)

@@ -1,0 +1,24 @@
+--- a/Singletons/Tokens.qml
++++ b/Singletons/Tokens.qml
+@@ -152,9 +152,10 @@
+     // ── motion ───────────────────────────────────────────────────────────
+     // dur() scales every duration by motionScale (shell.json theme.motion) and
+     // zeroes it under reduceMotion, so the Hub retimes the desktop live.
++    readonly property bool softwareRenderer: Quickshell.env("TSUKUYOMI_SOFTWARE_RENDERER") === "1"
+     property real motionScale: 1.0
+-    property bool reduceMotion: false
+-    function dur(ms) { return reduceMotion ? 0 : Math.round(ms * motionScale); }
++    property bool reduceMotion: softwareRenderer
++    function dur(ms) { return (reduceMotion || softwareRenderer) ? 0 : Math.round(ms * motionScale); }
+ 
+     // ── per-monitor UI scale ─────────────────────────────────────────────
+     // shell.json displays.ui_scale, keyed by output name. Surfaces multiply
+@@ -307,7 +308,7 @@
+         }
+         t.namedScheme = pal;
+         t.motionScale = scale;
+-        t.reduceMotion = reduce;
++        t.reduceMotion = reduce || t.softwareRenderer;
+         t.uiScales = scales;
+         t.barVisibility = bars;
+         t.widgetVisibility = widgets;

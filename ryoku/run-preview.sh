@@ -40,6 +40,8 @@ here=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
 "$here/stage-preview.sh" "$work/profile" "${1:-}"
+cp -a /usr/lib/qt6/qml/Ryoku/Ui "$work/ui"
+"$here/stage-ui.sh" "$work/ui"
 cp -a /usr/lib/qt6/qml/Ryoku/Ryogami "$work/picker"
 "$here/stage-picker.sh" "$work/picker"
 "$here/build-shell.sh" "$work/ryoku-shell"
@@ -52,6 +54,7 @@ bwrap --unshare-all --die-with-parent \
     --symlink usr/bin /bin --symlink usr/lib /lib --symlink usr/lib /lib64 \
     --proc /proc --dev /dev "${gpu[@]}" --tmpfs /run --tmpfs /tmp --tmpfs /var \
     --bind "$work" /preview --ro-bind "$parent" /preview/runtime/parent-wayland \
+    --ro-bind "$work/ui" /usr/lib/qt6/qml/Ryoku/Ui \
     --ro-bind "$work/picker" /usr/lib/qt6/qml/Ryoku/Ryogami \
     --ro-bind "$work/ryoku-shell" /usr/bin/ryoku-shell \
     --ro-bind "$here/preview.lua" /preview/hyprland.lua \
