@@ -1,0 +1,379 @@
+--- a/FilterBar.qml
++++ b/FilterBar.qml
+@@ -205,31 +205,10 @@
+             width: parent.width
+             height: 58 * Theme.scale
+ 
+-            Text {
+-                id: pickerTitle
+-                anchors.left: parent.left
+-                anchors.leftMargin: 16 * Theme.scale
+-                anchors.verticalCenter: parent.verticalCenter
+-                text: "Tsukuyomi"
+-                color: Theme.surfaceText
+-                font.family: Theme.sans
+-                font.pixelSize: Theme.fontSmall
+-                font.weight: Font.DemiBold
+-            }
+-            Rectangle {
+-                id: sealRule
+-                anchors.left: pickerTitle.right
+-                anchors.leftMargin: 14 * Theme.scale
+-                anchors.verticalCenter: parent.verticalCenter
+-                width: 1
+-                height: 30 * Theme.scale
+-                color: Theme.withAlpha(Theme.surfaceText, 0.18)
+-            }
+-
+             CollectionTabs {
+                 id: tabsBlock
+-                anchors.left: sealRule.right
+-                anchors.leftMargin: 10 * Theme.scale
++                anchors.left: parent.left
++                anchors.leftMargin: 8 * Theme.scale
+                 anchors.verticalCenter: parent.verticalCenter
+                 state: root.state
+             }
+@@ -283,6 +262,14 @@
+                     height: 30 * Theme.scale
+                     color: Theme.withAlpha(Theme.surfaceText, 0.18)
+                 }
++                FixedButton {
++                    anchors.verticalCenter: parent.verticalCenter
++                    enabled: root.state && root.state.field && root.state.field.currentIndex >= 0
++                        && root.view && root.view.count > 0
++                    label: I18n.tr("Preview")
++                    mode: "action"
++                    onTriggered: root.state.openPreview()
++                }
+                 // Wallpaper colours: matugen derives the desktop palette from each wallpaper
+                 // you apply. Off holds the current colours; a theme tile picks a fixed one.
+                 BarButton {
+--- a/CollectionTabs.qml
++++ b/CollectionTabs.qml
+@@ -1,7 +1,7 @@
+ import QtQuick
+ import Ryoku.Ui.Singletons
+ 
+-// The four libraries as masthead tabs: the Latin name with its Japanese word above it.
++// The four collections share a single row of tabs.
+ // One bone plate sits under the open tab and slides to the next. The plate carries its
+ // own dark copy of the words, clipped to itself, so every letter it passes over inverts
+ // in step with it. Switching is instant: it only reconfigures the one shared view.
+@@ -11,10 +11,10 @@
+     required property PickerState state
+ 
+     readonly property var _tabs: [
+-        { value: "wallpapers", label: I18n.tr("Wallpapers"), jp: "壁紙" },
+-        { value: "themes", label: I18n.tr("Themes"), jp: "配色" },
+-        { value: "rices", label: I18n.tr("Rices"), jp: "装い" },
+-        { value: "workshop", label: I18n.tr("Workshop"), jp: "工房" }
++        { value: "wallpapers", label: I18n.tr("Wallpapers") },
++        { value: "themes", label: I18n.tr("Themes") },
++        { value: "rices", label: I18n.tr("Rices") },
++        { value: "workshop", label: I18n.tr("Workshop") }
+     ]
+     readonly property string current: tabs.state ? tabs.state.collection : ""
+     property string hoveredValue: ""
+@@ -24,7 +24,7 @@
+     property bool _placed: false
+ 
+     implicitWidth: base.implicitWidth
+-    implicitHeight: 42 * Theme.scale
++    implicitHeight: 36 * Theme.scale
+ 
+     Component {
+         id: face
+@@ -36,7 +36,7 @@
+             readonly property bool hovered: tabs.hoveredValue === modelData.value && !tab.active
+ 
+             // Sized for the bold cut, so a tab keeps its width as it becomes the open one.
+-            width: Math.max(boldCut.advanceWidth, kanji.implicitWidth) + 30 * Theme.scale
++            width: boldCut.advanceWidth + 24 * Theme.scale
+             height: tabs.height
+ 
+             TextMetrics {
+@@ -58,24 +58,9 @@
+             }
+ 
+             Text {
+-                id: kanji
+-                anchors.horizontalCenter: parent.horizontalCenter
+-                y: (tab.hovered ? 4 : 6) * Theme.scale
+-                text: UiPreferences.text(tab.modelData.jp, "")
+-                font.family: Theme.jp
+-                font.pixelSize: Theme.fs(9.5)
+-                font.letterSpacing: 2
+-                color: tab.inverted ? Theme.withAlpha(Theme.surface, 0.7)
+-                     : Theme.withAlpha(Theme.surfaceText, tab.hovered ? 0.85 : 0.42)
+-                renderType: Text.NativeRendering
+-                Behavior on y { NumberAnimation { duration: Theme.fast; easing.type: Easing.OutCubic } }
+-                Behavior on color { ColorAnimation { duration: Theme.fast } }
+-            }
+-            Text {
+                 id: latin
+                 anchors.horizontalCenter: parent.horizontalCenter
+-                anchors.bottom: parent.bottom
+-                anchors.bottomMargin: 6 * Theme.scale
++                anchors.verticalCenter: parent.verticalCenter
+                 text: tab.modelData.label
+                 font.family: Theme.sans
+                 font.weight: tab.active ? Font.DemiBold : Font.Medium
+--- a/PickerState.qml
++++ b/PickerState.qml
+@@ -29,6 +29,9 @@
+     // True while an open sheet wants the card scene visible through it (a folio design section).
+     property bool sceneThrough: false
+ 
++    property var previewEntry: null
++    property bool applyingWallpaper: false
++    property int applyGeneration: 0
+     property bool themeBarOpen: false
+     property bool riceWorkshopOpen: false
+     property var riceEntry: null
+@@ -106,7 +109,19 @@
+         state.sheetArgs = args || ({})
+         state.sheet = name
+     }
++    function openPreview() {
++        if (!state.field || !state.view || state.sheet !== ""
++                || state.field.currentIndex < 0 || state.field.currentIndex >= state.view.count)
++            return
++        var item = state.view.get(state.field.currentIndex)
++        if (item && item.key) {
++            var full = Library.entry(state.collection, item.key)
++            state.previewEntry = full && full.key ? full : item
++            state.openSheet("selectionPreview", { collection: state.collection })
++        }
++    }
+     function closeSheet() {
++        state.previewEntry = null
+         state.sheet = ""
+         state.sheetArgs = ({})
+     }
+@@ -169,17 +184,12 @@
+         var full = Library.entry(state.collection, e.key)
+         var outs = state.applyTargets()
+         state._applyWall(full && full.key ? full : e, outs, ({}), ({}))
+-        if (state._bool(state._closeOnSelection))
+-            state.hideRequested()
+     }
+ 
+     function applyEntry(entry, outputs, audioMap, volumeMap, target) {
+         if (!entry)
+             return
+         state._applyWall(entry, outputs, audioMap, volumeMap, target)
+-        state.multipickerOpen = false
+-        if (state._bool(state._closeOnSelection))
+-            state.hideRequested()
+     }
+ 
+     function applyTargets() {
+@@ -187,6 +197,10 @@
+     }
+ 
+     function _applyWall(entry, outputs, audioMap, volumeMap, target) {
++        if (state.applyingWallpaper)
++            return
++        state.applyingWallpaper = true
++        var generation = state.applyGeneration
+         var type = entry.type || "static"
+         var params = { type: type, outputs: outputs || [] }
+         if (type === "we")
+@@ -202,8 +216,16 @@
+         if (volumeMap && Object.keys(volumeMap).length > 0)
+             params.outputs_volume = volumeMap
+         Daemon.call("wall.apply", params, function(result, error) {
+-            if (error)
++            state.applyingWallpaper = false
++            if (!state.shown || generation !== state.applyGeneration)
++                return
++            if (error) {
+                 state.toast(error.message || I18n.tr("This wallpaper could not be applied."), "error")
++                return
++            }
++            state.multipickerOpen = false
++            if (state._bool(state._closeOnSelection))
++                state.hideRequested()
+         })
+     }
+ 
+@@ -285,7 +307,7 @@
+     readonly property bool softwareRenderer: Quickshell.env("TSUKUYOMI_SOFTWARE_RENDERER") === "1"
+     readonly property bool livePreview: !softwareRenderer && state._bool(state._livePreview)
+     readonly property bool shellHover: !softwareRenderer && state._bool(state._shellHover)
+-    readonly property bool _hoverActive: state.shown && state.sheet === "" && !state.multipickerOpen
++    readonly property bool _hoverActive: state.shown && !state.applyingWallpaper && state.sheet === "" && !state.multipickerOpen
+         && (state.livePreview || state.shellHover)
+     property Timer _hoverDwell: Timer {
+         interval: 180
+@@ -313,6 +335,8 @@
+     }
+ 
+     function _pushHover() {
++        if (!state._hoverActive)
++            return
+         var key = state.hoverKey
+         if (state.livePreview) {
+             if (key) {
+@@ -341,6 +365,7 @@
+             state.filterBarToggled = false
+             state.applyStartPosition()
+         } else {
++            state.applyGeneration++
+             state._startPending = false
+             state._hoverDwell.stop()
+             if (Theme.previewPalette)
+--- a/Keymap.qml
++++ b/Keymap.qml
+@@ -10,6 +10,7 @@
+     readonly property var _actions: [
+         { id: "select",          key: "keys.select",          def: "click",             scope: "everywhere" },
+         { id: "apply",           key: "keys.apply",           def: "enter",             scope: "everywhere" },
++        { id: "preview",         key: "keys.preview",         def: "space",             scope: "picker" },
+         { id: "flip",            key: "keys.flip",            def: "right-click",       scope: "everywhere" },
+         { id: "reveal",          key: "keys.reveal",          def: "v",                 scope: "everywhere" },
+         { id: "favourite",       key: "keys.favourite",       def: "f",                 scope: "everywhere" },
+@@ -148,6 +149,12 @@
+         switch (id) {
+         case "select":
+         case "apply": if (row >= 0) keymap.state.applyRow(row, false); break
++        case "preview":
++            if (!keymap.state.searchOpen && !keymap.state.riceWorkshopOpen
++                    && !keymap.state.multipickerOpen && !keymap.state.helpOpen
++                    && !keymap.state.themeBarOpen && keymap.state.riceShare === "")
++                keymap.state.openPreview()
++            break
+         case "flip": if (f && row >= 0) f.flip(row); break
+         case "reveal": if (f) f.action("reveal"); break
+         case "favourite": if (row >= 0) keymap.state.toggleFavourite(row); break
+--- a/Picker.qml
++++ b/Picker.qml
+@@ -198,6 +198,16 @@
+         SheetHost { anchors.fill: parent; state: pickerState }
+         ToastLayer { id: toastLayer; anchors.fill: parent; state: pickerState }
+ 
++        Loader {
++            anchors.fill: parent
++            active: pickerState.sheet === "selectionPreview"
++            source: active ? Qt.resolvedUrl("SelectionPreview.qml") : ""
++            onLoaded: {
++                item.state = pickerState
++                item.forceActiveFocus()
++            }
++        }
++
+         Keymap { id: keymap; state: pickerState }
+     }
+ }
+--- /dev/null
++++ b/SelectionPreview.qml
+@@ -0,0 +1,108 @@
++import QtQuick
++import QtQuick.Controls
++import Ryoku.Ui.Singletons
++
++FocusScope {
++    id: root
++
++    property PickerState state
++    readonly property var entry: state && state.previewEntry ? state.previewEntry : ({})
++    readonly property bool themePreview: state && state.sheetArgs.collection === "themes"
++    property var loadedPalette: null
++    readonly property var palette: entry.palette || Theme.presets[entry.key] || loadedPalette
++
++    function loadThemePalette() {
++        if (!themePreview || palette || art)
++            return
++        var key = entry.key
++        Daemon.call("theme.previews", {}, function(result, error) {
++            if (!error && result && root.entry.key === key) {
++                var card = (result.previews || []).find(preview => preview.value === key)
++                root.loadedPalette = card ? card.palette : null
++            }
++        })
++    }
++
++    onStateChanged: loadThemePalette()
++    readonly property string art: String(entry.preview || entry.thumb
++        || (entry.type === "static" ? entry.path : "") || "")
++
++    Keys.onEscapePressed: if (state) state.closeSheet()
++
++    Rectangle {
++        anchors.fill: parent
++        color: "#a6000000"
++        TapHandler { onTapped: if (root.state) root.state.closeSheet() }
++    }
++
++    Rectangle {
++        id: panel
++        width: Math.min(parent.width * 0.88, Theme.px(760))
++        height: Math.min(parent.height * 0.80, width * 0.70)
++        anchors.centerIn: parent
++        color: Theme.surface
++        border.color: Theme.outline
++        radius: Theme.radius
++        MouseArea { anchors.fill: parent }
++
++        Text {
++            anchors { left: parent.left; right: closeButton.left; top: parent.top; margins: Theme.px(16) }
++            text: String(root.entry.name || root.entry.key || "")
++            color: Theme.surfaceText
++            font.family: Theme.sans
++            font.pixelSize: Theme.fontHead
++            font.weight: Font.DemiBold
++            elide: Text.ElideRight
++        }
++
++        Button {
++            id: closeButton
++            anchors { top: parent.top; right: parent.right; margins: Theme.px(12) }
++            text: I18n.tr("Close")
++            focus: true
++            onClicked: if (root.state) root.state.closeSheet()
++        }
++
++        Item {
++            id: content
++            anchors {
++                top: closeButton.bottom; bottom: parent.bottom
++                left: parent.left; right: parent.right; margins: Theme.px(16)
++            }
++            Image {
++                id: picture
++                anchors.fill: parent
++                source: root.art ? Library.fileUrl(root.art) : ""
++                visible: status === Image.Ready
++                asynchronous: true
++                sourceSize.width: Math.ceil(width)
++                sourceSize.height: Math.ceil(height)
++                fillMode: Image.PreserveAspectFit
++            }
++            Row {
++                anchors.centerIn: parent
++                spacing: Theme.px(8)
++                visible: picture.status !== Image.Ready && root.themePreview && !!root.palette
++                Repeater {
++                    model: ["surface", "surfaceText", "primary", "tertiary", "outline"]
++                    Rectangle {
++                        required property string modelData
++                        width: Math.min(content.width / 7, Theme.px(76))
++                        height: width
++                        radius: Theme.radius
++                        border.color: Theme.outline
++                        color: root.palette && root.palette[modelData] || Theme[modelData]
++                    }
++                }
++            }
++            Text {
++                anchors.centerIn: parent
++                visible: picture.status !== Image.Ready && !(root.themePreview && root.palette)
++                text: picture.status === Image.Loading ? I18n.tr("Loading preview…") : I18n.tr("Preview unavailable")
++                color: Theme.surfaceText
++                font.family: Theme.sans
++                font.pixelSize: Theme.fontBody
++            }
++        }
++    }
++}
