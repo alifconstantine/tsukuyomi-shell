@@ -1,0 +1,82 @@
+--- a/FilterBar.qml
++++ b/FilterBar.qml
+@@ -48,7 +48,7 @@
+         && !(root.field && root.field.flippedIndex >= 0)
+     // The wall grid centres itself in the space below the masthead while it shows.
+     readonly property bool obscured: root.state !== null && root.state.sheet !== "" && !root.state.sceneThrough
+-    readonly property real edge: 22 * Theme.scale
++    readonly property real edge: 58 * Theme.scale
+     readonly property real gap: 14 * Theme.scale
+     Binding {
+         when: root.field !== null
+--- a/PickerState.qml
++++ b/PickerState.qml
+@@ -66,11 +66,15 @@
+     }
+     property bool shown: false
+ 
+-    readonly property string hoverKey: (state.field && state.view && state.field.hoveredIndex >= 0)
+-        ? (state.view.get(state.field.hoveredIndex).key || "")
++    property bool _selectionMoved: false
++    readonly property int previewIndex: (state.field && state.field.hoveredIndex >= 0)
++        ? state.field.hoveredIndex
++        : (state._selectionMoved && state.field && state.field.currentIndex >= 0 ? state.field.currentIndex : -1)
++    readonly property string hoverKey: (state.view && state.previewIndex >= 0)
++        ? (state.view.get(state.previewIndex).key || "")
+         : ""
+-    readonly property string hoverType: (state.field && state.view && state.field.hoveredIndex >= 0)
+-        ? (state.view.get(state.field.hoveredIndex).type || "static")
++    readonly property string hoverType: (state.view && state.previewIndex >= 0)
++        ? (state.view.get(state.previewIndex).type || "static")
+         : ""
+ 
+     signal toastRequested(string message, string kind)
+@@ -305,12 +309,19 @@
+     }
+ 
+     readonly property bool softwareRenderer: Quickshell.env("TSUKUYOMI_SOFTWARE_RENDERER") === "1"
+-    readonly property bool livePreview: !softwareRenderer && state._bool(state._livePreview)
++    readonly property bool livePreview: state._bool(state._livePreview)
+     readonly property bool shellHover: !softwareRenderer && state._bool(state._shellHover)
+     readonly property bool _hoverActive: state.shown && !state.applyingWallpaper && state.sheet === "" && !state.multipickerOpen
+         && (state.livePreview || state.shellHover)
++    property Connections _fieldIndexConn: Connections {
++        target: state.field
++        function onCurrentIndexChanged() {
++            if (state.shown && !state._startPending)
++                state._selectionMoved = true
++        }
++    }
+     property Timer _hoverDwell: Timer {
+-        interval: 180
++        interval: 150
+         onTriggered: if (state._hoverActive) state._pushHover()
+     }
+     onHoverKeyChanged: if (state._hoverActive) state._hoverDwell.restart()
+@@ -340,11 +351,13 @@
+         var key = state.hoverKey
+         if (state.livePreview) {
+             if (key) {
+-                Daemon.call("palette.preview", { key: key }, function(result, error) {
+-                    if (state.hoverKey !== key)
+-                        return
+-                    Theme.previewPalette = (!error && result) ? state._chromePalette(result) : null
+-                })
++                if (!state.softwareRenderer) {
++                    Daemon.call("palette.preview", { key: key }, function(result, error) {
++                        if (state.hoverKey !== key)
++                            return
++                        Theme.previewPalette = (!error && result) ? state._chromePalette(result) : null
++                    })
++                }
+                 // The desktop previews the hovered still beside its palette;
+                 // a video or a scene has no still for the daemon to paint.
+                 if (state.hoverType === "static")
+@@ -362,6 +375,7 @@
+ 
+     onShownChanged: {
+         if (state.shown) {
++            state._selectionMoved = false
+             state.filterBarToggled = false
+             state.applyStartPosition()
+         } else {

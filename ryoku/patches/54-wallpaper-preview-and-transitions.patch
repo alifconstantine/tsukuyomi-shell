@@ -1,0 +1,91 @@
+--- a/shell/services/Perf.qml
++++ b/shell/services/Perf.qml
+@@ -81,7 +81,8 @@
+ 
+     // Effective eye-candy switches: explicit toggle, or the lowPowerMode master, or
+     // the Power Saver tier, or Game Mode. Performance/Balanced add nothing.
+-    readonly property bool reduceMotion:     lowPower || adapter.reduceMotion   || saver || gaming || softwareRenderer
++    readonly property bool userReduceMotion: lowPower || adapter.reduceMotion   || saver || gaming
++    readonly property bool reduceMotion:     userReduceMotion || softwareRenderer
+     readonly property bool blurDisabled:     lowPower || adapter.disableBlur    || saver || gaming || softwareRenderer
+     readonly property bool shadowsDisabled:  lowPower || adapter.disableShadows || saver || gaming || softwareRenderer
+ 
+--- a/shell/modules/wallpaper/Singletons/Motion.qml
++++ b/shell/modules/wallpaper/Singletons/Motion.qml
+@@ -10,6 +10,8 @@
+ // instant cut, matching the shell Motion so a weak GPU stops repainting.
+ Singleton {
+     readonly property bool reduce: Perf.reduceMotion
++    readonly property bool userReduce: Perf.userReduceMotion
++    readonly property bool softwareRenderer: Perf.softwareRenderer
+     readonly property int wallpaperFade: reduce ? 0 : 200
+ 
+ }
+--- a/shell/modules/wallpaper/Backdrop.qml
++++ b/shell/modules/wallpaper/Backdrop.qml
+@@ -376,12 +376,21 @@
+     // A skwd catalog transition
+     // (t.shader set) loads its own ported fragment shader and eases inside it, so
+     // progress runs linear over the configured duration.
++    readonly property bool useShaderReveal: !Motion.softwareRenderer
++
+     function startReveal() {
+-        if (Motion.reduce) {
++        if (Motion.userReduce) {
+             view.commit();
+             return;
+         }
+         view.transitioning = true;
++        if (!view.useShaderReveal) {
++            reveal.progress = 0;
++            revealAnim.easing.type = Easing.InOutQuad;
++            revealAnim.duration = 280;
++            revealAnim.restart();
++            return;
++        }
+         // sourceItem bindings attach on this assignment. Explicit updates keep
+         // these non-live captures to exactly one frame per reveal.
+         srcA.scheduleUpdate();
+@@ -447,6 +456,8 @@
+         screenName: view.screenName
+         imageWidth: imgA.sourceSize.width
+         imageHeight: imgA.sourceSize.height
++        z: view.transitioning && !view.useShaderReveal ? (view.aFront ? 0 : 1) : 0
++        opacity: view.transitioning && !view.useShaderReveal && !view.aFront ? reveal.progress : 1
+ 
+         visible: view.transitioning || (view.aFront && !view.videoOn)
+         Image {
+@@ -477,6 +488,8 @@
+         screenName: view.screenName
+         imageWidth: imgB.sourceSize.width
+         imageHeight: imgB.sourceSize.height
++        z: view.transitioning && !view.useShaderReveal ? (view.aFront ? 1 : 0) : 0
++        opacity: view.transitioning && !view.useShaderReveal && view.aFront ? reveal.progress : 1
+ 
+         visible: view.transitioning || (!view.aFront && !view.videoOn)
+         Image {
+@@ -533,13 +546,13 @@
+     // the front WallpaperFramedPlane then paints directly at rest.
+     ShaderEffectSource {
+         id: srcA
+-        sourceItem: view.transitioning ? frameA : null
++        sourceItem: view.transitioning && view.useShaderReveal ? frameA : null
+         hideSource: true
+         live: false
+     }
+     ShaderEffectSource {
+         id: srcB
+-        sourceItem: view.transitioning ? frameB : null
++        sourceItem: view.transitioning && view.useShaderReveal ? frameB : null
+         hideSource: true
+         live: false
+     }
+@@ -549,7 +562,7 @@
+     ShaderEffect {
+         id: reveal
+         anchors.fill: parent
+-        visible: view.transitioning && !view.videoOn
++        visible: view.transitioning && view.useShaderReveal && !view.videoOn
+ 
+         property variant oldTex: view.aFront ? srcA : srcB
+         property variant newTex: view.aFront ? srcB : srcA
