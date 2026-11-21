@@ -1,0 +1,288 @@
+--- a/settings.go
++++ b/settings.go
+@@ -188,10 +188,11 @@
+ }
+ 
+ type themeSettings struct {
+-	Theme      string           `json:"theme"`
+-	Matugen    matugenSettings  `json:"matugen"`
+-	Attributes attributesConfig `json:"attributes"`
+-	Motion     motionConfig     `json:"motion"`
++	Appearance *appearanceSettings `json:"appearance"`
++	Theme      string              `json:"theme"`
++	Matugen    matugenSettings     `json:"matugen"`
++	Attributes attributesConfig    `json:"attributes"`
++	Motion     motionConfig        `json:"motion"`
+ }
+ 
+ type matugenSettings struct {
+@@ -647,6 +648,15 @@
+ }
+ 
+ func (t *themeSettings) normalize(v *validator) {
++	if t.Appearance != nil {
++		if err := t.Appearance.validate(); err != nil {
++			if v.strict && v.err == nil {
++				v.err = err
++			} else if !v.strict {
++				t.Appearance = nil
++			}
++		}
++	}
+ 	v.nonEmpty("theme.theme", t.Theme)
+ 	// theme.theme validates against the live set (dynamic variants + static
+ 	// catalog + installed library ids). A patch (strict) rejects an unknown
+@@ -1030,7 +1040,8 @@
+ // through patch), so the pill's Theme.namedScheme always tracks the chosen theme.
+ func resolveThemePalette(full map[string]any, themeName string) {
+ 	// The live path is gated on theme.json, so the same selection has to reach it.
+-	syncFollowWallpaper(themeName)
++	theme, _ := full["theme"].(map[string]any)
++	syncFollowWallpaper(themeName, themeName == "Default" && theme["appearance"] != nil)
+ 	pal, ok := lookupThemePalette(themeName)
+ 	if !ok {
+ 		delete(full, "themePalette")
+@@ -1333,6 +1344,12 @@
+ 	contract := contractKeys[segs[0]]
+ 	if err := setByPath(full, segs, value, !contract); err != nil {
+ 		return err
++	}
++	// An explicit Appearance change selects the built-in palette atomically.
++	if path == "theme.appearance" && string(value) != "null" {
++		if err := setByPath(full, []string{"theme", "theme"}, json.RawMessage(`"Default"`), false); err != nil {
++			return err
++		}
+ 	}
+ 	if err := normalizeDockSettings(full, true); err != nil {
+ 		return err
+--- a/matugen.go
++++ b/matugen.go
+@@ -404,7 +404,7 @@
+ // it off (a rice, a fixed palette) selected a scheme that never regenerated.
+ // theme.theme is the master; this is its shadow. Other keys in the file
+ // (themeApps) are preserved.
+-func syncFollowWallpaper(themeName string) {
++func syncFollowWallpaper(themeName string, managed bool) {
+ 	path := filepath.Join(ryokuConfigDir(), "theme.json")
+ 	doc := map[string]any{}
+ 	if b, err := os.ReadFile(path); err == nil {
+@@ -417,7 +417,7 @@
+ 	// brand palette. theme.theme is the master; this is its shadow.
+ 	scheme, _ := doc["scheme"].(string)
+ 	locked := scheme == "light" || scheme == "dark"
+-	follow := !staticName(themeName) && !locked
++	follow := managed || (!staticName(themeName) && !locked)
+ 	if cur, ok := doc["followWallpaper"].(bool); ok && cur == follow {
+ 		return
+ 	}
+@@ -634,10 +634,26 @@
+ // smart light/dark reads.
+ func generatePaletteStill(img, source string) (map[string]string, map[string]string, map[string]string, map[string]map[string]string, string, error) {
+ 	k := readMatugenKnobs()
++	appearance := activeAppearance()
++	colourSource := ""
++	if appearance != nil {
++		k.Mode = appearance.Mode
++		switch appearance.Accent {
++		case "neutral":
++			colourSource = "#808080"
++			k.SchemeType = "scheme-monochrome"
++		case "preset", "custom":
++			colourSource = appearance.Hex
++			k.SchemeType = matugenSchemeType
++		}
++	}
+ 	mode := resolveMode(k.Mode, source)
+ 	args, err := matugenArgs(img, k, mode)
+ 	if err != nil {
+ 		return nil, nil, nil, nil, "", err
++	}
++	if colourSource != "" {
++		args = append([]string{"color", "hex", colourSource}, args[2:]...)
+ 	}
+ 	out, err := runMatugenCapture(args)
+ 	if err != nil {
+@@ -653,11 +669,16 @@
+ 	// extract, so it falls back to its built-in blue and paints a blue palette
+ 	// onto a black-and-white picture. Strip the invented hue to grays that match
+ 	// the picture, luminance preserved so every contrast still lands.
+-	if imageAchromatic(img) {
++	if colourSource == "" && imageAchromatic(img) {
+ 		neutralizePalette(activePal)
+ 		neutralizePalette(darkPal)
+ 		neutralizePalette(lightPal)
+ 		neutralizeTones(tones)
++	}
++	if appearance != nil {
++		for _, palette := range []map[string]string{activePal, darkPal, lightPal} {
++			neutralizeAppearanceSurfaces(palette)
++		}
+ 	}
+ 	return activePal, darkPal, lightPal, tones, mode, nil
+ }
+@@ -1672,11 +1693,16 @@
+ func matugenThemeSig(frame []byte) string {
+ 	var doc struct {
+ 		Theme struct {
+-			Theme string `json:"theme"`
++			Theme      string              `json:"theme"`
++			Appearance *appearanceSettings `json:"appearance"`
+ 		} `json:"theme"`
+ 	}
+ 	if json.Unmarshal(frame, &doc) != nil {
+ 		return ""
++	}
++	if doc.Theme.Theme == "Default" && doc.Theme.Appearance != nil {
++		a := doc.Theme.Appearance
++		return "Default:" + a.Mode + ":" + a.Accent + ":" + a.Hex
+ 	}
+ 	return doc.Theme.Theme
+ }
+--- a/matugen_test.go
++++ b/matugen_test.go
+@@ -1189,7 +1189,7 @@
+ 		return m
+ 	}
+ 
+-	syncFollowWallpaper("Wallpaper")
++	syncFollowWallpaper("Wallpaper", false)
+ 	got := read()
+ 	if got["followWallpaper"] != true {
+ 		t.Errorf("live scheme: followWallpaper = %v, want true", got["followWallpaper"])
+@@ -1198,21 +1198,21 @@
+ 		t.Errorf("themeApps was dropped: %v", got)
+ 	}
+ 
+-	syncFollowWallpaper("Dracula")
++	syncFollowWallpaper("Dracula", false)
+ 	if got := read(); got["followWallpaper"] != false {
+ 		t.Errorf("named theme: followWallpaper = %v, want false", got["followWallpaper"])
+ 	}
+ 
+ 	// Default is the plain base and now follows the wallpaper: with no static
+ 	// theme and no Light/Dark lock, the shadow key stays on.
+-	syncFollowWallpaper("Default")
++	syncFollowWallpaper("Default", false)
+ 	if got := read(); got["followWallpaper"] != true {
+ 		t.Errorf("Default: followWallpaper = %v, want true (follows by default)", got["followWallpaper"])
+ 	}
+ 
+ 	// An explicit Light/Dark curated lock still pins a fixed palette.
+ 	writeFile(t, path, `{"scheme":"dark","themeApps":true}`)
+-	syncFollowWallpaper("Default")
++	syncFollowWallpaper("Default", false)
+ 	if got := read(); got["followWallpaper"] != false {
+ 		t.Errorf("Default + dark lock: followWallpaper = %v, want false", got["followWallpaper"])
+ 	}
+--- /dev/null
++++ b/tsukuyomi_appearance.go
+@@ -0,0 +1,65 @@
++package main
++
++import (
++	"encoding/json"
++	"fmt"
++	"os"
++	"path/filepath"
++	"strings"
++)
++
++// The Default theme has independent brightness and accent choices. Named Store
++// themes continue to supply their own palette through the existing catalog.
++type appearanceSettings struct {
++	Mode   string `json:"mode"`
++	Accent string `json:"accent"`
++	Hex    string `json:"hex,omitempty"`
++}
++
++func (a appearanceSettings) validate() error {
++	switch a.Mode {
++	case "dark", "light", "auto":
++	default:
++		return fmt.Errorf("appearance: choose dark, light, or auto")
++	}
++	switch a.Accent {
++	case "neutral", "wallpaper":
++		return nil
++	case "preset", "custom":
++		if len(a.Hex) == 7 && a.Hex[0] == '#' {
++			if _, _, _, ok := parseHexRGB(a.Hex); ok {
++				return nil
++			}
++		}
++	}
++	return fmt.Errorf("appearance: choose an accent or enter a valid #RRGGBB colour")
++}
++
++func activeAppearance() *appearanceSettings {
++	raw, err := os.ReadFile(filepath.Join(ryokuConfigDir(), "shell.json"))
++	if err != nil {
++		return nil
++	}
++	var config struct {
++		Theme themeSettings `json:"theme"`
++	}
++	if json.Unmarshal(raw, &config) != nil || config.Theme.Theme != "Default" {
++		return nil
++	}
++	a := config.Theme.Appearance
++	if a == nil || a.validate() != nil {
++		return nil
++	}
++	return a
++}
++
++func neutralizeAppearanceSurfaces(palette map[string]string) {
++	for role, hex := range palette {
++		switch {
++		case strings.HasPrefix(role, "surface"), strings.HasPrefix(role, "on_surface"),
++			strings.HasPrefix(role, "outline"), role == "background", role == "on_background",
++			role == "inverse_surface", role == "inverse_on_surface":
++			palette[role] = neutralizeHex(hex)
++		}
++	}
++}
+--- /dev/null
++++ b/tsukuyomi_appearance_test.go
+@@ -0,0 +1,41 @@
++package main
++
++import (
++	"encoding/json"
++	"path/filepath"
++	"testing"
++)
++
++func TestAppearanceSelectsDefaultAndSignalsPaletteRefresh(t *testing.T) {
++	cfg := t.TempDir()
++	t.Setenv("XDG_CONFIG_HOME", cfg)
++	store := newSettingsStore(filepath.Join(cfg, "shell.json"))
++	if err := store.patch("theme.theme", json.RawMessage(`"Dracula"`)); err != nil {
++		t.Fatal(err)
++	}
++	before := matugenThemeSig(store.frameLocked())
++	if err := store.patch("theme.appearance", json.RawMessage(`{"mode":"light","accent":"custom","hex":"#407ACA"}`)); err != nil {
++		t.Fatal(err)
++	}
++	if store.cur.Theme.Theme != "Default" || store.cur.Theme.Appearance.Mode != "light" {
++		t.Fatalf("unexpected theme: %+v", store.cur.Theme)
++	}
++	after := matugenThemeSig(store.frameLocked())
++	if before == after {
++		t.Fatal("appearance change didn't invalidate the palette")
++	}
++	if err := store.patch("theme.appearance", json.RawMessage(`{"mode":"dark","accent":"custom","hex":"invalid"}`)); err == nil {
++		t.Fatal("invalid colour was accepted")
++	}
++	if got := matugenThemeSig(store.frameLocked()); got != after {
++		t.Fatalf("invalid change modified settings: %s", got)
++	}
++}
++
++func TestAppearanceLeavesAccentRolesColoured(t *testing.T) {
++	palette := map[string]string{"surface": "#131629", "primary": "#6699cc", "error": "#cc1111"}
++	neutralizeAppearanceSurfaces(palette)
++	if palette["surface"] == "#131629" || palette["primary"] != "#6699cc" || palette["error"] != "#cc1111" {
++		t.Fatalf("unexpected palette: %v", palette)
++	}
++}

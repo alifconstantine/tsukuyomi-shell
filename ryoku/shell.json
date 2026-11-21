@@ -54,6 +54,7 @@
   },
   "theme": {
     "theme": "Default",
+    "appearance": { "mode": "dark", "accent": "neutral" },
     "matugen": {
       "mode": "Dark",
       "preference": "Darkness"

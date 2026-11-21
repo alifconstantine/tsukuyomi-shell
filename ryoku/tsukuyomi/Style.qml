@@ -16,7 +16,7 @@ QtObject {
     readonly property color lineStrong: dark ? "#626262" : "#8a8a8a"
     readonly property color hover: dark ? "#2b2b2b" : "#e8e8e8"
     readonly property color selected: dark ? "#383838" : "#dedede"
-    readonly property color accent: dark ? "#d0d0d0" : "#4b4b4b"
+    readonly property color accent: Tokens.sun
     readonly property string icons: "Material Symbols Outlined"
 
     function sectionIcon(key) {
@@ -27,6 +27,7 @@ QtObject {
         case "connections": return "\ue63e";
         case "input": case "keybinds": return "\ue312";
         case "gpu": case "performance": return "\ue1a3";
+        case "appearance": return "\ue40a";
         case "lockscreen": return "\ue897";
         case "windowmanager": case "windowrules": return "\ue42a";
         case "plugins": case "addons": case "community": return "\ue87b";

@@ -1,0 +1,275 @@
+--- a/hub/Hub.qml
++++ b/hub/Hub.qml
+@@ -132,7 +132,7 @@
+             { key: "displays", name: "Displays", needs: { cap: "monitorConfig" } }, { key: "connections", name: "Connections" },
+             { key: "input", name: "Input" }, { key: "gpu", name: "Graphics & Power" } ] },
+         { name: "Appearance", items: [
+-            { key: "lockscreen", name: "Lockscreen" } ] },
++            { key: "appearance", name: "Theme & Accent" }, { key: "lockscreen", name: "Lockscreen" } ] },
+         { name: "Window Manager", items: [
+             { key: "windowmanager", name: "Window Manager", needs: { provider: true } }, { key: "plugins", name: "Plugins", needs: { cap: "plugins" } },
+             { key: "layerrules", name: "Layer Rules", adv: true, needs: { rows: true } } ] },
+@@ -172,6 +172,7 @@
+     // schema rows (Connections, Rashin) and cover synonyms the copy avoids
+     // (transparency->opacity, startup->autostart, screensaver->lockscreen).
+     readonly property var sectionKeywords: ({
++        "appearance": "theme appearance colours colors accent hex dark light wallpaper palette installed",
+         "global": "language locale region formats format date time number currency text size font scale icons icon theme appearance location city weather timezone international i18n l10n",
+         "profile": "dashboard status overview telemetry hostname cpu gpu memory uptime specs",
+         "displays": "monitor screen resolution refresh scale rotation arrange mirror hidpi dual second external multiple",
+@@ -536,7 +537,7 @@
+             "connections": "ConnectionsPage", "gpu": "GpuPage",
+             "updates": "UpdatesPage", "rashin": "RashinPage",
+             "recording": "RecordingPage", "performance": "PerformancePage",
+-            "launcher": "LauncherPage", "lockscreen": "SessionLockscreenPage",
++            "launcher": "LauncherPage", "lockscreen": "SessionLockscreenPage", "appearance": "AppearancePage",
+             "fastfetch": "FastfetchPage", "addons": "AddonsPage",
+             "credits": "CreditsPage", "gamebar": "GameBarPage"
+         };
+--- /dev/null
++++ b/hub/pages/AppearancePage.qml
+@@ -0,0 +1,244 @@
++pragma ComponentBehavior: Bound
++
++import QtQuick
++import QtQuick.Controls as QQC
++import Quickshell
++import Ryoku.Ui
++import Ryoku.Ui.Singletons
++import ".."
++import "../Singletons"
++import "../tsukuyomi" as Tsukuyomi
++
++Item {
++    id: page
++
++    property var hub
++    readonly property bool fullBleed: true
++    readonly property var saved: Settings.get("theme.appearance")
++    readonly property string activeTheme: Settings.get("theme.theme") || "Default"
++    readonly property var presets: [
++        { label: I18n.tr("Blue"), hex: "#3D87D9" },
++        { label: I18n.tr("Teal"), hex: "#248C83" },
++        { label: I18n.tr("Violet"), hex: "#8955C8" },
++        { label: I18n.tr("Rose"), hex: "#CA596D" },
++        { label: I18n.tr("Amber"), hex: "#B97526" }
++    ]
++
++    property string mode: "dark"
++    property string accent: "neutral"
++    property string preset: presets[0].hex
++    property string custom: "#3D87D9"
++    property string errorMessage: ""
++    property bool saving: false
++    readonly property bool validHex: /^#[0-9a-f]{6}$/i.test(custom.trim())
++
++    function syncSaved() {
++        const current = saved;
++        page.mode = current ? current.mode : (Tokens.light ? "light" : "dark");
++        page.accent = current ? current.accent : (activeTheme === "Wallpaper" ? "wallpaper" : "neutral");
++        if (current && current.accent === "preset")
++            page.preset = current.hex;
++        if (current && current.accent === "custom")
++            page.custom = current.hex;
++    }
++    function save(path, value) {
++        if (page.saving || !Settings.ready)
++            return;
++        page.saving = true;
++        page.errorMessage = "";
++        Settings.patch(path, value, function(ok, error) {
++            page.saving = false;
++            if (!ok)
++                page.errorMessage = error || I18n.tr("Could not apply the theme.");
++        });
++    }
++    function applyAppearance() {
++        const next = { mode: mode, accent: accent };
++        if (accent === "preset")
++            next.hex = preset;
++        else if (accent === "custom")
++            next.hex = custom.trim().toUpperCase();
++        page.save("theme.appearance", next);
++    }
++
++    Component.onCompleted: {
++        syncSaved();
++        UserSchemes.refresh();
++    }
++    onSavedChanged: if (!saving) syncSaved()
++    onVisibleChanged: if (visible) UserSchemes.refresh()
++
++    SchemaPage {
++        anchors.fill: parent
++        anchors.margins: Tokens.s6
++        schema: []
++        draft: null
++        defaults: ({})
++        title: I18n.tr("Theme & Accent")
++        blurb: I18n.tr("Choose the desktop mode, accent, or an installed theme.")
++
++        Column {
++            width: parent.width
++            spacing: Tokens.s4
++
++            SettingCard {
++                width: parent.width
++                title: I18n.tr("Desktop appearance")
++
++                SettingRow {
++                    width: parent.width
++                    label: I18n.tr("Mode")
++                    controlWidth: modeChoice.implicitWidth
++                    Seg {
++                        id: modeChoice
++                        anchors.right: parent.right
++                        anchors.verticalCenter: parent.verticalCenter
++                        options: ["dark", "light", "auto"]
++                        labels: ({ dark: I18n.tr("Dark"), light: I18n.tr("Light"), auto: I18n.tr("Follow wallpaper") })
++                        current: page.mode
++                        onChose: value => page.mode = value
++                    }
++                }
++                SettingRow {
++                    width: parent.width
++                    label: I18n.tr("Accent source")
++                    divider: true
++                    controlWidth: accentChoice.implicitWidth
++                    Seg {
++                        id: accentChoice
++                        anchors.right: parent.right
++                        anchors.verticalCenter: parent.verticalCenter
++                        options: ["neutral", "preset", "custom", "wallpaper"]
++                        labels: ({ neutral: I18n.tr("Neutral"), preset: I18n.tr("Preset"),
++                            custom: I18n.tr("HEX"), wallpaper: I18n.tr("Wallpaper") })
++                        current: page.accent
++                        onChose: value => page.accent = value
++                    }
++                }
++                SettingRow {
++                    width: parent.width
++                    visible: page.accent === "preset" || page.accent === "custom"
++                    label: page.accent === "preset" ? I18n.tr("Preset colour") : I18n.tr("Hex colour")
++                    divider: true
++                    controlWidth: colourInput.implicitWidth
++                    Row {
++                        id: colourInput
++                        anchors.right: parent.right
++                        anchors.verticalCenter: parent.verticalCenter
++                        spacing: Tokens.s3
++                        Rectangle {
++                            anchors.verticalCenter: parent.verticalCenter
++                            width: 26; height: 26; radius: 6
++                            color: page.accent === "preset" ? page.preset
++                                : (page.validHex ? page.custom.trim() : "transparent")
++                            border.color: Tsukuyomi.Style.lineStrong
++                        }
++                        QQC.ComboBox {
++                            visible: page.accent === "preset"
++                            model: page.presets
++                            textRole: "label"
++                            valueRole: "hex"
++                            currentIndex: Math.max(0, page.presets.findIndex(item => item.hex === page.preset))
++                            onActivated: page.preset = currentValue
++                            Accessible.name: I18n.tr("Preset colour")
++                        }
++                        Field {
++                            visible: page.accent === "custom"
++                            width: 126
++                            text: page.custom
++                            placeholder: "#3D87D9"
++                            onEdited: value => page.custom = value
++                        }
++                    }
++                }
++                Row {
++                    spacing: Tokens.s3
++                    Btn {
++                        text: I18n.tr("Apply appearance")
++                        primary: true
++                        enabled: Settings.ready && !page.saving && (page.accent !== "custom" || page.validHex)
++                        onAct: page.applyAppearance()
++                    }
++                    Text {
++                        anchors.verticalCenter: parent.verticalCenter
++                        color: Tsukuyomi.Style.secondary
++                        font.family: Tokens.ui
++                        text: page.saving ? I18n.tr("Applying…")
++                            : (page.activeTheme === "Default" ? I18n.tr("Active") : "")
++                    }
++                }
++                Text {
++                    width: parent.width
++                    visible: page.accent === "custom" && !page.validHex
++                    color: Tokens.alert
++                    font.family: Tokens.ui
++                    text: I18n.tr("Enter six hexadecimal digits after #.")
++                }
++            }
++
++            SettingCard {
++                width: parent.width
++                title: I18n.tr("Installed themes")
++
++                SettingRow {
++                    width: parent.width
++                    label: I18n.tr("Theme")
++                    desc: page.activeTheme !== "Default" ? I18n.tr("Active: %1").arg(
++                        (UserSchemes.schemes.find(item => item.id === page.activeTheme) || {}).label || page.activeTheme) : ""
++                    controlWidth: themeChoice.width
++                    QQC.ComboBox {
++                        id: themeChoice
++                        anchors.right: parent.right
++                        anchors.verticalCenter: parent.verticalCenter
++                        width: Math.min(230, page.width * 0.40)
++                        model: UserSchemes.schemes
++                        textRole: "label"
++                        valueRole: "id"
++                        currentIndex: Math.max(0, UserSchemes.schemes.findIndex(item => item.id === page.activeTheme))
++                        enabled: count > 0
++                        displayText: count > 0 ? currentText : I18n.tr("No themes installed")
++                        Accessible.name: I18n.tr("Installed theme")
++                    }
++                }
++                Row {
++                    spacing: Tokens.s3
++                    Repeater {
++                        model: (UserSchemes.schemes[themeChoice.currentIndex] || {}).sw || []
++                        Rectangle {
++                            required property string modelData
++                            width: 25; height: 25; radius: 5
++                            color: modelData
++                            border.color: Tsukuyomi.Style.lineStrong
++                        }
++                    }
++                }
++                Flow {
++                    width: parent.width
++                    spacing: Tokens.s3
++                    Btn {
++                        text: I18n.tr("Apply theme")
++                        enabled: themeChoice.count > 0 && Settings.ready && !page.saving
++                            && themeChoice.currentValue !== page.activeTheme
++                        onAct: page.save("theme.theme", themeChoice.currentValue)
++                    }
++                    Btn {
++                        text: I18n.tr("Browse Store")
++                        onAct: Quickshell.execDetached(["ryostore", "open", "colorschemes"])
++                    }
++                    Btn {
++                        text: I18n.tr("Refresh")
++                        onAct: UserSchemes.refresh()
++                    }
++                }
++            }
++            Text {
++                width: parent.width
++                visible: page.errorMessage !== ""
++                wrapMode: Text.WordWrap
++                color: Tokens.alert
++                font.family: Tokens.ui
++                text: page.errorMessage
++            }
++        }
++    }
++}
