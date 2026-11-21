@@ -1,0 +1,256 @@
+--- a/hub/pages/QsBarStudio.qml
++++ b/hub/pages/QsBarStudio.qml
+@@ -26,14 +26,6 @@
+         { id: "widgets", label: "Widgets" },
+         { id: "dock", label: "Dock" }
+     ]
+-    readonly property var formIds: ["islands", "full", "fit", "dock", "notch"]
+-    readonly property var formLabels: ({
+-        islands: I18n.tr("Islands"),
+-        full: I18n.tr("Full width"),
+-        fit: I18n.tr("Fit"),
+-        dock: I18n.tr("Dock"),
+-        notch: I18n.tr("Notch")
+-    })
+     readonly property var widgetIds: {
+         const ids = [];
+         for (let i = 0; i < editor.widgets.length; i++)
+@@ -106,17 +98,6 @@
+         else if (barActive)
+             Quickshell.execDetached(["ryoku-shell", "bar", "settings", editor.tab]);
+     }
+-    function openFormPicker() {
+-        if (!editor.hostPage || !editor.barActive || editor.saving)
+-            return;
+-        editor.hostPage.openStudioPick(
+-            I18n.tr("Bar form"),
+-            editor.formIds,
+-            editor.formLabels,
+-            Settings.get("qsbar.barShellStyle") || "full",
+-            key => editor.patch("qsbar.barShellStyle", key)
+-        );
+-    }
+     function openWidgetPicker() {
+         if (!editor.hostPage || !editor.barActive || editor.saving || editor.widgetIds.length === 0)
+             return;
+@@ -209,24 +190,7 @@
+         SettingRow {
+             width: parent.width
+             visible: editor.tab === "bars"
+-            label: I18n.tr("Bar form")
+-            desc: I18n.tr("Shape and edge layout of the bar.")
+-            controlWidth: Math.min(Tokens.px(240), Math.round(width * 0.40))
+-            PickBar {
+-                anchors.fill: parent
+-                enabled: editor.barActive && !editor.saving
+-                opacity: enabled ? 1 : 0.45
+-                value: Settings.get("qsbar.barShellStyle") || "full"
+-                count: editor.formIds.length
+-                labels: editor.formLabels
+-                onOpened: editor.openFormPicker()
+-            }
+-        }
+-        SettingRow {
+-            width: parent.width
+-            visible: editor.tab === "bars"
+             label: I18n.tr("Position")
+-            divider: true
+             controlWidth: position.implicitWidth
+             Seg {
+                 id: position
+--- a/shell/modules/bar/barstyles/qsbar/Theme.qml
++++ b/shell/modules/bar/barstyles/qsbar/Theme.qml
+@@ -2383,7 +2383,7 @@
+         return isFinite(n) ? Math.round(Math.max(1, Math.min(2, n)) * 10) / 10 : 1
+     }
+ 
+-    property string barShellStyle: "full"
++    property string barShellStyle: "islands"
+     property bool barBorderEnabled: true
+     // Outer bar-shell corner radius in px, applied to the fitted shell forms.
+     // Persisted in shell.json .qsbar; set from the control center and Bar Studio.
+@@ -2411,8 +2411,7 @@
+     readonly property int barGapLead: barPosition === "bottom" ? barGapBottom : barGapTop
+     readonly property int barGapTrail: barPosition === "bottom" ? barGapTop : barGapBottom
+     function barShellStyleValid(value) {
+-        return value === "islands" || value === "full" || value === "fit"
+-            || value === "dock" || value === "notch"
++        return value === "islands"
+     }
+ 
+     // ── picker visual style (theme/wallpaper/screenshot/video pickers) ──
+--- a/shell/modules/bar/barstyles/qsbar/controlcenter/routes/BarsRoute.qml
++++ b/shell/modules/bar/barstyles/qsbar/controlcenter/routes/BarsRoute.qml
+@@ -26,23 +26,7 @@
+     readonly property real colW: Math.min(page.width, page.tk ? page.tk.contentW : 640)
+     implicitHeight: col.implicitHeight
+ 
+-    // the five bar forms + their captions (drives the FORM grid)
+-    readonly property var formModel: [
+-        { form: "islands", label: I18n.tr("Islands"), detail: I18n.tr("Split pills") },
+-        { form: "full",    label: I18n.tr("Full"),    detail: I18n.tr("Edge to edge") },
+-        { form: "fit",     label: I18n.tr("Fit"),     detail: I18n.tr("Inset frame") },
+-        { form: "dock",    label: I18n.tr("Dock"),    detail: I18n.tr("Open edge") },
+-        { form: "notch",   label: I18n.tr("Notch"),   detail: I18n.tr("Flowing shoulders") }
+-    ]
+-
+-    // One shape picker over the single bar: islands is the split-pill form, the
+-    // rest are the continuous shell forms. Selecting a form just records it.
+-    readonly property string activeForm:
+-        page.root && page.root.barShellStyle ? String(page.root.barShellStyle) : "full"
+-    function selectForm(f) {
+-        if (page.root && page.root.barShellStyleValid && page.root.barShellStyleValid(f))
+-            page.root.barShellStyle = f
+-    }
++    readonly property string activeForm: "islands"
+ 
+     // gap-animation mode: each option sets barAnim to its exact mode value (0-8).
+     readonly property int curAnim: (page.root && page.root.barAnim !== undefined) ? page.root.barAnim : -1
+@@ -227,95 +211,12 @@
+                 }
+             }
+ 
+-            // ── 03 FORM: one row of named tiles, the way the Hub picks a bar
+-            // style. The live silhouette sits at the top of this page already, so a
+-            // tile only has to name the shape.
++            // ── 03 SURFACE ──
+             Entrance {
+                 width: page.colW
+                 index: 2
+                 Tsukuyomi.SectionCard {
+                     width: page.colW
+-                    title: I18n.tr("Form")
+-                    kana: "\u5f62"
+-
+-                    Item {
+-                        width: parent.width
+-                        height: formRow.height + (page.tk ? page.tk.gap * 2 : 24)
+-
+-                        Row {
+-                            id: formRow
+-                            anchors.left: parent.left
+-                            anchors.right: parent.right
+-                            anchors.verticalCenter: parent.verticalCenter
+-                            anchors.leftMargin: page.tk ? page.tk.gap : 12
+-                            anchors.rightMargin: page.tk ? page.tk.gap : 12
+-                            spacing: Tokens.s2
+-                            readonly property real cellW: (width - (page.formModel.length - 1) * Tokens.s2)
+-                                / Math.max(1, page.formModel.length)
+-
+-                            Repeater {
+-                                model: page.formModel
+-
+-                                delegate: Rectangle {
+-                                    id: ftile
+-                                    required property var modelData
+-                                    readonly property bool on: page.activeForm === modelData.form
+-
+-                                    width: formRow.cellW
+-                                    height: Tokens.px(58)
+-                                    radius: Tokens.radius
+-                                    color: ftile.on ? Tokens.bone : (fma.containsMouse ? Tokens.tint5 : "transparent")
+-                                    border.width: Tokens.border
+-                                    border.color: ftile.on ? Tokens.bone : Tokens.line
+-                                    Behavior on color { ColorAnimation { duration: Tokens.snap } }
+-
+-                                    Column {
+-                                        anchors.left: parent.left
+-                                        anchors.right: parent.right
+-                                        anchors.margins: Tokens.s3
+-                                        anchors.verticalCenter: parent.verticalCenter
+-                                        spacing: 2
+-
+-                                        UiText {
+-                                            width: parent.width
+-                                            text: I18n.tr(ftile.modelData.label).toUpperCase()
+-                                            color: ftile.on ? Tokens.inkOnBone : Tokens.inkDim
+-                                            elide: Text.ElideRight
+-                                            font.family: Tokens.ui
+-                                            font.pixelSize: Tokens.fSmall
+-                                            font.weight: Font.Medium
+-                                            font.letterSpacing: Tokens.trackLabel
+-                                        }
+-                                        UiText {
+-                                            width: parent.width
+-                                            text: I18n.tr(ftile.modelData.detail)
+-                                            color: ftile.on ? Tokens.inkOnBoneDim : Tokens.inkFaint
+-                                            elide: Text.ElideRight
+-                                            font.family: Tokens.mono
+-                                            font.pixelSize: Tokens.fTiny
+-                                        }
+-                                    }
+-
+-                                    MouseArea {
+-                                        id: fma
+-                                        anchors.fill: parent
+-                                        hoverEnabled: true
+-                                        cursorShape: Qt.PointingHandCursor
+-                                        onClicked: page.selectForm(ftile.modelData.form)
+-                                    }
+-                                }
+-                            }
+-                        }
+-                    }
+-                }
+-            }
+-
+-            // ── 04 SURFACE ──
+-            Entrance {
+-                width: page.colW
+-                index: 3
+-                Tsukuyomi.SectionCard {
+-                    width: page.colW
+                     title: I18n.tr("Surface")
+                     kana: "\u8868\u9762"
+ 
+@@ -396,10 +297,10 @@
+                 }
+             }
+ 
+-            // ── 05 GAPS: how far the shell stays off each output edge ──
++            // ── 04 GAPS: how far the shell stays off each output edge ──
+             Entrance {
+                 width: page.colW
+-                index: 4
++                index: 3
+                 Tsukuyomi.SectionCard {
+                     width: page.colW
+                     title: I18n.tr("Gaps")
+@@ -483,10 +384,10 @@
+                 }
+             }
+ 
+-            // ── 06 ACCENT: the bar's data colour, so the swatches keep their hue ──
++            // ── 05 ACCENT: the bar's data colour, so the swatches keep their hue ──
+             Entrance {
+                 width: page.colW
+-                index: 5
++                index: 4
+                 Tsukuyomi.SectionCard {
+                     width: page.colW
+                     title: I18n.tr("Accent")
+@@ -534,11 +435,11 @@
+                 }
+             }
+ 
+-            // ── 07 PICKERS: the visual form shared by the theme, wallpaper and
++            // ── 06 PICKERS: the visual form shared by the theme, wallpaper and
+             // media browsers that open from this bar.
+             Entrance {
+                 width: page.colW
+-                index: 6
++                index: 5
+                 Tsukuyomi.SectionCard {
+                     width: page.colW
+                     title: I18n.tr("Pickers")
+--- a/shell/modules/bar/barstyles/qsbar/controlcenter/ControlCenter.qml
++++ b/shell/modules/bar/barstyles/qsbar/controlcenter/ControlCenter.qml
+@@ -67,8 +67,6 @@
+         return out.concat([
+             { id: "bars.position", name: I18n.tr("Bar position"), route: "bars", category: I18n.tr("Bar"),
+               searchTags: ["top", "bottom", "edge"], description: I18n.tr("Which edge the bar docks to.") },
+-            { id: "bars.form", name: I18n.tr("Bar form"), route: "bars", category: I18n.tr("Bar"),
+-              searchTags: ["full", "fit", "dock", "notch", "islands", "shape"], description: I18n.tr("The shell shape the bar takes.") },
+             { id: "bars.surface", name: I18n.tr("Bar surface"), route: "bars", category: I18n.tr("Bar"),
+               searchTags: ["border", "corners", "frost", "shadow", "depth", "tooltip"], description: I18n.tr("Border, corners, frost, shadow and tooltip border.") },
+             { id: "bars.gaps", name: I18n.tr("Bar gaps"), route: "bars", category: I18n.tr("Bar"),
