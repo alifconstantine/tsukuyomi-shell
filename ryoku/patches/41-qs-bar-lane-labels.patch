@@ -1,0 +1,24 @@
+--- a/hub/pages/QsBarStudio.qml
++++ b/hub/pages/QsBarStudio.qml
+@@ -20,10 +20,6 @@
+     readonly property bool barActive: Settings.ready && Settings.get("barStyle") === "qsbar"
+     readonly property string qsConfig: JSON.stringify(Settings.get("qsbar") || ({}))
+     readonly property var selected: widgets.find(widget => widget.id === selectedId) || null
+-    readonly property var lanes: [
+-        { name: I18n.tr("Left"), id: "left" }, { name: I18n.tr("Center"), id: "center" },
+-        { name: I18n.tr("Right"), id: "right" }
+-    ]
+     readonly property var forms: [
+         { name: I18n.tr("Islands"), id: "islands" }, { name: I18n.tr("Full width"), id: "full" },
+         { name: I18n.tr("Fit"), id: "fit" }, { name: I18n.tr("Dock"), id: "dock" },
+@@ -207,8 +203,8 @@
+                 id: sectionChoice
+                 anchors.right: parent.right
+                 anchors.verticalCenter: parent.verticalCenter
+-                options: editor.lanes.map(lane => lane.id)
+-                labels: Object.fromEntries(editor.lanes.map(lane => [lane.id, lane.name]))
++                options: ["left", "center", "right"]
++                labels: ({ left: I18n.tr("Left"), center: I18n.tr("Center"), right: I18n.tr("Right") })
+                 current: editor.selected ? editor.selected.section : ""
+                 enabled: editor.barActive && !editor.saving
+                 onChose: value => {
