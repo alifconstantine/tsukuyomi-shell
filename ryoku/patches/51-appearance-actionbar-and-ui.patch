@@ -1,0 +1,464 @@
+--- a/hub/Hub.qml
++++ b/hub/Hub.qml
+@@ -437,7 +437,7 @@
+     // `framed` pages keep the rail + bottom action bar; `ledger` pages also get
+     // the right write-ledger column. Everything else is full-bleed.
+     readonly property var framedSet: ({
+-        "subshells": true, "bar-studio": true, "desktop": true, "controls": true, "plugins": true, "input": true, "global": true, "windowmanager": true,
++        "appearance": true, "subshells": true, "bar-studio": true, "desktop": true, "controls": true, "plugins": true, "input": true, "global": true, "windowmanager": true,
+         "windowrules": true, "appoverrides": true, "layerrules": true,
+         "session": true, "gamebar": true
+     })
+@@ -584,6 +584,7 @@
+         "general.clock_format_24_h": false,
+         "reloadCover": ReloadCoverModel.empty(),
+         "language": "Auto", "barStyle": "orpheus", "showJapaneseGloss": true, "obi": {}, "nacre": NacreConfig.defaultConfig(), "qsbar": {}, "dock": {},
++        "theme.theme": "Default", "theme.appearance": ({ mode: "dark", accent: "neutral" }),
+         "notifications.show_images": false,
+         "deckFrostEnabled": true, "deckFrost": 0.45,
+         "clipboard.widthPercent": 65, "clipboard.heightPercent": 42, "clipboard.bottomPercent": 0,
+@@ -715,7 +716,7 @@
+     // against liveBaseline: the state at open, re-snapshotted on every Save.
+     // Quit and Revert walk the desktop back to that baseline through the same
+     // channel, so an unsaved close leaves no residue.
+-    readonly property var liveKeys: ["frameBars", "frameEnabled", "frameOpacity", "frameThickness", "frameCorner", "fontFamily", "terminalFontFamily", "fontSize", "barStyle", "obi", "nacre", "qsbar", "dock", "clipboard.widthPercent", "clipboard.heightPercent", "clipboard.bottomPercent", "clipboard.panelRadius", "clipboard.paneRadius", "clipboard.cardRadius"]
++    readonly property var liveKeys: ["frameBars", "frameEnabled", "frameOpacity", "frameThickness", "frameCorner", "fontFamily", "terminalFontFamily", "fontSize", "barStyle", "obi", "nacre", "qsbar", "dock", "theme.theme", "theme.appearance", "clipboard.widthPercent", "clipboard.heightPercent", "clipboard.bottomPercent", "clipboard.panelRadius", "clipboard.paneRadius", "clipboard.cardRadius"]
+     property var liveBaseline: null
+     property var livePending: ({})
+     function captureLiveBaseline() {
+--- a/hub/pages/AppearancePage.qml
++++ b/hub/pages/AppearancePage.qml
+@@ -1,7 +1,6 @@
+ pragma ComponentBehavior: Bound
+ 
+ import QtQuick
+-import QtQuick.Controls as QQC
+ import Quickshell
+ import Ryoku.Ui
+ import Ryoku.Ui.Singletons
+@@ -13,9 +12,12 @@
+     id: page
+ 
+     property var hub
+-    readonly property bool fullBleed: true
+-    readonly property var saved: Settings.get("theme.appearance")
+-    readonly property string activeTheme: Settings.get("theme.theme") || "Default"
++    readonly property var currentAppearance: page.hub
++        ? (page.hub.val("theme.appearance") || ({ mode: "dark", accent: "neutral" }))
++        : (Settings.get("theme.appearance") || ({ mode: "dark", accent: "neutral" }))
++    readonly property string activeTheme: page.hub
++        ? (page.hub.val("theme.theme") || "Default")
++        : (Settings.get("theme.theme") || "Default")
+     readonly property var presets: [
+         { label: I18n.tr("Blue"), hex: "#3D87D9" },
+         { label: I18n.tr("Teal"), hex: "#248C83" },
+@@ -23,54 +25,124 @@
+         { label: I18n.tr("Rose"), hex: "#CA596D" },
+         { label: I18n.tr("Amber"), hex: "#B97526" }
+     ]
++    readonly property var presetIds: ["#3D87D9", "#248C83", "#8955C8", "#CA596D", "#B97526"]
++    readonly property var presetLabels: ({
++        "#3D87D9": I18n.tr("Blue"),
++        "#248C83": I18n.tr("Teal"),
++        "#8955C8": I18n.tr("Violet"),
++        "#CA596D": I18n.tr("Rose"),
++        "#B97526": I18n.tr("Amber")
++    })
+ 
+     property string mode: "dark"
+     property string accent: "neutral"
+     property string preset: presets[0].hex
+     property string custom: "#3D87D9"
++    property string selectedTheme: ""
+     property string errorMessage: ""
+-    property bool saving: false
++    property bool syncing: false
+     readonly property bool validHex: /^#[0-9a-f]{6}$/i.test(custom.trim())
+ 
+-    function syncSaved() {
+-        const current = saved;
+-        page.mode = current ? current.mode : (Tokens.light ? "light" : "dark");
+-        page.accent = current ? current.accent : (activeTheme === "Wallpaper" ? "wallpaper" : "neutral");
+-        if (current && current.accent === "preset")
++    property string pickTitle: ""
++    property var pickOptions: []
++    property var pickLabels: ({})
++    property string pickCurrent: ""
++    property var pickCallback: null
++
++    readonly property var schemeIds: {
++        const ids = [];
++        for (let i = 0; i < UserSchemes.schemes.length; i++)
++            ids.push(UserSchemes.schemes[i].id);
++        return ids;
++    }
++    readonly property var schemeLabels: {
++        const labels = ({});
++        for (let i = 0; i < UserSchemes.schemes.length; i++) {
++            const item = UserSchemes.schemes[i];
++            labels[item.id] = item.label || item.id;
++        }
++        return labels;
++    }
++    readonly property var selectedSchemeObj: UserSchemes.schemes.find(item => item.id === page.selectedTheme) || UserSchemes.schemes[0] || null
++
++    function syncFromStore() {
++        const current = page.currentAppearance;
++        page.syncing = true;
++        page.mode = current && current.mode ? current.mode : (Tokens.light ? "light" : "dark");
++        page.accent = current && current.accent ? current.accent : (page.activeTheme === "Wallpaper" ? "wallpaper" : "neutral");
++        if (current && current.accent === "preset" && current.hex)
+             page.preset = current.hex;
+-        if (current && current.accent === "custom")
++        if (current && current.accent === "custom" && current.hex)
+             page.custom = current.hex;
++        if (page.selectedTheme === "" || page.activeTheme !== "Default")
++            page.selectedTheme = page.activeTheme !== "Default" ? page.activeTheme : (page.schemeIds[0] || "");
++        page.syncing = false;
++    }
++
++    function stageAppearance() {
++        if (page.syncing || !Settings.ready)
++            return;
++        if (page.accent === "custom" && !page.validHex)
++            return;
++        const next = { mode: page.mode, accent: page.accent };
++        if (page.accent === "preset")
++            next.hex = page.preset;
++        else if (page.accent === "custom")
++            next.hex = page.custom.trim().toUpperCase();
++        page.errorMessage = "";
++        if (page.hub) {
++            if (page.hub.val("theme.theme") !== "Default")
++                page.hub.stageLive("theme.theme", "Default");
++            page.hub.stageLive("theme.appearance", next);
++        } else {
++            Settings.patch("theme.appearance", next, function(ok, error) {
++                if (!ok)
++                    page.errorMessage = error || I18n.tr("Could not apply the theme.");
++            });
++        }
+     }
+-    function save(path, value) {
+-        if (page.saving || !Settings.ready)
++
++    function stageTheme(themeId) {
++        if (!themeId || !Settings.ready)
+             return;
+-        page.saving = true;
+         page.errorMessage = "";
+-        Settings.patch(path, value, function(ok, error) {
+-            page.saving = false;
+-            if (!ok)
+-                page.errorMessage = error || I18n.tr("Could not apply the theme.");
+-        });
+-    }
+-    function applyAppearance() {
+-        const next = { mode: mode, accent: accent };
+-        if (accent === "preset")
+-            next.hex = preset;
+-        else if (accent === "custom")
+-            next.hex = custom.trim().toUpperCase();
+-        page.save("theme.appearance", next);
++        if (page.hub)
++            page.hub.stageLive("theme.theme", themeId);
++        else
++            Settings.patch("theme.theme", themeId, function(ok, error) {
++                if (!ok)
++                    page.errorMessage = error || I18n.tr("Could not apply the theme.");
++            });
++    }
++
++    function openPick(title, options, labels, current, onPicked) {
++        page.pickTitle = title || "";
++        page.pickOptions = options || [];
++        page.pickLabels = labels || ({});
++        page.pickCurrent = current || "";
++        page.pickCallback = onPicked || null;
++        appearancePickerLayer.visible = true;
++        appearancePicker.open();
+     }
+ 
+     Component.onCompleted: {
+-        syncSaved();
++        syncFromStore();
+         UserSchemes.refresh();
+     }
+-    onSavedChanged: if (!saving) syncSaved()
++    onCurrentAppearanceChanged: syncFromStore()
++    onActiveThemeChanged: syncFromStore()
+     onVisibleChanged: if (visible) UserSchemes.refresh()
+ 
++    Connections {
++        target: UserSchemes
++        function onSchemesChanged() {
++            if (!page.selectedTheme && page.schemeIds.length > 0)
++                page.selectedTheme = page.schemeIds[0];
++        }
++    }
++
+     SchemaPage {
+         anchors.fill: parent
+-        anchors.margins: Tokens.s6
+         schema: []
+         draft: null
+         defaults: ({})
+@@ -81,9 +153,10 @@
+             width: parent.width
+             spacing: Tokens.s4
+ 
+-            SettingCard {
++            Tsukuyomi.SectionCard {
+                 width: parent.width
+                 title: I18n.tr("Desktop appearance")
++                collapsible: false
+ 
+                 SettingRow {
+                     width: parent.width
+@@ -96,7 +169,10 @@
+                         options: ["dark", "light", "auto"]
+                         labels: ({ dark: I18n.tr("Dark"), light: I18n.tr("Light"), auto: I18n.tr("Follow wallpaper") })
+                         current: page.mode
+-                        onChose: value => page.mode = value
++                        onChose: value => {
++                            page.mode = value;
++                            page.stageAppearance();
++                        }
+                     }
+                 }
+                 SettingRow {
+@@ -112,7 +188,10 @@
+                         labels: ({ neutral: I18n.tr("Neutral"), preset: I18n.tr("Preset"),
+                             custom: I18n.tr("HEX"), wallpaper: I18n.tr("Wallpaper") })
+                         current: page.accent
+-                        onChose: value => page.accent = value
++                        onChose: value => {
++                            page.accent = value;
++                            page.stageAppearance();
++                        }
+                     }
+                 }
+                 SettingRow {
+@@ -133,54 +212,54 @@
+                                 : (page.validHex ? page.custom.trim() : "transparent")
+                             border.color: Tsukuyomi.Style.lineStrong
+                         }
+-                        QQC.ComboBox {
++                        PickBar {
+                             visible: page.accent === "preset"
+-                            model: page.presets
+-                            textRole: "label"
+-                            valueRole: "hex"
+-                            currentIndex: Math.max(0, page.presets.findIndex(item => item.hex === page.preset))
+-                            onActivated: page.preset = currentValue
+-                            Accessible.name: I18n.tr("Preset colour")
++                            width: Tokens.px(180)
++                            anchors.verticalCenter: parent.verticalCenter
++                            value: page.preset
++                            count: page.presetIds.length
++                            labels: page.presetLabels
++                            onOpened: page.openPick(
++                                I18n.tr("Preset colour"),
++                                page.presetIds,
++                                page.presetLabels,
++                                page.preset,
++                                key => {
++                                    page.preset = key;
++                                    page.stageAppearance();
++                                }
++                            )
+                         }
+                         Field {
+                             visible: page.accent === "custom"
+                             width: 126
+                             text: page.custom
+                             placeholder: "#3D87D9"
+-                            onEdited: value => page.custom = value
++                            onEdited: value => {
++                                page.custom = value;
++                                page.stageAppearance();
++                            }
+                         }
+                     }
+                 }
+-                Row {
+-                    x: Tokens.s4
+-                    spacing: Tokens.s3
+-                    bottomPadding: Tokens.s3
+-                    Btn {
+-                        text: I18n.tr("Apply appearance")
+-                        primary: true
+-                        enabled: Settings.ready && !page.saving && (page.accent !== "custom" || page.validHex)
+-                        onAct: page.applyAppearance()
+-                    }
++                Item {
++                    width: parent.width
++                    visible: page.accent === "custom" && !page.validHex
++                    height: hexErr.implicitHeight + Tokens.s2 * 2
+                     Text {
+-                        anchors.verticalCenter: parent.verticalCenter
+-                        color: Tsukuyomi.Style.secondary
++                        id: hexErr
++                        anchors { left: parent.left; right: parent.right; leftMargin: Tokens.s4; rightMargin: Tokens.s4; verticalCenter: parent.verticalCenter }
++                        color: Tokens.alert
+                         font.family: Tokens.ui
+-                        text: page.saving ? I18n.tr("Applying…")
+-                            : (page.activeTheme === "Default" ? I18n.tr("Active") : "")
++                        text: I18n.tr("Enter six hexadecimal digits after #.")
+                     }
+                 }
+-                Text {
+-                    width: parent.width
+-                    visible: page.accent === "custom" && !page.validHex
+-                    color: Tokens.alert
+-                    font.family: Tokens.ui
+-                    text: I18n.tr("Enter six hexadecimal digits after #.")
+-                }
+             }
+ 
+-            SettingCard {
++            Tsukuyomi.SectionCard {
+                 width: parent.width
+                 title: I18n.tr("Installed themes")
++                collapsible: false
+ 
+                 SettingRow {
+                     width: parent.width
+@@ -188,52 +267,63 @@
+                     desc: !UserSchemes.schemes.length ? I18n.tr("No themes installed")
+                         : page.activeTheme !== "Default" ? I18n.tr("Active: %1").arg(
+                         (UserSchemes.schemes.find(item => item.id === page.activeTheme) || {}).label || page.activeTheme) : ""
+-                    controlWidth: themeChoice.width
+-                    QQC.ComboBox {
+-                        id: themeChoice
+-                        anchors.right: parent.right
+-                        anchors.verticalCenter: parent.verticalCenter
+-                        width: Math.min(230, page.width * 0.40)
+-                        model: UserSchemes.schemes
+-                        textRole: "label"
+-                        valueRole: "id"
+-                        currentIndex: Math.max(0, UserSchemes.schemes.findIndex(item => item.id === page.activeTheme))
+-                        visible: count > 0
+-                        Accessible.name: I18n.tr("Installed theme")
++                    controlWidth: Math.min(Tokens.px(240), Math.round(page.width * 0.40))
++                    PickBar {
++                        anchors.fill: parent
++                        visible: page.schemeIds.length > 0
++                        value: page.selectedTheme
++                        count: page.schemeIds.length
++                        labels: page.schemeLabels
++                        onOpened: page.openPick(
++                            I18n.tr("Installed theme"),
++                            page.schemeIds,
++                            page.schemeLabels,
++                            page.selectedTheme,
++                            key => { page.selectedTheme = key; }
++                        )
+                     }
+                 }
+-                Row {
+-                    x: Tokens.s4
+-                    spacing: Tokens.s3
+-                    Repeater {
+-                        model: (UserSchemes.schemes[themeChoice.currentIndex] || {}).sw || []
+-                        Rectangle {
+-                            required property string modelData
+-                            width: 25; height: 25; radius: 5
+-                            color: modelData
+-                            border.color: Tsukuyomi.Style.lineStrong
++                Item {
++                    width: parent.width
++                    visible: !!(page.selectedSchemeObj && page.selectedSchemeObj.sw && page.selectedSchemeObj.sw.length)
++                    height: swatchRow.implicitHeight + Tokens.s2 * 2
++                    Row {
++                        id: swatchRow
++                        anchors { left: parent.left; leftMargin: Tokens.s4; verticalCenter: parent.verticalCenter }
++                        spacing: Tokens.s3
++                        Repeater {
++                            model: (page.selectedSchemeObj && page.selectedSchemeObj.sw) || []
++                            Rectangle {
++                                required property string modelData
++                                width: 25; height: 25; radius: 5
++                                color: modelData
++                                border.color: Tsukuyomi.Style.lineStrong
++                            }
+                         }
+                     }
+                 }
+-                Flow {
+-                    x: Tokens.s4
+-                    width: parent.width - 2 * Tokens.s4
+-                    spacing: Tokens.s3
+-                    bottomPadding: Tokens.s3
+-                    Btn {
+-                        visible: themeChoice.count > 0
+-                        text: I18n.tr("Apply theme")
+-                        enabled: themeChoice.count > 0 && Settings.ready && !page.saving
+-                            && themeChoice.currentValue !== page.activeTheme
+-                        onAct: page.save("theme.theme", themeChoice.currentValue)
+-                    }
+-                    Btn {
+-                        text: I18n.tr("Browse Store")
+-                        onAct: Quickshell.execDetached(["ryostore", "open", "colorschemes"])
+-                    }
+-                    Btn {
+-                        text: I18n.tr("Refresh")
+-                        onAct: UserSchemes.refresh()
++                Item {
++                    width: parent.width
++                    height: themeActions.implicitHeight + Tokens.s3 * 2
++                    Flow {
++                        id: themeActions
++                        anchors { left: parent.left; right: parent.right; leftMargin: Tokens.s4; rightMargin: Tokens.s4; verticalCenter: parent.verticalCenter }
++                        spacing: Tokens.s3
++                        Btn {
++                            visible: page.schemeIds.length > 0
++                            text: I18n.tr("Apply theme")
++                            enabled: page.schemeIds.length > 0 && Settings.ready && page.selectedTheme !== ""
++                                && page.selectedTheme !== page.activeTheme
++                            onAct: page.stageTheme(page.selectedTheme)
++                        }
++                        Btn {
++                            text: I18n.tr("Browse Store")
++                            onAct: Quickshell.execDetached(["ryostore", "open", "colorschemes"])
++                        }
++                        Btn {
++                            text: I18n.tr("Refresh")
++                            onAct: UserSchemes.refresh()
++                        }
+                     }
+                 }
+             }
+@@ -247,4 +337,32 @@
+             }
+         }
+     }
++
++    Item {
++        id: appearancePickerLayer
++        anchors.fill: parent
++        visible: false
++        z: 800
++
++        Rectangle {
++            anchors.fill: parent
++            color: "black"
++            opacity: 0.55
++            TapHandler { onTapped: appearancePickerLayer.visible = false }
++        }
++        Picker {
++            id: appearancePicker
++            anchors.centerIn: parent
++            title: page.pickTitle
++            options: page.pickOptions
++            labels: page.pickLabels
++            current: page.pickCurrent
++            onChose: key => {
++                appearancePickerLayer.visible = false;
++                if (typeof page.pickCallback === "function")
++                    page.pickCallback(key);
++            }
++            onDismissed: appearancePickerLayer.visible = false
++        }
++    }
+ }
