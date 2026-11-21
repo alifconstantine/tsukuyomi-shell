@@ -20,7 +20,7 @@ Pass the desktop ID of an installed browser. Omit it for a dock without a browse
 - Press **Super+Space** to open the Main app launcher. Change the shortcut in **Hub → Keybinds → Shell → App Launcher**. **Super+Enter** opens Kitty, **Super+E** opens Dolphin, and **Super+W** opens the wallpaper picker. Use the arrow keys to highlight an item and **Space** for its preview. Press **Enter** to apply the selected wallpaper. New profiles start with Cloud Valley.
 - Press `Ctrl+Shift+F11` to open the Hub or `Ctrl+Shift+F12` to close the preview window.
 
-The nested session has a private D-Bus and runtime directory. Hardware actions, portals, and session locking require a real Tsukuyomi login. The default material is Frosted. To add the glass rim to the bar, open QS Bar Settings, choose Bar, then use Glass in the Surface section while Islands and Frost are selected.
+The nested session has a private D-Bus and runtime directory. Hardware actions, portals, and session locking require a real Tsukuyomi login. The default material is Frosted.
 
 On an installed Tsukuyomi session, open **Tsukuyomi Store → Subshells** to install Gokko, then use **Tsukuyomi Hub → Subshells** to switch between Gokko and QS Bar. **Tsukuyomi Hub → Add-ons** manages installed shell plugins. For lockscreen themes, install a theme from **Tsukuyomi Hub → Lockscreen → Browse Tsukuyomi Store**, refresh the list, and choose **Use theme**. **Lock to preview** tests the active theme in the session locker. **Clockwork Orbital** restores the stock look.
 
