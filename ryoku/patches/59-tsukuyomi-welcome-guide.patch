@@ -1,0 +1,112 @@
+diff -ruN qs-a/welcome/PageDone.qml qs-b/welcome/PageDone.qml
+--- a/welcome/PageDone.qml	2026-11-21 22:37:17.933624448 +0700
++++ b/welcome/PageDone.qml	2026-11-21 22:37:18.254368617 +0700
+@@ -67,8 +67,12 @@
+                     onAct: root.runCommand(["ryoku-shell", "hub", "open"])
+                 }
+                 Btn {
+-                    text: I18n.tr("QS Bar settings")
+-                    onAct: root.runCommand(["ryoku-shell", "bar", "settings"])
++                    text: I18n.tr("Tsukuyomi Store")
++                    onAct: root.runCommand(["ryostore", "open", "discover"])
++                }
++                Btn {
++                    text: I18n.tr("System Manager")
++                    onAct: root.runCommand(["ryomanager"])
+                 }
+                 Btn {
+                     text: I18n.tr("Finish")
+diff -ruN qs-a/welcome/PageEssentials.qml qs-b/welcome/PageEssentials.qml
+--- a/welcome/PageEssentials.qml	2026-11-21 22:37:17.933658743 +0700
++++ b/welcome/PageEssentials.qml	2026-11-21 22:37:18.254317571 +0700
+@@ -10,12 +10,12 @@
+ 
+     readonly property var essentials: [
+         { chord: I18n.tr("Super + Space"), title: I18n.tr("Launcher"), description: I18n.tr("Find apps and files."), command: ["ryoku-shell", "launcher"] },
+-        { chord: I18n.tr("Alt + Space"), title: I18n.tr("AI bar"), description: I18n.tr("Ask a quick question."), command: ["ryoku-shell", "ask"] },
+         { chord: I18n.tr("Super + comma"), title: I18n.tr("Tsukuyomi Hub"), description: I18n.tr("Change system and desktop settings."), command: ["ryoku-shell", "hub", "open"] },
++        { chord: I18n.tr("Super + W"), title: I18n.tr("Wallpapers"), description: I18n.tr("Browse and preview wallpapers."), command: ["ryogami", "wallpaper", "ui"] },
++        { chord: I18n.tr("Super + K"), title: I18n.tr("Keybinds"), description: I18n.tr("View shortcuts and hints."), command: ["ryoku-shell", "cheatsheet"] },
++        { chord: I18n.tr("Super + Shift + D"), title: I18n.tr("Stage Editor"), description: I18n.tr("Customize desktop widgets and dock."), command: ["ryoku-shell", "hub", "open", "widgets"] },
+         { chord: I18n.tr("Super + Escape"), title: I18n.tr("Quick settings"), description: I18n.tr("Open controls and session actions."), command: ["ryoku-shell", "quicksettings"] },
+-        { chord: I18n.tr("Super + K"), title: I18n.tr("Kit"), description: I18n.tr("Shortcuts, commands, your phone and quick tools."), command: ["ryoku-kit"] },
+-        { chord: I18n.tr("Super + Shift + S"), title: I18n.tr("Screenshot"), description: I18n.tr("Capture, edit, scan or record."), command: [] },
+-        { chord: I18n.tr("Super + Return"), title: I18n.tr("Terminal"), description: I18n.tr("Open the configured terminal."), command: ["ryoku-app", "terminal"] },
++        { chord: I18n.tr("Super + Return"), title: I18n.tr("Terminal"), description: I18n.tr("Open the terminal."), command: ["kitty"] },
+         { chord: I18n.tr("Super + L"), title: I18n.tr("Lock"), description: I18n.tr("Lock the current session."), command: ["ryoku-shell", "lock"] }
+     ]
+ 
+diff -ruN qs-a/welcome/PageHello.qml qs-b/welcome/PageHello.qml
+--- a/welcome/PageHello.qml	2026-11-21 22:37:17.933693227 +0700
++++ b/welcome/PageHello.qml	2026-11-21 22:37:18.254201754 +0700
+@@ -104,7 +104,7 @@
+ 
+                 Text {
+                     width: Math.min(parent.width, 520)
+-                    text: I18n.tr("Pick a bar, meet Ryostore, then learn the keys that open the desktop.")
++                    text: I18n.tr("Pick a bar, meet Tsukuyomi Store, then learn the keys that open the desktop.")
+                     color: Tokens.inkMuted
+                     font.family: Tokens.ui
+                     font.pixelSize: Tokens.fBody
+diff -ruN qs-a/welcome/PageMake.qml qs-b/welcome/PageMake.qml
+--- a/welcome/PageMake.qml	2026-11-21 22:37:17.933740906 +0700
++++ b/welcome/PageMake.qml	2026-11-21 22:37:18.254268910 +0700
+@@ -19,7 +19,7 @@
+             id: heading
+             width: parent.width
+             title: I18n.tr("Make it yours")
+-            description: I18n.tr("Ryostore carries complete looks and the pieces to build your own. Wallpaper colours retune the desktop.")
++            description: I18n.tr("Tsukuyomi Store carries complete looks, app bundles, and the pieces to build your own. Wallpaper colours can retune the desktop.")
+         }
+ 
+         Row {
+@@ -61,7 +61,7 @@
+ 
+                         Text {
+                             id: storeLabel
+-                            text: I18n.tr("RYOSTORE")
++                            text: I18n.tr("TSUKUYOMI STORE")
+                             color: Tokens.ink
+                             font.family: Tokens.mono
+                             font.pixelSize: Tokens.fMicro
+@@ -88,7 +88,7 @@
+ 
+                     Text {
+                         width: parent.width
+-                        text: I18n.tr("Bar styles reshape the edge. Rices apply a complete look. Plugins add new parts. Widgets and lockscreens are here too.")
++                        text: I18n.tr("Bar styles reshape the edge. Rices apply a complete look. Bundles install toolkits fast. Widgets and lockscreens are here too.")
+                         color: Tokens.inkDim
+                         font.family: Tokens.ui
+                         font.pixelSize: Tokens.fBody
+@@ -100,7 +100,7 @@
+                         spacing: Tokens.s2
+ 
+                         Btn {
+-                            text: I18n.tr("Open Ryostore")
++                            text: I18n.tr("Open Store")
+                             primary: true
+                             onAct: root.runCommand(["ryostore", "open", "discover"])
+                         }
+@@ -113,8 +113,8 @@
+                             onAct: root.runCommand(["ryostore", "open", "rices"])
+                         }
+                         Btn {
+-                            text: I18n.tr("Plugins")
+-                            onAct: root.runCommand(["ryostore", "open", "plugins"])
++                            text: I18n.tr("Bundles")
++                            onAct: root.runCommand(["ryostore", "open", "bundles"])
+                         }
+                     }
+                 }
+diff -ruN qs-a/welcome/Welcome.qml qs-b/welcome/Welcome.qml
+--- a/welcome/Welcome.qml	2026-11-21 22:37:17.933805778 +0700
++++ b/welcome/Welcome.qml	2026-11-21 22:37:18.254435542 +0700
+@@ -48,7 +48,7 @@
+     function runCommand(argv) {
+         if (!argv || argv.length === 0)
+             return
+-        if (["ryostore", "ryoku-kit", "ryoku-app"].includes(argv[0]))
++        if (["ryostore", "ryomanager", "ryogami", "kitty", "ryoku-kit", "ryoku-app"].includes(argv[0]))
+             Spawn.runApp(argv, { label: argv[0] })
+         else
+             Spawn.run(argv)

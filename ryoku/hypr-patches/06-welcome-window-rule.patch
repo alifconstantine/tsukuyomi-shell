@@ -1,0 +1,12 @@
+diff -ruN hy-a/modules/window_rules.lua hy-b/modules/window_rules.lua
+--- a/modules/window_rules.lua	2026-11-21 22:37:17.997120020 +0700
++++ b/modules/window_rules.lua	2026-11-21 22:37:18.254484304 +0700
+@@ -242,7 +242,7 @@
+ 
+ hl.window_rule({
+     name   = "float-ryoku-welcome",
+-    match  = { title = "^(Welcome to Ryoku)$" },
++    match  = { title = "^(Welcome to (?:Ryoku|Tsukuyomi))$" },
+     float  = true,
+     size   = fit(1180, 760),
+     center = true,
