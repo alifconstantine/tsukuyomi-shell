@@ -32,6 +32,10 @@ install -d "$draft/.config/quickshell" "$draft/.config/ryoku" "$draft/.local/sha
 find "$quickshell" -mindepth 1 -maxdepth 1 \
     -exec cp -a -t "$draft/.config/quickshell/" -- {} +
 install -m 644 "$here/SessionLockscreenPage.qml" "$draft/.config/quickshell/hub/pages/"
+# Quickshell isolates each config's relative imports.
+for config in hub ryostore shell; do
+    cp -a -- "$here/tsukuyomi" "$draft/.config/quickshell/$config/"
+done
 cp -a -- "$hypr" "$draft/.config/"
 sed -i -e 's/Ryoku Settings/Tsukuyomi Hub/g' \
     -e '/name   = "float-ryostore",/{ N; s/name   = "float-ryostore",\n    match  = { title = "\^(Ryostore)/name   = "float-tsukuyomi-store",\n    match  = { title = "^(Tsukuyomi Store)/; }' \

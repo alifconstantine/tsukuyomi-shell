@@ -1,0 +1,493 @@
+--- a/hub/Hub.qml
++++ b/hub/Hub.qml
+@@ -5,6 +5,7 @@
+ import Quickshell.Io
+ import Ryoku.Ui
+ import Ryoku.Ui.Singletons
++import "tsukuyomi" as Tsukuyomi
+ import "Singletons"
+ // The pages load by URL, so nothing else imports their directory, and
+ // Quickshell writes a qmldir only for directories reached by an import.
+@@ -53,7 +54,7 @@
+ 
+     implicitWidth: 1400
+     implicitHeight: 880
+-    color: Tokens.paper
++    color: Tsukuyomi.Style.surface
+     focus: true
+     readonly property bool reduceMotion: Tokens.reduceMotion || performance.reduceMotion || performance.lowPowerMode
+ 
+@@ -127,28 +128,28 @@
+     // stays calm until asked. Compositor-owned pages sit together under one group
+     // so a compositor's settings live in one place, not sprinkled through the list.
+     readonly property var groups: [
+-        { name: "OVERVIEW", items: [ { key: "profile", name: "Profile" }, { key: "global", name: "General" } ] },
+-        { name: "DEVICES", items: [
++        { name: "Overview", items: [ { key: "global", name: "General" }, { key: "profile", name: "Profile" } ] },
++        { name: "Devices", items: [
+             { key: "displays", name: "Displays", needs: { cap: "monitorConfig" } }, { key: "connections", name: "Connections" },
+             { key: "input", name: "Input" }, { key: "gpu", name: "Graphics & Power" } ] },
+-        { name: "LOOK", items: [
++        { name: "Appearance", items: [
+             { key: "lockscreen", name: "Lockscreen" } ] },
+-        { name: "COMPOSITOR", items: [
++        { name: "Window Manager", items: [
+             { key: "windowmanager", name: "Window Manager", needs: { provider: true } }, { key: "plugins", name: "Plugins", needs: { cap: "plugins" } },
+             { key: "layerrules", name: "Layer Rules", adv: true, needs: { rows: true } } ] },
+-        { name: "DESKTOP", items: [
++        { name: "Desktop", items: [
+             { key: "subshells", name: "Subshells", wired: true }, { key: "bar-studio", name: "Bar Studio", wired: true }, { key: "desktop", name: "Desktop", wired: true },
+             { key: "controls", name: "Controls", wired: true }, { key: "overlays", name: "Overlays", wired: true },
+             { key: "gamebar", name: "Game Bar" },
+             { key: "launcher", name: "App Launcher" } ] },
+-        { name: "KEYS & APPS", items: [
++        { name: "Keys & Apps", items: [
+             { key: "keybinds", name: "Keybinds" }, { key: "appoverrides", name: "App Overrides", adv: true },
+             { key: "windowrules", name: "Window Rules", adv: true } ] },
+-        { name: "SYSTEM", items: [
++        { name: "System", items: [
+             { key: "performance", name: "Performance" }, { key: "session", name: "Session" },
+             { key: "recording", name: "Recording" }, { key: "dictation", name: "Dictation" }, { key: "fastfetch", name: "Fastfetch", adv: true },
+             { key: "import", name: "Import config", adv: true, wired: true } ] },
+-        { name: "EXTEND", items: [ { key: "addons", name: "Add-ons" } ] },
++        { name: "Extensions", items: [ { key: "addons", name: "Add-ons" } ] },
+         { name: "", items: [ { key: "credits", name: "Credits" } ] }
+     ]
+ 
+@@ -1101,8 +1102,9 @@
+     Item {
+         id: rail
+         anchors { left: parent.left; top: parent.top; bottom: bar.top }
+-        width: Tokens.railW
+-        Rectangle { anchors.right: parent.right; width: 1; height: parent.height; color: Tokens.line }
++        width: Math.min(Tokens.px(228), Math.round(parent.width * 0.32))
++        Rectangle { anchors.fill: parent; color: Tsukuyomi.Style.sidebar }
++        Rectangle { anchors.right: parent.right; width: 1; height: parent.height; color: Tsukuyomi.Style.line }
+ 
+         Column {
+             id: railHead
+@@ -1110,35 +1112,7 @@
+             anchors.margins: Tokens.s5
+             spacing: Tokens.s4
+ 
+-            // the masthead as a poster plate: framed, register-ticked, with the
+-            // seal and a /// mark. The reference sheet's title block, scaled down.
+-            Rectangle {
+-                width: parent.width
+-                height: 64
+-                color: "transparent"
+-                radius: Tokens.radius
+-                border.width: Tokens.border
+-                border.color: Tokens.line
+-                Row {
+-                    anchors { left: parent.left; verticalCenter: parent.verticalCenter; leftMargin: Tokens.s4 }
+-                    spacing: Tokens.s3
+-                    Text { text: hub.brandMark; color: Tokens.ink; font.family: Tokens.jp; font.pixelSize: 22 }
+-                    Column {
+-                        spacing: 1
+-                        anchors.verticalCenter: parent.verticalCenter
+-                        Text {
+-                            text: I18n.tr("TSUKUYOMI HUB")
+-                            color: Tokens.ink
+-                            font.family: Tokens.ui
+-                            font.pixelSize: 14; font.weight: Font.Medium; font.letterSpacing: 2.4
+-                        }
+-                        Text {
+-                            text: I18n.tr("SETTINGS"); color: Tokens.inkMuted
+-                            font.family: Tokens.mono; font.pixelSize: 10; font.letterSpacing: 1.4
+-                        }
+-                    }
+-                }
+-            }
++            Tsukuyomi.Brand { title: I18n.tr("Tsukuyomi Hub") }
+             Field {
+                 id: searchField
+                 width: parent.width
+@@ -1261,40 +1235,20 @@
+                             width: parent.width
+                             height: !anyShown ? 0 : (grp.modelData.name === "" ? Tokens.s4 : 34)
+                             visible: anyShown
+-                            Row {
++                            Text {
+                                 visible: grp.modelData.name !== ""
+-                                anchors.verticalCenter: parent.verticalCenter
+-                                anchors.bottomMargin: 2
+-                                spacing: Tokens.s2
+-                                // the poster's plate numerals: each group carries
+-                                // its index, 01..05, in tabular mono.
+-                                Text {
+-                                    text: (grp.index + 1 < 10 ? "0" : "") + (grp.index + 1)
+-                                    color: grp.activeGroup ? Tokens.inkDim : Tokens.inkFaint
+-                                    font.family: Tokens.mono; font.pixelSize: 9
+-                                    anchors.verticalCenter: parent.verticalCenter
+-                                }
+-                                Text {
+-                                    text: I18n.tr(grp.modelData.name); color: grp.activeGroup ? Tokens.inkDim : Tokens.inkFaint
+-                                    font.family: Tokens.ui; font.pixelSize: 9
+-                                    font.weight: Font.Medium; font.letterSpacing: 2
+-                                    anchors.verticalCenter: parent.verticalCenter
+-                                }
+-                                Rectangle {
+-                                    width: Math.max(0, nav.width - 130); height: 1; color: Tokens.lineSoft
+-                                    anchors.verticalCenter: parent.verticalCenter
+-                                }
+-                                Rectangle {
+-                                    width: 1; height: 5; color: grp.activeGroup ? Tokens.lineStrong : Tokens.line
+-                                    anchors.verticalCenter: parent.verticalCenter
+-                                    anchors.verticalCenterOffset: -2
+-                                }
++                                anchors { left: parent.left; leftMargin: Tokens.s3; verticalCenter: parent.verticalCenter }
++                                text: I18n.tr(grp.modelData.name)
++                                color: Tsukuyomi.Style.secondary
++                                font.family: Tokens.ui
++                                font.pixelSize: Tokens.fSmall
++                                font.weight: Font.DemiBold
+                             }
+                         }
+ 
+                         Repeater {
+                             model: grp.modelData.items
+-                            Item {
++                            Tsukuyomi.NavRow {
+                                 id: navItem
+                                 required property var modelData
+                                 // Advanced off hides the power-user (adv) sections
+@@ -1308,54 +1262,16 @@
+                                 width: nav.width
+                                 height: shown ? 36 : 0
+                                 visible: shown
+-                                readonly property bool sel: hub.section === modelData.key
+-                                onSelChanged: if (sel) Qt.callLater(navFlick.reveal, navItem)
+-
+-                                Rectangle {
+-                                    anchors.fill: parent
+-                                    anchors.topMargin: 1; anchors.bottomMargin: 1
+-                                    radius: Tokens.radius
+-                                    color: navItem.sel ? Tokens.bone : (nh.hovered ? Tokens.tint10 : "transparent")
+-                                    Behavior on color { ColorAnimation { duration: Tokens.snap } }
++                                current: hub.section === modelData.key
++                                section: modelData.key
++                                label: I18n.tr(modelData.name)
++                                onCurrentChanged: if (current) Qt.callLater(navFlick.reveal, navItem)
++                                onActiveFocusChanged: if (activeFocus) navFlick.reveal(navItem)
++                                onActivated: {
++                                    hub.query = "";
++                                    searchField.clear();
++                                    hub.section = navItem.modelData.key;
+                                 }
+-                                // selection is typography, never a coloured bar:
+-                                // the live section takes the sheet's // lead. On
+-                                // the right, every item carries its kanji seal,
+-                                // Latin and Japanese sitting side by side.
+-                                Row {
+-                                    x: Tokens.s3
+-                                    anchors.verticalCenter: parent.verticalCenter
+-                                    spacing: Tokens.s2
+-                                    Text {
+-                                        id: navLead
+-                                        visible: navItem.sel
+-                                        text: "//"
+-                                        color: Tokens.inkOnBoneDim
+-                                        font.family: Tokens.mono; font.pixelSize: 11
+-                                        anchors.verticalCenter: parent.verticalCenter
+-                                    }
+-                                    Text {
+-                                        id: navLatin
+-                                        text: I18n.tr(navItem.modelData.name)
+-                                        color: navItem.sel ? Tokens.inkOnBone : Tokens.inkDim
+-                                        font.family: Tokens.ui; font.pixelSize: 14
+-                                        anchors.verticalCenter: parent.verticalCenter
+-                                        elide: Text.ElideRight
+-                                        width: Math.max(0, navKana.x - Tokens.s2 - Tokens.s3
+-                                            - (navItem.sel ? navLead.width + Tokens.s2 : 0))
+-                                        Behavior on color { ColorAnimation { duration: Tokens.snap } }
+-                                    }
+-                                }
+-                                Text {
+-                                    id: navKana
+-                                    anchors { right: parent.right; rightMargin: Tokens.s3; verticalCenter: parent.verticalCenter }
+-                                    text: hub.showJapaneseGloss ? (hub.jpName[navItem.modelData.key] || "") : ""
+-                                    color: navItem.sel ? Tokens.inkOnBoneDim : Tokens.inkFaint
+-                                    font.family: Tokens.jp; font.pixelSize: 12
+-                                    Behavior on color { ColorAnimation { duration: Tokens.snap } }
+-                                }
+-                                HoverHandler { id: nh; cursorShape: Qt.PointingHandCursor }
+-                                TapHandler { onTapped: { hub.query = ""; searchField.clear(); hub.section = navItem.modelData.key } }
+                             }
+                         }
+                     }
+--- a/hub/SchemaPage.qml
++++ b/hub/SchemaPage.qml
+@@ -5,6 +5,7 @@
+ import Quickshell.Io
+ import Ryoku.Ui
+ import Ryoku.Ui.Singletons
++import "tsukuyomi" as Tsukuyomi
+ import "." as HubComponents
+ import "Singletons"
+ import "ReloadCoverModel.js" as ReloadCoverModel
+@@ -87,43 +88,14 @@
+         anchors { left: parent.left; top: parent.top }
+         anchors.leftMargin: sheet.sheetX
+         width: sheet.sheetWidth
+-        // the register row sits off the title: a rule over a 32px
+-        // title needs more than the gap between two lines of body text
+-        spacing: Tokens.s3
+-
+-        Item {
+-            width: parent.width
+-            // an eyebrow that only repeats the title is noise, not a register
+-            visible: I18n.tr(page.eyebrow).toLowerCase() !== page.title.toLowerCase()
+-            height: 18
+-            Row {
+-                id: ebrow
+-                spacing: Tokens.s2
+-                anchors.verticalCenter: parent.verticalCenter
+-                Rectangle { width: 16; height: 1; color: Tokens.ink; anchors.verticalCenter: parent.verticalCenter }
+-                Text {
+-                    text: UiPreferences.showJapaneseGloss ? "月" : "T"; color: Tokens.ink; font.family: Tokens.jp
+-                    font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter
+-                }
+-                Text {
+-                    text: I18n.tr(page.eyebrow); color: Tokens.inkMuted; font.family: Tokens.ui
+-                    font.pixelSize: 9; font.weight: Font.Medium; font.letterSpacing: Tokens.trackMark
+-                    anchors.verticalCenter: parent.verticalCenter
+-                }
+-            }
+-            // the band runs to the page edge and closes with the sheet's marks:
+-            // a register cross and the /// cluster, per the reference poster.
+-            Rectangle {
+-                anchors { left: ebrow.right; right: parent.right; verticalCenter: parent.verticalCenter }
+-                anchors.leftMargin: Tokens.s3
+-                height: 1; color: Tokens.lineSoft
+-            }
+-        }
++        spacing: Tokens.s2
++
+         Text {
+             text: page.title
+-            color: Tokens.ink
+-            font.family: Tokens.display
+-            font.pixelSize: Tokens.fTitle
++            color: Tsukuyomi.Style.text
++            font.family: Tokens.ui
++            font.pixelSize: Tokens.px(28)
++            font.weight: Font.DemiBold
+         }
+         Text {
+             visible: page.blurb !== ""
+@@ -137,7 +109,8 @@
+         Item { width: 1; height: Tokens.s1 }
+ 
+         // a page with one tab does not need a tab bar
+-        Tabs {
++        Tsukuyomi.Tabs {
++            width: parent.width
+             visible: page.tabs.length > 1
+             options: page.tabs
+             current: sheet.tab
+--- a/hub/SettingsSheet.qml
++++ b/hub/SettingsSheet.qml
+@@ -5,6 +5,7 @@
+ import Quickshell.Io
+ import Ryoku.Ui
+ import Ryoku.Ui.Singletons
++import "tsukuyomi" as Tsukuyomi
+ import "ReloadCoverModel.js" as ReloadCoverModel
+ 
+ // Renders a page from its schema as grouped, compact rows. A setting is a row
+@@ -101,55 +102,10 @@
+     // The Hub fills the screen, so the grid uses it: three columns of cards once
+     // the page can hold them, which is what keeps a page-wide window from being
+     // a narrow ribbon of cards floating in a field of paper.
+-    readonly property int cardMax: 520
+-    function fitsColumns(n) { return (width - 28) >= (n * cardMax + (n - 1) * Tokens.s5) }
+-    readonly property int capacity: fitsColumns(3) ? 3 : (fitsColumns(2) ? 2 : 1)
+-    // The grid's geometry follows the PAGE WIDTH alone, never how many groups the
+-    // open tab happens to have. Deriving it from the tab's group count made a
+-    // one-group tab (BORDERS, MOTION) shrink the sheet to a narrow column in the
+-    // middle of the window and drag the page's head and tabs sideways with it, so
+-    // switching tabs read as the whole page shuffling.
+-    readonly property int gridColumns: capacity
+-    // how many columns the groups are BUCKETED into: a page with two groups does
+-    // not get three columns, so the cards take the space instead of hugging the
+-    // left edge with one column empty beside them
+-    readonly property int columns: Math.max(1, Math.min(capacity, groups.length))
+-    readonly property int cardW: Math.min(Tokens.cardWide,
+-        Math.max(360, Math.floor((width - 28 - (gridColumns - 1) * Tokens.s5) / gridColumns)))
++    readonly property int cardW: Math.min(Tokens.px(940), Math.max(0, width - Tokens.s6))
+     // The column's own geometry, so a page's head can sit on the same grid.
+     readonly property real sheetWidth: col.width
+     readonly property real sheetX: flick.x + col.x
+-
+-    // Split `all` into `count` buckets, shortest column first, so the two sides
+-    // end up the same height instead of one long column beside one card and a
+-    // void. A group keeps its order inside its column; several short groups can
+-    // therefore land in one column past a taller one, which is the price of a
+-    // balanced page and reads as a grid rather than a queue.
+-    function bucketGroups(all, count) {
+-        if (count <= 1 || all.length <= 1) return [all];
+-        var heights = [];
+-        for (var g = 0; g < all.length; g++) {
+-            // every group carries its card's own header (~46px, three compact
+-            // rows): counting only the rows made a column holding many short
+-            // cards look light and took more of them, which is how one column
+-            // ended up far taller than the others
+-            var n = 3;
+-            for (var r = 0; r < rows.length; r++)
+-                if (rows[r].group === all[g]) n += sheet.ctlBlock(rows[r]) ? 6 : 1;
+-            heights.push(n);
+-        }
+-        var buckets = [];
+-        var loads = [];
+-        for (var c = 0; c < count; c++) { buckets.push([]); loads.push(0); }
+-        for (var i = 0; i < all.length; i++) {
+-            var least = 0;
+-            for (var k = 1; k < count; k++)
+-                if (loads[k] < loads[least] - 0.001) least = k;
+-            buckets[least].push(all[i]);
+-            loads[least] += heights[i] + 1;
+-        }
+-        return buckets;
+-    }
+ 
+     function val(r) {
+         if (!draft) return "";
+@@ -301,13 +257,17 @@
+         if (c === "seg" && n >= 3) return true;
+         return false;
+     }
+-    function ctlFoot(r) {
++    function ctlFoot(r, w) {
+         var c = r.ctl;
+-        if (c === "pick" || c === "text" || c === "color" || c === "location" || c === "action" || c === "app" || c === "timezone" || c === "install") return 32;
++        if (c === "pick" || c === "timezone")
++            return w < Tokens.px(620) ? Tokens.px(32) : 0;
++        if (c === "text" || c === "color" || c === "location" || c === "action" || c === "app" || c === "install") return 32;
+         return 0;
+     }
+     function ctlWidth(r, w) {
+         var c = r.ctl, n = sheet.optsFor(r).length;
++        if (c === "pick" || c === "timezone")
++            return Math.min(Tokens.px(300), Math.round(w * 0.42));
+         if (c === "sw") return 54;
+         if (c === "step") return 58;
+         if (c === "slid") return Math.min(240, Math.max(160, Math.round(w * 0.34)));
+@@ -361,11 +321,8 @@
+         // The sheet IS the column: the flick is sized to the cards it holds and
+         // centred in the page, so the scroll rail hangs off the column's edge
+         // instead of the window's, and the margins either side stay equal.
+-        width: Math.min(parent.width - 14, sheet.gridColumns * sheet.cardW + (sheet.gridColumns - 1) * Tokens.s5 + 14)
++        width: Math.min(parent.width, sheet.cardW + 14)
+         x: Math.round((parent.width - width) / 2)
+-        // The card columns span the column they were given, so a two-column sheet
+-        // fills the measure and a one-column one is not left-aligned in it.
+-        property int columnSpan: sheet.gridColumns
+         anchors.top: parent.top
+         anchors.bottom: parent.bottom
+         contentHeight: Math.max(col.height + Tokens.s5, height)
+@@ -401,7 +358,7 @@
+                 id: cardColumns
+                 width: col.width
+                 spacing: Tokens.s5
+-                readonly property var buckets: sheet.bucketGroups(sheet.groups, sheet.columns)
++                readonly property var buckets: [sheet.groups]
+ 
+                 // A tab change swaps the whole card set, which otherwise snaps.
+                 // The motion is a settle slide in the direction of travel (the
+@@ -437,7 +394,7 @@
+                         Repeater {
+                             model: cardColumn.modelData
+ 
+-                                    SettingCard {
++                                    Tsukuyomi.SectionCard {
+                                         id: card
+                                         required property string modelData
+                                         width: cardColumn.width
+@@ -470,7 +427,7 @@
+                                     changed: sheet.isChanged(r)
+                                     source: r.src ? (r.src.slice(-5) === ".json" ? r.src : r.src + ".json") : ""
+                                     block: sheet.ctlBlock(r)
+-                                    footH: sheet.ctlBlock(r) ? 0 : sheet.ctlFoot(r)
++                                    footH: sheet.ctlBlock(r) ? 0 : sheet.ctlFoot(r, card.width)
+                                     controlWidth: sheet.ctlWidth(r, card.width)
+                                     spotlight: sheet.spotlightKey !== "" && sheet.spotlightKey === r.key
+                                     onResetRequested: sheet.resetRow(r)
+--- a/hub/pages/IconThemeSettings.qml
++++ b/hub/pages/IconThemeSettings.qml
+@@ -2,6 +2,7 @@
+ import Quickshell.Io
+ import Ryoku.Ui
+ import Ryoku.Ui.Singletons
++import "../tsukuyomi" as Tsukuyomi
+ 
+ // General's app-icon choice. The backend owns discovery, validation and every
+ // toolkit write; this surface only presents that catalogue and its applied value.
+@@ -96,15 +97,16 @@
+ 
+     Component.onCompleted: root.refresh()
+ 
+-    SettingCard {
++    Tsukuyomi.SectionCard {
+         id: card
+         width: parent.width
+-        title: I18n.tr("ICONS")
++        title: I18n.tr("Icons")
+         summary: I18n.tr("App icon theme")
+ 
+         SettingRow {
+             width: parent.width
+-            footH: 32
++            footH: width < Tokens.px(620) ? Tokens.px(32) : 0
++            controlWidth: Math.min(Tokens.px(300), Math.round(width * 0.42))
+             label: I18n.tr("Icon theme")
+             desc: root.error !== ""
+                 ? root.error
+--- a/hub/pages/GlobalPage.qml
++++ b/hub/pages/GlobalPage.qml
+@@ -14,7 +14,7 @@
+     id: pg
+     property var hub
+ 
+-    readonly property string pTitle: I18n.tr("Global")
++    readonly property string pTitle: I18n.tr("General")
+     readonly property string pEyebrow: I18n.tr("GLOBAL")
+     readonly property string pBlurb: I18n.tr("Language, regional formats, people, fonts, icons, window blur and sounds.")
+     readonly property string soundsTab: "Sounds"
+--- a/hub/pages/ControlsPage.qml
++++ b/hub/pages/ControlsPage.qml
+@@ -4,6 +4,7 @@
+ import QtQuick.Controls as QQC
+ import Ryoku.Ui
+ import Ryoku.Ui.Singletons
++import "../tsukuyomi" as Tsukuyomi
+ import ".."
+ import "../Singletons"
+ import "../schema/ControlsPage.js" as ControlsSchema
+@@ -290,7 +291,7 @@
+             Behavior on opacity { NumberAnimation { duration: Tokens.snap; easing.type: Easing.OutCubic } }
+ 
+ 
+-            SettingCard {
++            Tsukuyomi.SectionCard {
+                 id: previewCardHost
+                 width: editor.stacked ? editor.width : Math.max(360, Math.round((editor.width - editor.spacing) * 0.54))
+                 title: I18n.tr("PANEL PREVIEW")
+@@ -436,7 +437,7 @@
+                 width: editor.stacked ? editor.width : editor.width - previewCardHost.width - editor.spacing
+                 spacing: Tokens.s4
+ 
+-                SettingCard {
++                Tsukuyomi.SectionCard {
+                     width: parent.width
+                     title: page.selectedModel ? I18n.tr(page.selectedModel.label.toUpperCase()) : I18n.tr("DETAILS")
+                     kana: page.selectedModel ? page.selectedModel.kana : ""
+@@ -482,7 +483,7 @@
+                     }
+                 }
+ 
+-                SettingCard {
++                Tsukuyomi.SectionCard {
+                     width: parent.width
+                     title: I18n.tr("DEFAULT")
+                     kana: I18n.tr("初期")
