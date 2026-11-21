@@ -1,0 +1,401 @@
+--- a/hub/pages/BarStudioPage.qml
++++ b/hub/pages/BarStudioPage.qml
+@@ -9,6 +9,7 @@
+ import "../barstudio"
+ import Ryoku.FrameBars
+ import "../barstudio/BarStudioModel.js" as Model
++import "../tsukuyomi" as Tsukuyomi
+ 
+ // Choose the active bar and show that style's editor below the gallery.
+ // Everything Sumi stages through the shared draft (hub.stageLive), which applies
+@@ -23,6 +24,21 @@
+ 
+     // which rail is on the bench
+     property string edge: "left"
++    property string pickTitle: ""
++    property var pickOptions: []
++    property var pickLabels: ({})
++    property string pickCurrent: ""
++    property var pickCallback: null
++
++    function openStudioPick(title, options, labels, current, onPicked) {
++        page.pickTitle = title || "";
++        page.pickOptions = options || [];
++        page.pickLabels = labels || ({});
++        page.pickCurrent = current || "";
++        page.pickCallback = onPicked || null;
++        studioPickerLayer.visible = true;
++        studioPicker.open();
++    }
+ 
+     // Always normalize what the editor reads. A stored value that lost a subtree
+     // (a legacy config, a hand edit, a partial write) would otherwise leave the
+@@ -262,10 +278,11 @@
+                 spacing: Tokens.s5
+ 
+                 // ── BAR STYLE: which bar the desktop draws ───────────────────────
+-                SettingCard {
++                Tsukuyomi.SectionCard {
+                     id: styleSect
+                     width: parent.width
+-                    title: page.subshellsOnly ? I18n.tr("SUBSHELL") : I18n.tr("BAR STYLE")
++                    collapsible: false
++                    title: page.subshellsOnly ? I18n.tr("Subshell") : I18n.tr("Bar style")
+ 
+                     StoreDesignGallery {
+                         id: styleGallery
+@@ -285,6 +302,7 @@
+                     active: page.showActiveDetails && page.activeStyle === "qsbar"
+                     visible: active
+                     source: active ? Qt.resolvedUrl("QsBarStudio.qml") : ""
++                    onLoaded: if (item) item.hostPage = page
+                 }
+             }
+ 
+@@ -734,4 +752,32 @@
+         }
+     }
+ 
++
++    Item {
++        id: studioPickerLayer
++        anchors.fill: parent
++        visible: false
++        z: 800
++
++        Rectangle {
++            anchors.fill: parent
++            color: "black"
++            opacity: 0.55
++            TapHandler { onTapped: studioPickerLayer.visible = false }
++        }
++        Picker {
++            id: studioPicker
++            anchors.centerIn: parent
++            title: page.pickTitle
++            options: page.pickOptions
++            labels: page.pickLabels
++            current: page.pickCurrent
++            onChose: key => {
++                studioPickerLayer.visible = false;
++                if (typeof page.pickCallback === "function")
++                    page.pickCallback(key);
++            }
++            onDismissed: studioPickerLayer.visible = false
++        }
++    }
+ }
+--- a/hub/pages/QsBarStudio.qml
++++ b/hub/pages/QsBarStudio.qml
+@@ -1,7 +1,6 @@
+ pragma ComponentBehavior: Bound
+ 
+ import QtQuick
+-import QtQuick.Controls as QQC
+ import Quickshell
+ import Quickshell.Io
+ import Ryoku.Ui
+@@ -12,6 +11,7 @@
+ Column {
+     id: editor
+ 
++    property var hostPage: null
+     property string tab: "bars"
+     property string selectedId: ""
+     property var widgets: []
+@@ -20,14 +20,55 @@
+     readonly property bool barActive: Settings.ready && Settings.get("barStyle") === "qsbar"
+     readonly property string qsConfig: JSON.stringify(Settings.get("qsbar") || ({}))
+     readonly property var selected: widgets.find(widget => widget.id === selectedId) || null
+-    readonly property var forms: [
+-        { name: I18n.tr("Islands"), id: "islands" }, { name: I18n.tr("Full width"), id: "full" },
+-        { name: I18n.tr("Fit"), id: "fit" }, { name: I18n.tr("Dock"), id: "dock" },
+-        { name: I18n.tr("Notch"), id: "notch" }
++    readonly property var tabMeta: [
++        { id: "bars", label: "Style" },
++        { id: "layout", label: "Layout" },
++        { id: "widgets", label: "Widgets" },
++        { id: "dock", label: "Dock" }
+     ]
++    readonly property var formIds: ["islands", "full", "fit", "dock", "notch"]
++    readonly property var formLabels: ({
++        islands: I18n.tr("Islands"),
++        full: I18n.tr("Full width"),
++        fit: I18n.tr("Fit"),
++        dock: I18n.tr("Dock"),
++        notch: I18n.tr("Notch")
++    })
++    readonly property var widgetIds: {
++        const ids = [];
++        for (let i = 0; i < editor.widgets.length; i++)
++            ids.push(editor.widgets[i].id);
++        return ids;
++    }
++    readonly property var widgetLabels: {
++        const labels = ({});
++        for (let i = 0; i < editor.widgets.length; i++) {
++            const w = editor.widgets[i];
++            labels[w.id] = w.label || w.id;
++        }
++        return labels;
++    }
+ 
+     spacing: Tokens.s4
+ 
++    function tabLabelFor(id) {
++        for (let i = 0; i < editor.tabMeta.length; i++)
++            if (editor.tabMeta[i].id === id)
++                return editor.tabMeta[i].label;
++        return "Style";
++    }
++    function tabIdFor(label) {
++        for (let i = 0; i < editor.tabMeta.length; i++)
++            if (editor.tabMeta[i].label === label)
++                return editor.tabMeta[i].id;
++        return "bars";
++    }
++    function laneLabel(section) {
++        if (section === "left") return I18n.tr("Left");
++        if (section === "center") return I18n.tr("Center");
++        if (section === "right") return I18n.tr("Right");
++        return section || "";
++    }
+     function loadWidgets() {
+         if (editor.visible && editor.barActive && !readWidgets.running)
+             readWidgets.running = true;
+@@ -65,6 +106,28 @@
+         else if (barActive)
+             Quickshell.execDetached(["ryoku-shell", "bar", "settings", editor.tab]);
+     }
++    function openFormPicker() {
++        if (!editor.hostPage || !editor.barActive || editor.saving)
++            return;
++        editor.hostPage.openStudioPick(
++            I18n.tr("Bar form"),
++            editor.formIds,
++            editor.formLabels,
++            Settings.get("qsbar.barShellStyle") || "full",
++            key => editor.patch("qsbar.barShellStyle", key)
++        );
++    }
++    function openWidgetPicker() {
++        if (!editor.hostPage || !editor.barActive || editor.saving || editor.widgetIds.length === 0)
++            return;
++        editor.hostPage.openStudioPick(
++            I18n.tr("Bar widget"),
++            editor.widgetIds,
++            editor.widgetLabels,
++            editor.selectedId,
++            key => { editor.selectedId = key; }
++        );
++    }
+ 
+     onQsConfigChanged: refresh.restart()
+     onBarActiveChanged: if (barActive) refresh.restart()
+@@ -112,36 +175,51 @@
+         onFileChanged: { reload(); refresh.restart(); }
+     }
+ 
+-    SettingCard {
++    Tsukuyomi.SectionCard {
+         width: parent.width
+         title: I18n.tr("QS Bar")
+         collapsible: false
+ 
+-        Seg {
+-            options: ["bars", "layout", "widgets", "dock"]
+-            labels: ({ bars: I18n.tr("Style"), layout: I18n.tr("Layout"),
+-                widgets: I18n.tr("Widgets"), dock: I18n.tr("Dock") })
+-            current: editor.tab
+-            onChose: value => editor.tab = value
++        Item {
++            width: parent.width
++            height: studioTabs.implicitHeight + Tokens.s3 * 2
++
++            Tsukuyomi.Tabs {
++                id: studioTabs
++                anchors {
++                    left: parent.left
++                    right: parent.right
++                    leftMargin: Tokens.s4
++                    rightMargin: Tokens.s4
++                    verticalCenter: parent.verticalCenter
++                }
++                options: ["Style", "Layout", "Widgets", "Dock"]
++                current: editor.tabLabelFor(editor.tab)
++                onChose: option => { editor.tab = editor.tabIdFor(option); }
++            }
++            Rectangle {
++                anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
++                anchors.leftMargin: Tokens.s4
++                anchors.rightMargin: Tokens.s4
++                height: 1
++                color: Tsukuyomi.Style.line
++            }
+         }
+ 
+         SettingRow {
+             width: parent.width
+             visible: editor.tab === "bars"
+             label: I18n.tr("Bar form")
+-            controlWidth: form.width
+-            QQC.ComboBox {
+-                id: form
+-                anchors.right: parent.right
+-                anchors.verticalCenter: parent.verticalCenter
+-                model: editor.forms
+-                textRole: "name"
+-                valueRole: "id"
+-                currentIndex: Math.max(0, editor.forms.findIndex(item =>
+-                    item.id === (Settings.get("qsbar.barShellStyle") || "full")))
++            desc: I18n.tr("Shape and edge layout of the bar.")
++            controlWidth: Math.min(Tokens.px(240), Math.round(width * 0.40))
++            PickBar {
++                anchors.fill: parent
+                 enabled: editor.barActive && !editor.saving
+-                onActivated: editor.patch("qsbar.barShellStyle", currentValue)
+-                Accessible.name: I18n.tr("Bar form")
++                opacity: enabled ? 1 : 0.45
++                value: Settings.get("qsbar.barShellStyle") || "full"
++                count: editor.formIds.length
++                labels: editor.formLabels
++                onOpened: editor.openFormPicker()
+             }
+         }
+         SettingRow {
+@@ -180,19 +258,16 @@
+             width: parent.width
+             visible: editor.tab === "layout" || editor.tab === "widgets"
+             label: I18n.tr("Widget")
+-            controlWidth: widget.width
+-            QQC.ComboBox {
+-                id: widget
+-                anchors.right: parent.right
+-                anchors.verticalCenter: parent.verticalCenter
+-                width: Math.min(230, editor.width * 0.43)
+-                model: editor.widgets
+-                textRole: "label"
+-                valueRole: "id"
+-                currentIndex: Math.max(0, editor.widgets.findIndex(item => item.id === editor.selectedId))
+-                enabled: editor.barActive && !editor.saving && count > 0
+-                onActivated: editor.selectedId = currentValue
+-                Accessible.name: I18n.tr("Bar widget")
++            desc: I18n.tr("Choose a widget to move or toggle.")
++            controlWidth: Math.min(Tokens.px(240), Math.round(width * 0.40))
++            PickBar {
++                anchors.fill: parent
++                enabled: editor.barActive && !editor.saving && editor.widgetIds.length > 0
++                opacity: enabled ? 1 : 0.45
++                value: editor.selected ? editor.selected.id : ""
++                count: editor.widgetIds.length
++                labels: editor.widgetLabels
++                onOpened: editor.openWidgetPicker()
+             }
+         }
+         SettingRow {
+@@ -215,20 +290,29 @@
+                 }
+             }
+         }
+-        Flow {
++        SettingRow {
+             width: parent.width
+             visible: editor.tab === "layout" && editor.selected !== null
+-            spacing: Tokens.s3
+-            Btn {
+-                text: I18n.tr("Move earlier")
+-                enabled: editor.barActive && !editor.saving && editor.selected && editor.selected.index > 0
+-                onAct: editor.move(editor.selected.section, editor.selected.index - 1)
+-            }
+-            Btn {
+-                text: I18n.tr("Move later")
+-                enabled: editor.barActive && !editor.saving && editor.selected && editor.widgets.some(widget =>
+-                    widget.section === editor.selected.section && widget.index > editor.selected.index)
+-                onAct: editor.move(editor.selected.section, editor.selected.index + 1)
++            label: I18n.tr("Order")
++            desc: editor.selected ? I18n.tr("Slot %1 in %2").arg(editor.selected.index + 1).arg(editor.laneLabel(editor.selected.section)) : ""
++            divider: true
++            controlWidth: orderBtns.implicitWidth
++            Row {
++                id: orderBtns
++                anchors.right: parent.right
++                anchors.verticalCenter: parent.verticalCenter
++                spacing: Tokens.s2
++                Btn {
++                    text: I18n.tr("Move earlier")
++                    enabled: editor.barActive && !editor.saving && editor.selected && editor.selected.index > 0
++                    onAct: editor.move(editor.selected.section, editor.selected.index - 1)
++                }
++                Btn {
++                    text: I18n.tr("Move later")
++                    enabled: editor.barActive && !editor.saving && editor.selected && editor.widgets.some(widget =>
++                        widget.section === editor.selected.section && widget.index > editor.selected.index)
++                    onAct: editor.move(editor.selected.section, editor.selected.index + 1)
++                }
+             }
+         }
+         SettingRow {
+@@ -247,18 +331,53 @@
+             }
+         }
+ 
+-        Text {
++        SettingRow {
++            width: parent.width
++            visible: editor.tab === "dock"
++            label: I18n.tr("Dock settings")
++            desc: I18n.tr("Manage dock visibility, auto-hide, design, and pinned apps.")
++            controlWidth: dockBtn.implicitWidth
++            Btn {
++                id: dockBtn
++                anchors.right: parent.right
++                anchors.verticalCenter: parent.verticalCenter
++                text: I18n.tr("Open Dock settings")
++                onAct: editor.openSettings()
++            }
++        }
++
++        Item {
+             width: parent.width
+             visible: editor.errorMessage !== ""
+-            color: Tokens.alert
+-            font.family: Tokens.ui
+-            wrapMode: Text.WordWrap
+-            text: editor.errorMessage
+-        }
+-        Btn {
+-            text: editor.tab === "dock" ? I18n.tr("Open Dock settings") : I18n.tr("Open full QS Bar settings")
+-            enabled: editor.barActive
+-            onAct: editor.openSettings()
++            height: errText.implicitHeight + Tokens.s2 * 2
++            Text {
++                id: errText
++                anchors { left: parent.left; right: parent.right; leftMargin: Tokens.s4; rightMargin: Tokens.s4; verticalCenter: parent.verticalCenter }
++                color: Tokens.alert
++                font.family: Tokens.ui
++                wrapMode: Text.WordWrap
++                text: editor.errorMessage
++            }
++        }
++
++        Item {
++            width: parent.width
++            visible: editor.tab !== "dock"
++            height: fullSettingsBtn.implicitHeight + Tokens.s3 * 2
++            Rectangle {
++                anchors { left: parent.left; right: parent.right; top: parent.top }
++                anchors.leftMargin: Tokens.s4
++                anchors.rightMargin: Tokens.s4
++                height: 1
++                color: Tsukuyomi.Style.line
++            }
++            Btn {
++                id: fullSettingsBtn
++                anchors { left: parent.left; leftMargin: Tokens.s4; verticalCenter: parent.verticalCenter }
++                text: I18n.tr("Open full QS Bar settings")
++                enabled: editor.barActive
++                onAct: editor.openSettings()
++            }
+         }
+     }
+ }
