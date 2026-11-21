@@ -1,0 +1,203 @@
+--- a/qmldir
++++ b/qmldir
+@@ -3,7 +3,6 @@
+ optional plugin ryogami-pickerplugin
+ classname Ryoku_RyogamiPlugin
+ typeinfo ryogami-picker.qmltypes
+-prefer :/qt/qml/Ryoku/Ryogami/
+ KeyChord 1.0 KeyChord.js
+ Keymap 1.0 Keymap.qml
+ Picker 1.0 Picker.qml
+--- a/FilterBar.qml
++++ b/FilterBar.qml
+@@ -1,11 +1,6 @@
+ import QtQuick
+-import QtQuick.Effects
+ import Ryoku.Ui.Singletons
+ 
+-// The picker's masthead, set like the head of a printed page: the 力 seal, the four
+-// libraries named in Latin and Japanese, a search line and the count. Under a hairline,
+-// a second line carries only what the open library needs. Emphasis is inversion, colour
+-// appears only as data (the hue swatches) and in the seal.
+ Item {
+     id: root
+ 
+@@ -171,12 +166,6 @@
+         function onHueFilterChanged() { root.save("color", root.view.hueFilter) }
+         function onSortChanged() { root.save("sort", root.view.sort) }
+         function onFavouritesOnlyChanged() { root.save("favourites", root.view.favouritesOnly) }
+-    }
+-
+-    // The seal stamps in each time the picker opens: the one moment the masthead performs.
+-    Connections {
+-        target: root.state
+-        function onShownChanged() { if (root.state.shown) stamp.restart() }
+     }
+ 
+     // The second line fades across when the library changes, so its controls never pop.
+@@ -216,41 +205,20 @@
+             width: parent.width
+             height: 58 * Theme.scale
+ 
+-            // Ryoku's mark, the one on the README. On a light theme its bone strokes would
+-            // vanish, so it takes the ink colour there.
+-            Item {
+-                id: seal
++            Text {
++                id: pickerTitle
+                 anchors.left: parent.left
+                 anchors.leftMargin: 16 * Theme.scale
+                 anchors.verticalCenter: parent.verticalCenter
+-                width: 30 * Theme.scale
+-                height: 26 * Theme.scale
+-                Image {
+-                    id: mark
+-                    anchors.fill: parent
+-                    source: Qt.resolvedUrl("brand/logo-mark.png")
+-                    fillMode: Image.PreserveAspectFit
+-                    sourceSize.height: 64
+-                    smooth: true
+-                    mipmap: true
+-                    visible: Theme.isDark
+-                }
+-                MultiEffect {
+-                    anchors.fill: mark
+-                    source: mark
+-                    visible: !Theme.isDark
+-                    colorization: 1
+-                    colorizationColor: Theme.surfaceText
+-                }
+-                ParallelAnimation {
+-                    id: stamp
+-                    NumberAnimation { target: seal; property: "scale"; from: 0.7; to: 1; duration: Theme.slow; easing.type: Easing.OutBack; easing.overshoot: 1.8 }
+-                    NumberAnimation { target: seal; property: "opacity"; from: 0; to: 1; duration: Theme.standard; easing.type: Easing.OutQuad }
+-                }
++                text: "Tsukuyomi"
++                color: Theme.surfaceText
++                font.family: Theme.sans
++                font.pixelSize: Theme.fontSmall
++                font.weight: Font.DemiBold
+             }
+             Rectangle {
+                 id: sealRule
+-                anchors.left: seal.right
++                anchors.left: pickerTitle.right
+                 anchors.leftMargin: 14 * Theme.scale
+                 anchors.verticalCenter: parent.verticalCenter
+                 width: 1
+--- a/BrowserTabs.qml
++++ b/BrowserTabs.qml
+@@ -29,14 +29,6 @@
+             height: 28 * Theme.scale
+             spacing: 7 * Theme.scale
+ 
+-            Text {
+-                anchors.verticalCenter: parent.verticalCenter
+-                text: UiPreferences.brandMark("力")
+-                color: Theme.primary
+-                font.family: Theme.jp
+-                font.pixelSize: Theme.fs(18)
+-                renderType: Text.NativeRendering
+-            }
+             Text {
+                 anchors.verticalCenter: parent.verticalCenter
+                 text: I18n.tr("SOURCES")
+--- a/FolioMasthead.qml
++++ b/FolioMasthead.qml
+@@ -4,7 +4,7 @@
+ Rectangle {
+     id: masthead
+ 
+-    property string wordmark: I18n.tr("Ryogami")
++    property string wordmark: I18n.tr("Tsukuyomi Wallpapers")
+     property string breadcrumb: ""
+     property real reveal: 1
+ 
+--- a/BrowserSources.qml
++++ b/BrowserSources.qml
+@@ -15,7 +15,7 @@
+         { id: "bing",      label: I18n.tr("Bing Daily"),     searchable: false },
+         { id: "moewalls",  label: I18n.tr("MoeWalls"),       searchable: true },
+         { id: "motionbgs", label: I18n.tr("MotionBGs"),      searchable: true },
+-        { id: "ryostore",  label: I18n.tr("Ryostore"),       searchable: true },
++        { id: "ryostore",  label: I18n.tr("Tsukuyomi Store"),       searchable: true },
+         { id: "repos",     label: I18n.tr("Repos"),          searchable: true }
+     ]
+ 
+--- a/DownloadMenu.qml
++++ b/DownloadMenu.qml
+@@ -23,7 +23,7 @@
+         { key: "bing", label: I18n.tr("Bing Daily"), glyph: "\uf002" },
+         { key: "moewalls", label: I18n.tr("MoeWalls"), glyph: "\uf008" },
+         { key: "motionbgs", label: I18n.tr("MotionBGs"), glyph: "\uf008" },
+-        { key: "ryostore", label: I18n.tr("Ryostore"), glyph: "\uf290" },
++        { key: "ryostore", label: I18n.tr("Tsukuyomi Store"), glyph: "\uf290" },
+         { key: "repos", label: I18n.tr("Repos"), glyph: "\uf126" }
+     ]
+     property var _rows: []
+--- a/LibraryTab.qml
++++ b/LibraryTab.qml
+@@ -15,7 +15,7 @@
+                   kind: "text",
+                   variant: "path",
+                   label: I18n.tr("Wallpaper directory"),
+-                  help: I18n.tr("Folder Ryogami scans for image and video wallpapers."),
++                  help: I18n.tr("Folder to scan for image and video wallpapers."),
+                   placeholder: I18n.tr("~/Pictures/Wallpapers"),
+                   search: ["paths.wallpaper", "wallpaper", "directory", "text"] },
+                 { id: "paths.videoWallpaper",
+--- a/AutomationTab.qml
++++ b/AutomationTab.qml
+@@ -133,7 +133,7 @@
+                   key: "pickOnlyMode",
+                   kind: "toggle",
+                   label: I18n.tr("Disable internal wallpaper application"),
+-                  help: I18n.tr("When enabled, Ryogami will not apply wallpapers itself. Use the post-processing commands below to drive your own setter."),
++                  help: I18n.tr("When enabled, the picker will not apply wallpapers itself. Use the post-processing commands below to drive your own setter."),
+                   search: ["pickOnlyMode", "disable", "internal", "wallpaper", "application", "toggle"] },
+                 { id: "postProcessOnRestore",
+                   key: "postProcessOnRestore",
+--- a/SearchPanel.qml
++++ b/SearchPanel.qml
+@@ -820,7 +820,7 @@
+                 ? I18n.tr("Describe search is turned off")
+                 : I18n.tr("Describe search is not available here")
+         readonly property string body: root.semanticState === "noModel"
+-                ? I18n.tr("Import a model pack once. Ryogami reads your wallpapers on this machine so you can search them by describing them. Tag search works without it.")
++                ? I18n.tr("Import a model pack once. The picker reads your wallpapers on this machine so you can search them by describing them. Tag search works without it.")
+             : root.semanticState === "disabled"
+                 ? I18n.tr("Turn it on to search wallpapers by describing them. Tag search stays available either way.")
+                 : I18n.tr("The Lens component (skwd-lens and its runtime) is not installed on this system, so wallpapers cannot be read for description. Tag search works without it.")
+--- a/IntegrationsTab.qml
++++ b/IntegrationsTab.qml
+@@ -4,7 +4,7 @@
+ FolioTabData {
+     tabKey: "integrations"
+     title: I18n.tr("Integrations")
+-    note: I18n.tr("Connect Ryogami to the desktop and the overview.")
++    note: I18n.tr("Connect the wallpaper picker to the desktop and overview.")
+     sections: [
+         {
+             title: I18n.tr("Overview backdrop"),
+--- a/FilterTab.qml
++++ b/FilterTab.qml
+@@ -278,7 +278,7 @@
+                   key: null,
+                   kind: "action",
+                   label: I18n.tr("Import model pack"),
+-                  help: I18n.tr("Choose a semantic-pack.json or .skwdmodel archive. Ryogami validates the pack, installs it, and selects it."),
++                  help: I18n.tr("Choose a semantic-pack.json or .skwdmodel archive. The picker validates the pack, installs it, and selects it."),
+                   action: "ImportSemanticModel",
+                   search: ["semantic.models.import", "import", "model", "pack", "action"] },
+                 { id: "semantic.manifest",
+--- a/CardChrome.qml
++++ b/CardChrome.qml
+@@ -131,7 +131,7 @@
+                 anchors.verticalCenter: parent.verticalCenter
+                 anchors.leftMargin: 12 * Theme.scale
+                 anchors.rightMargin: 12 * Theme.scale
+-                text: chrome.entry.name || chrome.entry.key || ""
++                text: String(chrome.entry.name || chrome.entry.key || "").replace(/^Ryoku\//, "")
+                 elide: Text.ElideRight
+                 font.family: Theme.sans
+                 font.weight: Font.DemiBold
