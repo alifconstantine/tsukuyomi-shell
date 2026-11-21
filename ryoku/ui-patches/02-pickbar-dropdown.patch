@@ -1,64 +1,330 @@
+diff -ruN ui-orig/PickBar.qml ui-new/PickBar.qml
+--- a/PickBar.qml	2026-11-12 08:11:11.000000000 +0700
++++ b/PickBar.qml	2026-11-21 22:39:01.218076232 +0700
+@@ -26,7 +26,7 @@
+         font.family: Tokens.ui
+         font.pixelSize: 11
+         elide: Text.ElideRight
+-        width: parent.width - 70
++        width: parent.width - 34
+     }
+     Text {
+         anchors { right: parent.right; rightMargin: 9; verticalCenter: parent.verticalCenter }
+@@ -38,5 +38,5 @@
+         font.pixelSize: 9
+     }
+     HoverHandler { id: bh; cursorShape: Qt.PointingHandCursor }
+-    TapHandler { id: tap; onTapped: bar.opened() }
++    TapHandler { id: tap; onTapped: { Tokens.pickAnchor = bar; bar.opened(); } }
+ }
 diff -ruN ui-orig/Picker.qml ui-new/Picker.qml
---- a/Picker.qml	2026-11-21 22:30:40.726833939 +0700
-+++ b/Picker.qml	2026-11-21 22:30:40.759484125 +0700
-@@ -46,10 +46,11 @@
-     function _syncGeometry() {
-         if (!pick.parent)
-             return;
--        var chromeH = (!pick.anchored ? 28 : 0) + (pick.searchable ? 40 : 0);
+--- a/Picker.qml	2026-11-12 08:11:11.000000000 +0700
++++ b/Picker.qml	2026-11-21 22:39:01.218104124 +0700
+@@ -2,31 +2,114 @@
+ import QtQuick.Controls
+ import "Singletons"
+ 
+-// the catalogue overlay. a 25-entry font list cannot be browsed, so the filter
+-// is the interface; Enter takes the top match.
++// Dropdown catalogue triggered by PickBar (or centered picker when opened without an anchor).
+ Rectangle {
+     id: pick
+     property string title: ""
+     property var options: []
+     property string current: ""
+-    // optional key -> display label; a key absent from the map keeps its own
+-    // text. Lets a caller show a friendly option name (the anchor picker's
+-    // "Auto (calm spot)") while still storing the raw key.
+     property var labels: ({})
+     signal chose(string key)
+     signal dismissed()
+ 
+-    width: 330
+-    height: 330
++    property var _anchor: null
++    property int cursor: -1
++    readonly property bool anchored: _anchor !== null && _anchor.parent !== null
++    readonly property bool searchable: options.length >= 9
++
++    width: 300
++    height: 280
+     radius: Tokens.radius
+     color: Tokens.paperLift
+     border.width: Tokens.border
+     border.color: Tokens.lineStrong
++    focus: true
++
++    // Absorb stray clicks inside padding/borders so outer scrim MouseAreas do not dismiss.
++    MouseArea { anchors.fill: parent; z: -1 }
++
++    Keys.onEscapePressed: pick.dismissed()
++    Keys.onUpPressed: {
++        if (pick.shown.length === 0) return;
++        pick.cursor = pick.cursor <= 0 ? pick.shown.length - 1 : pick.cursor - 1;
++    }
++    Keys.onDownPressed: {
++        if (pick.shown.length === 0) return;
++        pick.cursor = (pick.cursor + 1) % pick.shown.length;
++    }
++    Keys.onReturnPressed: {
++        if (pick.shown.length === 0) return;
++        var idx = pick.cursor >= 0 && pick.cursor < pick.shown.length ? pick.cursor : 0;
++        pick.chose(pick.shown[idx]);
++    }
++
++    function _syncGeometry() {
++        if (!pick.parent)
++            return;
 +        var hasHeader = !pick.anchored && pick.title !== "";
 +        var chromeH = 12 + (hasHeader ? 28 : 0) + (pick.searchable ? 38 : 0);
-         var listRows = Math.max(1, pick.shown.length);
-         var maxListH = pick.anchored ? 256 : 248;
--        var idealH = chromeH + Math.min(maxListH, listRows * 32) + 12;
++        var listRows = Math.max(1, pick.shown.length);
++        var maxListH = pick.anchored ? 256 : 248;
 +        var idealH = chromeH + Math.min(maxListH, listRows * 32);
-         if (pick.anchored) {
-             var pt = pick._anchor.mapToItem(pick.parent, 0, 0);
-             var dw = Math.max(220, Math.min(pick.parent.width - 16, pick._anchor.width));
-@@ -102,6 +103,7 @@
-         }
-     }
-     onOptionsChanged: if (visible) Qt.callLater(pick._syncGeometry)
++        if (pick.anchored) {
++            var pt = pick._anchor.mapToItem(pick.parent, 0, 0);
++            var dw = Math.max(220, Math.min(pick.parent.width - 16, pick._anchor.width));
++            var spaceBelow = pick.parent.height - (pt.y + pick._anchor.height + 6) - 8;
++            var spaceAbove = pt.y - 6 - 8;
++            var openUp = spaceBelow < Math.min(180, idealH) && spaceAbove > spaceBelow;
++            var maxAvail = Math.max(110, openUp ? spaceAbove : spaceBelow);
++            var dh = Math.min(idealH, maxAvail);
++            pick.width = dw;
++            pick.height = dh;
++            pick.x = Math.max(8, Math.min(pt.x, pick.parent.width - dw - 8));
++            pick.y = openUp
++                ? Math.max(8, pt.y - dh - 4)
++                : Math.min(pick.parent.height - dh - 8, pt.y + pick._anchor.height + 4);
++        } else {
++            var dw2 = Math.min(340, pick.parent.width - 32);
++            var dh2 = Math.min(330, Math.min(idealH, pick.parent.height - 32));
++            pick.width = dw2;
++            pick.height = dh2;
++            pick.x = Math.round((pick.parent.width - dw2) / 2);
++            pick.y = Math.round((pick.parent.height - dh2) / 2);
++        }
++    }
++
++    function _prepareOpen() {
++        if (Tokens.pickAnchor !== null) {
++            pick._anchor = Tokens.pickAnchor;
++            Tokens.pickAnchor = null;
++        }
++        q.text = "";
++        pick.cursor = -1;
++        pick._syncGeometry();
++        Qt.callLater(function () {
++            if (!pick.visible) return;
++            pick._syncGeometry();
++            if (pick.searchable) q.forceActiveFocus();
++            else pick.forceActiveFocus();
++        });
++    }
++
++    function open() {
++        _prepareOpen();
++    }
++
++    onVisibleChanged: {
++        if (visible) {
++            _prepareOpen();
++        } else {
++            pick._anchor = null;
++        }
++    }
++    onOptionsChanged: if (visible) Qt.callLater(pick._syncGeometry)
 +    onShownChanged: if (visible) Qt.callLater(pick._syncGeometry)
-     Connections {
-         target: pick.parent
-         function onWidthChanged() { if (pick.visible) pick._syncGeometry(); }
-@@ -126,6 +128,7 @@
-         spacing: 6
++    Connections {
++        target: pick.parent
++        function onWidthChanged() { if (pick.visible) pick._syncGeometry(); }
++        function onHeightChanged() { if (pick.visible) pick._syncGeometry(); }
++    }
+ 
+-    function open() { q.text = ""; q.forceActiveFocus() }
+-    // the display label is what the reader sees, so it is what the filter has
+-    // to match: in the language list the key is "pl" and the label "Polski",
+-    // and typing either has to find it.
+     function _display(o) {
+         return (pick.labels && pick.labels[o] !== undefined) ? pick.labels[o] : I18n.tr(o);
+     }
+@@ -39,35 +122,50 @@
+     })
+ 
+     Column {
++        id: layoutCol
+         anchors.fill: parent
+-        anchors.margins: Tokens.s3
+-        spacing: Tokens.s2
++        anchors.margins: 6
++        spacing: 6
  
          Row {
 +            id: headerRow
              width: parent.width
-             visible: !pick.anchored && pick.title !== ""
-             height: visible ? 22 : 0
-@@ -154,6 +157,7 @@
++            visible: !pick.anchored && pick.title !== ""
++            height: visible ? 22 : 0
++            leftPadding: 4
++            rightPadding: 4
+             Text {
++                anchors.verticalCenter: parent.verticalCenter
+                 text: I18n.tr(pick.title).toUpperCase()
+-                color: Tokens.ink
++                color: Tokens.inkDim
+                 font.family: Tokens.ui
+                 font.pixelSize: 10
+                 font.weight: Font.Medium
+                 font.letterSpacing: Tokens.trackLabel
++                width: parent.width - 56
++                elide: Text.ElideRight
+             }
+-            Item { width: parent.width - 190; height: 1 }
+             Text {
++                anchors.verticalCenter: parent.verticalCenter
++                width: 48
++                horizontalAlignment: Text.AlignRight
+                 text: pick.shown.length + " / " + pick.options.length
+                 color: Tokens.inkFaint
+                 font.family: Tokens.mono
+                 font.pixelSize: 9
+             }
          }
- 
++
          Rectangle {
 +            id: filterBox
              width: parent.width
-             visible: pick.searchable
-             height: visible ? 32 : 0
-@@ -200,9 +204,9 @@
- 
+-            height: 30
+-            color: "transparent"
+-            radius: Tokens.radius
+-            border.width: q.activeFocus ? 2 : Tokens.border
++            visible: pick.searchable
++            height: visible ? 32 : 0
++            color: Tokens.paper
++            radius: Math.max(4, Tokens.radius - 2)
++            border.width: q.activeFocus ? 1.5 : Tokens.border
+             border.color: q.activeFocus ? Tokens.ink : Tokens.line
++
+             TextInput {
+                 id: q
+                 anchors.fill: parent
+@@ -78,8 +176,21 @@
+                 font.family: Tokens.ui
+                 font.pixelSize: 12
+                 selectByMouse: true
+-                Keys.onReturnPressed: if (pick.shown.length) pick.chose(pick.shown[0])
++                Keys.onReturnPressed: {
++                    if (pick.shown.length) {
++                        var idx = pick.cursor >= 0 && pick.cursor < pick.shown.length ? pick.cursor : 0;
++                        pick.chose(pick.shown[idx]);
++                    }
++                }
+                 Keys.onEscapePressed: pick.dismissed()
++                Keys.onUpPressed: {
++                    if (pick.shown.length)
++                        pick.cursor = pick.cursor <= 0 ? pick.shown.length - 1 : pick.cursor - 1;
++                }
++                Keys.onDownPressed: {
++                    if (pick.shown.length)
++                        pick.cursor = (pick.cursor + 1) % pick.shown.length;
++                }
+                 Text {
+                     anchors.fill: parent
+                     visible: q.text === ""
+@@ -90,12 +201,20 @@
+                 }
+             }
+         }
++
          Flickable {
              width: parent.width
--            height: Math.max(32, parent.height
--                - (pick.anchored || pick.title === "" ? 0 : 28)
--                - (pick.searchable ? 38 : 0))
+-            height: parent.height - 76
 +            height: Math.max(32, layoutCol.height
 +                - (headerRow.visible ? headerRow.height + layoutCol.spacing : 0)
 +                - (filterBox.visible ? filterBox.height + layoutCol.spacing : 0))
              contentHeight: col.height
              clip: true
-             boundsBehavior: Flickable.StopAtBounds
+-            ScrollBar.vertical: ScrollBar { contentItem: Rectangle { implicitWidth: 3; color: Tokens.line } }
++            boundsBehavior: Flickable.StopAtBounds
++            ScrollBar.vertical: ScrollBar {
++                policy: ScrollBar.AsNeeded
++                contentItem: Rectangle { implicitWidth: 3; radius: 2; color: Tokens.lineStrong }
++            }
++
+             Column {
+                 id: col
+                 width: parent.width
+@@ -103,28 +222,55 @@
+                     model: pick.shown
+                     Rectangle {
+                         required property string modelData
++                        required property int index
++                        readonly property bool selected: pick.current === modelData
++                        readonly property bool active: rh.hovered || pick.cursor === index
+                         width: col.width
+-                        height: 30
+-                        color: rh.hovered ? Tokens.bone : "transparent"
+-                        Behavior on color { ColorAnimation { duration: 70 } }
++                        height: 32
++                        radius: Math.max(4, Tokens.radius - 2)
++                        color: active ? Tokens.bone : (selected ? Tokens.tint10 : "transparent")
++                        Behavior on color { ColorAnimation { duration: Tokens.snap } }
++
+                         Text {
+-                            anchors { left: parent.left; leftMargin: 8; verticalCenter: parent.verticalCenter }
++                            anchors {
++                                left: parent.left; leftMargin: 10
++                                right: checkMark.visible ? checkMark.left : parent.right
++                                rightMargin: 8
++                                verticalCenter: parent.verticalCenter
++                            }
+                             text: pick._display(parent.modelData)
+-                            color: rh.hovered ? Tokens.inkOnBone : (pick.current === parent.modelData ? Tokens.ink : Tokens.inkDim)
++                            elide: Text.ElideRight
++                            color: parent.active ? Tokens.inkOnBone
++                                : (parent.selected ? Tokens.ink : Tokens.inkDim)
+                             font.family: Tokens.ui
+-                            font.pixelSize: 13
++                            font.pixelSize: 12
++                            font.weight: parent.selected ? Font.Medium : Font.Normal
+                         }
+                         Text {
+-                            anchors { right: parent.right; rightMargin: 8; verticalCenter: parent.verticalCenter }
+-                            visible: pick.current === parent.modelData
+-                            text: "●"
+-                            color: rh.hovered ? Tokens.inkOnBone : Tokens.ink
+-                            font.pixelSize: 7
++                            id: checkMark
++                            anchors { right: parent.right; rightMargin: 10; verticalCenter: parent.verticalCenter }
++                            visible: parent.selected
++                            text: "✓"
++                            color: parent.active ? Tokens.inkOnBone : Tokens.ink
++                            font.family: Tokens.ui
++                            font.pixelSize: 11
++                            font.weight: Font.Bold
+                         }
+                         HoverHandler { id: rh; cursorShape: Qt.PointingHandCursor }
+                         TapHandler { onTapped: pick.chose(parent.modelData) }
+                     }
+                 }
++                Text {
++                    width: col.width
++                    height: 32
++                    visible: pick.shown.length === 0
++                    horizontalAlignment: Text.AlignHCenter
++                    verticalAlignment: Text.AlignVCenter
++                    text: I18n.tr("No matches")
++                    color: Tokens.inkMuted
++                    font.family: Tokens.ui
++                    font.pixelSize: 12
++                }
+             }
+         }
+     }
 diff -ruN ui-orig/Singletons/Tokens.qml ui-new/Singletons/Tokens.qml
---- a/Singletons/Tokens.qml	2026-11-21 22:30:40.727097803 +0700
-+++ b/Singletons/Tokens.qml	2026-11-21 22:30:40.759279582 +0700
-@@ -153,6 +153,7 @@
+--- a/Singletons/Tokens.qml	2026-11-21 22:39:01.204638761 +0700
++++ b/Singletons/Tokens.qml	2026-11-21 22:39:01.218022912 +0700
+@@ -152,6 +152,7 @@
+     // ── motion ───────────────────────────────────────────────────────────
      // dur() scales every duration by motionScale (shell.json theme.motion) and
      // zeroes it under reduceMotion, so the Hub retimes the desktop live.
-     property var pickAnchor: null
 +    property var pickAnchor: null
      readonly property bool softwareRenderer: Quickshell.env("TSUKUYOMI_SOFTWARE_RENDERER") === "1"
      property real motionScale: 1.0
