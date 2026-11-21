@@ -1,0 +1,102 @@
+--- a/Picker.qml
++++ b/Picker.qml
+@@ -7,6 +7,7 @@
+     id: picker
+ 
+     property bool shown: false
++    readonly property bool softwareRenderer: Quickshell.env("TSUKUYOMI_SOFTWARE_RENDERER") === "1"
+     readonly property bool active: picker.shown || picker._showPending
+     readonly property bool busy: Settings.busy || riceShare.busy || riceWorkshop.busy
+     property var _screen: null
+@@ -142,8 +143,9 @@
+             source: pickerState.view
+             settings: Settings
+             mode: pickerState.mode
+-            active: picker.shown
+-            previewAllowed: picker.shown && pickerState.sheet === "" && !pickerState.searchOpen
++            active: picker.shown && (pickerState.sheet === "" || pickerState.sceneThrough)
++            visible: active
++            previewAllowed: active && !picker.softwareRenderer && pickerState.sheet === "" && !pickerState.searchOpen
+                 && !pickerState.multipickerOpen && !pickerState.helpOpen
+                 && !pickerState.themeBarOpen && !pickerState.riceWorkshopOpen
+                 && pickerState.riceShare === ""
+@@ -165,7 +167,7 @@
+         }
+ 
+         WorkshopCardChrome { anchors.fill: parent; state: pickerState }
+-        CardChrome { anchors.fill: parent; state: pickerState }
++        CardChrome { anchors.fill: parent; visible: cardField.active; state: pickerState }
+         EmptyState { anchors.fill: parent; state: pickerState }
+ 
+         FilterBar { anchors.fill: parent; state: pickerState }
+--- a/PickerState.qml
++++ b/PickerState.qml
+@@ -84,7 +84,7 @@
+     property Connections _livePreviewConn: Connections {
+         target: state._livePreview
+         function onValueChanged() {
+-            if (state._bool(state._livePreview))
++            if (state.livePreview)
+                 return
+             state._hoverDwell.stop()
+             Theme.previewPalette = null
+@@ -282,10 +282,14 @@
+         function onChanged(collection) { state._settleStartPosition(false) }
+     }
+ 
++    readonly property bool softwareRenderer: Quickshell.env("TSUKUYOMI_SOFTWARE_RENDERER") === "1"
++    readonly property bool livePreview: !softwareRenderer && state._bool(state._livePreview)
++    readonly property bool shellHover: !softwareRenderer && state._bool(state._shellHover)
+     readonly property bool _hoverActive: state.shown && state.sheet === "" && !state.multipickerOpen
++        && (state.livePreview || state.shellHover)
+     property Timer _hoverDwell: Timer {
+-        interval: 50
+-        onTriggered: state._pushHover()
++        interval: 180
++        onTriggered: if (state._hoverActive) state._pushHover()
+     }
+     onHoverKeyChanged: if (state._hoverActive) state._hoverDwell.restart()
+     onHoverTypeChanged: if (state._hoverActive) state._hoverDwell.restart()
+@@ -310,7 +314,7 @@
+ 
+     function _pushHover() {
+         var key = state.hoverKey
+-        if (state._bool(state._livePreview)) {
++        if (state.livePreview) {
+             if (key) {
+                 Daemon.call("palette.preview", { key: key }, function(result, error) {
+                     if (state.hoverKey !== key)
+@@ -328,7 +332,7 @@
+                 Daemon.call("wall.preview.clear", {})
+             }
+         }
+-        if (state._bool(state._shellHover) && !state._bool(state._livePreview))
++        if (state.shellHover && !state.livePreview)
+             Daemon.call("palette.hover", key ? { key: key } : ({}))
+     }
+ 
+--- a/BrowserResults.qml
++++ b/BrowserResults.qml
+@@ -1,4 +1,5 @@
+ import QtQuick
++import Quickshell
+ import Ryoku.Ui.Singletons
+ import "KeyChord.js" as KeyChord
+ 
+@@ -19,7 +20,7 @@
+     property real reveal: 1
+     property bool cancellable: false
+     property string emptyText: ""
+-    property bool autoLoad: true
++    property bool autoLoad: false
+ 
+     property bool pendingApply: false
+     property var applyItem: null
+@@ -263,6 +264,7 @@
+                     interactive: true
+                     active: results.visible && (results.source ? results.source.count > 0 : false)
+                     previewAllowed: active && !searchInput.activeFocus
++                        && Quickshell.env("TSUKUYOMI_SOFTWARE_RENDERER") !== "1"
+                         && !(results.source && results.source.loading)
+                     activateOnClick: true
+                     visible: results.source ? results.source.count > 0 : false

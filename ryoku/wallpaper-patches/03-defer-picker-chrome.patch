@@ -1,0 +1,50 @@
+--- a/Picker.qml
++++ b/Picker.qml
+@@ -9,7 +9,7 @@
+     property bool shown: false
+     readonly property bool softwareRenderer: Quickshell.env("TSUKUYOMI_SOFTWARE_RENDERER") === "1"
+     readonly property bool active: picker.shown || picker._showPending
+-    readonly property bool busy: Settings.busy || riceShare.busy || riceWorkshop.busy
++    readonly property bool busy: Settings.busy || riceShare.item?.busy === true || riceWorkshop.item?.busy === true
+     property var _screen: null
+     property bool _showPending: false
+     property int _showRequest: 0
+@@ -121,6 +121,21 @@
+     LibraryView {
+         id: libraryView
+         collection: pickerState.collection
++    }
++
++    // Wait to parse and instantiate these panes until their first use.
++    component DeferredChrome: Loader {
++        required property string fileName
++        required property bool wanted
++        anchors.fill: parent
++
++        function loadIfWanted() {
++            if (wanted && source.toString() === "")
++                setSource(Qt.resolvedUrl(fileName), { state: pickerState })
++        }
++
++        onWantedChanged: loadIfWanted()
++        Component.onCompleted: loadIfWanted()
+     }
+ 
+     FocusScope {
+@@ -171,11 +186,11 @@
+         EmptyState { anchors.fill: parent; state: pickerState }
+ 
+         FilterBar { anchors.fill: parent; state: pickerState }
+-        SearchPanel { anchors.fill: parent; state: pickerState }
+-        HelpOverlay { anchors.fill: parent; state: pickerState }
+-        ThemeBar { anchors.fill: parent; state: pickerState }
+-        RiceWorkshop { id: riceWorkshop; anchors.fill: parent; state: pickerState }
+-        RiceShare { id: riceShare; anchors.fill: parent; state: pickerState }
++        DeferredChrome { fileName: "SearchPanel.qml"; wanted: pickerState.searchOpen }
++        DeferredChrome { fileName: "HelpOverlay.qml"; wanted: pickerState.helpOpen }
++        DeferredChrome { fileName: "ThemeBar.qml"; wanted: pickerState.themeBarOpen }
++        DeferredChrome { id: riceWorkshop; fileName: "RiceWorkshop.qml"; wanted: pickerState.riceWorkshopOpen }
++        DeferredChrome { id: riceShare; fileName: "RiceShare.qml"; wanted: pickerState.riceShare !== "" }
+ 
+         CardBackPanel { anchors.fill: parent; state: pickerState }
+         Multipicker { anchors.fill: parent; state: pickerState }
