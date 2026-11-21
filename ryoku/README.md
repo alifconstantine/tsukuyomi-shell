@@ -14,7 +14,9 @@ Pass the desktop ID of an installed browser. Omit it for a dock without a browse
 
 - Click the Arch logo for System Controls. The sliders icon opens QS Bar Settings. The adjacent gear opens Tsukuyomi Hub.
 - Click the clock to open the dashboard. The dock opens Applications, Dolphin, the supplied browser, and Kitty.
-- Press **Super+Space** to open Applications. Change the shortcut in **Hub → Keybinds → Shell → App Launcher**. **Super+Enter** opens Kitty, **Super+E** opens Dolphin, and **Super+W** opens the wallpaper picker. Use the arrow keys to highlight a wallpaper and press **Enter** to apply it.
+- Open **Hub → Appearance → Theme & Accent** for Dark, Light, wallpaper brightness, and accent sources. Installed Store themes can be applied from the same page.
+- **Hub → Appearance → Bar Studio** shows live QS Bar style, layout, and widgets while QS Bar is selected. The QS Bar Settings shortcut opens the full editor.
+- Press **Super+Space** to open the Main app launcher. Change the shortcut in **Hub → Keybinds → Shell → App Launcher**. **Super+Enter** opens Kitty, **Super+E** opens Dolphin, and **Super+W** opens the wallpaper picker. Use the arrow keys to highlight an item and **Space** for its preview. Press **Enter** to apply the selected wallpaper. New profiles start with Cloud Valley.
 - Press `Ctrl+Shift+F11` to open the Hub or `Ctrl+Shift+F12` to close the preview window.
 
 The nested session has a private D-Bus and runtime directory. Hardware actions, portals, and session locking require a real Tsukuyomi login. The default material is Frosted. To add the glass rim to the bar, open QS Bar Settings, choose Bar, then use Glass in the Surface section while Islands and Frost are selected.
@@ -23,4 +25,4 @@ On an installed Tsukuyomi session, open **Tsukuyomi Store → Subshells** to ins
 
 ## Build the desktop package
 
-`stage-profile.sh UPSTREAM_QUICKSHELL_DIR NEW_PROFILE_DIR [BROWSER_DESKTOP_ID]` stages Quickshell and the adjacent upstream `hypr/` tree for both entry points. The ISO builder ships the matching shell, Qt modules, Hyprland provider, and selected helpers. SDDM launches the Tsukuyomi session, which routes lock and idle through the existing `tsukuyomi-lock`. Tsukuyomi Store uses the packaged Ryoku catalogue and opens from Applications, the Hub, and QS Bar Settings. The catalogue needs a network connection on first use. [Tsukuyomi ISO build](https://github.com/alifconstantine/tsukuyomi)
+`stage-profile.sh UPSTREAM_QUICKSHELL_DIR NEW_PROFILE_DIR [BROWSER_DESKTOP_ID]` stages Quickshell and the adjacent upstream `hypr/` tree for both entry points. The ISO builder and nested preview use the same patched shell daemon and picker. The first build needs Git, Go and network access to cache the pinned source. SDDM launches the Tsukuyomi session, which routes lock and idle through the existing `tsukuyomi-lock`. Tsukuyomi Store uses the packaged Ryoku catalogue and opens from Applications, the Hub, and QS Bar Settings. The catalogue needs a network connection on first use. [Tsukuyomi ISO build](https://github.com/alifconstantine/tsukuyomi)
