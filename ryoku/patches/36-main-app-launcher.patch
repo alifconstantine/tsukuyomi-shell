@@ -1,0 +1,549 @@
+--- a/shell/modules/launcher/catalog.json
++++ b/shell/modules/launcher/catalog.json
+@@ -1,31 +1,16 @@
+ {
+   "version": 1,
+-  "default": "hero",
++  "default": "main",
+   "fallback": "okshell",
+   "variants": [
+     {
+       "id": "main",
+       "name": "Main",
+-      "description": "Compact command palette with a centered RestDashboard image card.",
++      "description": "Search apps, files, and commands, or open the app grid.",
+       "entrypoint": "variants/main/Main.qml",
+       "preview": "variants/main/Preview.qml",
+       "capabilities": [
+         "shape",
+-        "background",
+-        "results",
+-        "hero",
+-        "hiddenApps"
+-      ]
+-    },
+-    {
+-      "id": "hero",
+-      "name": "Applications",
+-      "description": "Search apps and files in a compact palette.",
+-      "entrypoint": "variants/hero/Main.qml",
+-      "preview": "variants/hero/Preview.qml",
+-      "capabilities": [
+-        "shape",
+-        "background",
+         "results",
+         "hiddenApps"
+       ]
+@@ -33,7 +18,7 @@
+     {
+       "id": "okshell",
+       "name": "OkShell",
+-      "description": "Fast applications-only list in Ryoku's live palette.",
++      "description": "A compact list for finding and launching applications.",
+       "entrypoint": "variants/okshell/Main.qml",
+       "preview": "variants/okshell/Preview.qml",
+       "capabilities": []
+--- a/shell/modules/launcher/shared/Singletons/LauncherConfig.qml
++++ b/shell/modules/launcher/shared/Singletons/LauncherConfig.qml
+@@ -38,7 +38,7 @@
+ 
+         JsonAdapter {
+             id: adapter
+-            property string variant: "hero"
++            property string variant: "main"
+             property real radius: 16
+             property int bgBlur: 2
+             property string weatherUnit: "auto"
+--- a/hub/pages/LauncherPage.qml
++++ b/hub/pages/LauncherPage.qml
+@@ -23,7 +23,7 @@
+         "columns", "matWidth", "sectionOrder", "hiddenSections", "pinnedApps"
+     ]
+     readonly property var factory: ({
+-            "variant": "hero", "radius": 16, "bgBlur": 2, "weatherUnit": "auto", "heroImage": "",
++            "variant": "main", "radius": 16, "bgBlur": 2, "weatherUnit": "auto", "heroImage": "",
+             "heroStrength": 0.6, "heroPosX": 0.5, "heroPosY": 0.5,
+             "showWeather": true, "showGreeting": true, "resultSettleMs": 360,
+             "horizonMode": "auto", "horizonColor": "#ffc777", "overlayOpacity": 0.94, "hiddenApps": [],
+@@ -70,7 +70,7 @@
+     }
+     function variantEntry(id) {
+         var variants = pg.wearableVariants();
+-        var requested = String(id || "");
++        var requested = id === "hero" ? "main" : String(id || "");
+         for (var i = 0; i < variants.length; i++)
+             if (String(variants[i].id || "") === requested)
+                 return variants[i];
+@@ -278,7 +278,7 @@
+ 
+         JsonAdapter {
+             id: cfgA
+-            property string variant: "hero"
++            property string variant: "main"
+             property real radius: 16
+             property int bgBlur: 2
+             property string weatherUnit: "auto"
+--- a/shell/modules/launcher/variants/main/SearchRow.qml
++++ b/shell/modules/launcher/variants/main/SearchRow.qml
+@@ -3,10 +3,9 @@
+ import Quickshell
+ import "../../shared/Singletons"
+ import "metrics.js" as MainMetrics
+-import "." as MainVariant
+ import Ryoku.Ui.Singletons
+ 
+-// The search row: the 力 brand glyph, the query field, an active-mode chip, and a
++// The search row: a search icon, query field, active-mode chip, and a
+ // result counter. The mode chip names the command the current prefix routes to
+ // (FILE, PKG, CALC...), so it is always clear what a query will do.
+ Item {
+@@ -33,12 +32,15 @@
+     function focusField() { field.forceActiveFocus(); }
+     function clear() { field.text = ""; }
+ 
+-    MainVariant.BrandMark {
++    Text {
+         id: glyph
+         anchors.verticalCenter: parent.verticalCenter
+         anchors.left: parent.left
+         anchors.leftMargin: MainMetrics.padOuter * root.s
+-        size: 19 * root.s
++        text: "search"
++        font.family: "Material Symbols Outlined"
++        font.pixelSize: 22 * root.s
++        color: Theme.iconDim
+     }
+ 
+     TextField {
+@@ -53,7 +55,8 @@
+         color: Theme.cream
+         font.family: Theme.font
+         font.pixelSize: MainMetrics.fontSearch * root.s
+-        placeholderText: I18n.tr("Search apps, type / for commands")
++        placeholderText: I18n.tr("Search apps, files, and commands")
++        Accessible.name: placeholderText
+         placeholderTextColor: Theme.faint
+         selectByMouse: true
+         selectionColor: Theme.verm
+--- a/shell/modules/launcher/variants/main/Launcher.qml
++++ b/shell/modules/launcher/variants/main/Launcher.qml
+@@ -1,4 +1,5 @@
+ import QtQuick
++import QtQuick.Controls
+ import Quickshell
+ import Quickshell.Services.Mpris
+ import "../../shared/Singletons"
+@@ -6,8 +7,9 @@
+ import "../../shared" as Shared
+ import "." as MainVariant
+ import Ryoku.Ui.Singletons
+-
+-// The command palette body: a search row over the rest dashboard (empty query),
++import "../../../../tsukuyomi" as Tsukuyomi
++
++// The command palette body: a search row over pinned apps (empty query),
+ // the all-apps grid (Ctrl+A from rest), the action-mode tabs + list ("/" prefix),
+ // or the ranked result list. Ctrl+K opens the selected row's action panel. Grows
+ // and shrinks with its content on the Ryoku morph curve. Providers register with
+@@ -180,7 +182,7 @@
+     readonly property real listH: visibleCount * (MainMetrics.rowHeight + MainMetrics.gapRow) * s + sectionCount * MainMetrics.sectionH * s
+     readonly property real gridH: 380 * s
+     readonly property real tabsH: actionBrowse ? tabs.implicitHeight + 6 * s : 0
+-    readonly property real restH: rest.implicitHeight
++    readonly property real restH: rest.height
+         + (hasMedia ? nowPlaying.implicitHeight + MainMetrics.padRow * s : 0)
+         + (hasMedia && mediaSources.sources.length > 0 ? mediaSources.implicitHeight + 6 * s : 0)
+         + (radioParked ? radioAside.implicitHeight + 6 * s : 0)
+@@ -263,8 +265,8 @@
+         anchors.fill: parent
+         radius: LauncherConfig.radius
+         power: 4
+-        color: Theme.cardTop
+-        borderColor: Theme.border
++        color: Tsukuyomi.Style.surface
++        borderColor: Tsukuyomi.Style.lineStrong
+         borderWidth: 1
+     }
+ 
+@@ -355,16 +357,30 @@
+         s: root.s
+     }
+ 
+-    MainVariant.RestDashboard {
++    Flow {
+         id: rest
+-        visible: root.resting && !root.allApps && !root.help
++        visible: root.resting && !root.allApps && !root.help && pins.count > 0
+         anchors.top: divider.bottom
+-        anchors.topMargin: MainMetrics.padRow * root.s
+-        anchors.left: parent.left
+-        anchors.right: parent.right
+-        anchors.leftMargin: MainMetrics.padOuter * root.s
+-        anchors.rightMargin: MainMetrics.padOuter * root.s
+-        s: root.s
++        anchors.left: parent.left
++        anchors.right: parent.right
++        anchors.leftMargin: MainMetrics.padOuter * root.s
++        anchors.rightMargin: MainMetrics.padOuter * root.s
++        topPadding: visible ? MainMetrics.padRow * root.s : 0
++        spacing: 6 * root.s
++        height: visible ? implicitHeight : 0
++
++        Repeater {
++            id: pins
++            model: LauncherConfig.pinnedApps.map(id => root.appEntries.find(entry => entry.id === id))
++                .filter(entry => entry !== undefined).slice(0, 6)
++
++            Button {
++                required property var modelData
++                text: String(modelData.title || "")
++                icon.source: modelData.icon
++                onClicked: appGrid.launch(modelData)
++            }
++        }
+     }
+ 
+     Shared.HelpPanel {
+--- a/shell/modules/launcher/variants/main/Main.qml
++++ b/shell/modules/launcher/variants/main/Main.qml
+@@ -2,7 +2,6 @@
+ //@ pragma DefaultEnv QSG_RENDER_LOOP = basic
+ 
+ import QtQuick
+-import QtQuick.Effects
+ import Quickshell
+ import Quickshell.Io
+ import Quickshell.Wayland
+@@ -12,8 +11,7 @@
+ import "." as MainVariant
+ import "../../../../services/lib/screens.js" as Screens
+ 
+-// Main's compact command palette: a separate search row over an image-backed
+-// dashboard, loaded behind the stable launcher selector.
++// Main command palette, loaded behind the stable launcher selector.
+ Scope {
+     id: root
+ 
+@@ -80,7 +78,7 @@
+             visible: shown || closing.running
+             color: "transparent"
+             exclusionMode: ExclusionMode.Ignore
+-            WlrLayershell.namespace: "launcher"
++            WlrLayershell.namespace: "launcher-noblur"
+             WlrLayershell.layer: WlrLayer.Overlay
+             // hold the grab until the window unmaps (end of the close morph).
+             // dropping it while still mapped strands the keyboard on the dead
+@@ -105,54 +103,6 @@
+             onVisibleChanged: {
+                 if (!visible && root.activeSurface === win)
+                     root.activeSurface = null;
+-            }
+-
+-            // blurred backdrop: a still snapshot of the desktop presented through
+-            // a Qt blur so the palette floats over frost without driving the
+-            // compositor. captured once per open (live: false) so the full-screen
+-            // window never samples itself. skipped on weak GPUs, at zero blur,
+-            // and where the compositor cannot host a long-lived capturing
+-            // surface: this view lives as long as the per-screen window, not as
+-            // long as one open.
+-            Item {
+-                id: frost
+-                anchors.fill: parent
+-                readonly property int radius: LauncherConfig.bgBlur | 0
+-                readonly property bool wanted: !Performance.blurDisabled
+-                    && radius > 0
+-                    && Wm.caps.persistentScreenCapture === true
+-                visible: opacity > 0.001 && frostCapture.hasContent
+-                opacity: win.shown ? 1 : 0
+-                Behavior on opacity { NumberAnimation { duration: Motion.open; easing.type: Easing.OutCubic } }
+-
+-                ScreencopyView {
+-                    id: frostCapture
+-                    anchors.fill: parent
+-                    visible: false
+-                    live: false
+-                    paintCursor: false
+-                    captureSource: (frost.wanted && win.visible) ? win.modelData : null
+-                }
+-
+-                ShaderEffectSource {
+-                    id: frostSource
+-                    anchors.fill: parent
+-                    sourceItem: frostCapture
+-                    live: frost.visible
+-                    hideSource: false
+-                    recursive: false
+-                    smooth: true
+-                    visible: false
+-                }
+-
+-                MultiEffect {
+-                    anchors.fill: parent
+-                    source: frostSource
+-                    autoPaddingEnabled: false
+-                    blurEnabled: true
+-                    blur: 1
+-                    blurMax: Math.max(1, Math.min(64, frost.radius))
+-                }
+             }
+ 
+             // dim + click-out scrim.
+--- a/shell/modules/launcher/variants/main/Preview.qml
++++ b/shell/modules/launcher/variants/main/Preview.qml
+@@ -1,225 +1,37 @@
+-pragma ComponentBehavior: Bound
++import QtQuick
++import Ryoku.Ui.Singletons
++import "../../../../tsukuyomi" as Tsukuyomi
+ 
+-import QtQuick
+-import Ryoku.Ui
+-import Ryoku.Ui.Singletons
+-
+-Item {
++Rectangle {
+     id: root
+ 
+     property var settings: ({})
+     signal editRequested(string key, var value)
+ 
+-    implicitWidth: 720
+-    implicitHeight: 250
++    implicitWidth: 640
++    implicitHeight: 66
++    radius: Number(settings.radius ?? 16)
++    color: Tsukuyomi.Style.surface
++    border.color: Tsukuyomi.Style.lineStrong
+ 
+-    readonly property var values: settings || ({})
+-    readonly property url heroSource: values.heroImage !== undefined
+-        && values.heroImage !== null ? values.heroImage : ""
+-    readonly property real heroStrength: boundedNumber(values.heroStrength, 0.6)
+-    readonly property real heroPosX: boundedNumber(values.heroPosX, 0.5)
+-    readonly property real heroPosY: boundedNumber(values.heroPosY, 0.5)
+-    readonly property bool showGreeting: values.showGreeting === undefined
+-        ? true : !!values.showGreeting
+-    readonly property bool showWeather: values.showWeather === undefined
+-        ? true : !!values.showWeather
+-
+-    function boundedNumber(value, fallback) {
+-        const number = Number(value);
+-        return isFinite(number) ? Math.max(0, Math.min(1, number)) : fallback;
+-    }
+-
+-    LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft
+-    LayoutMirroring.childrenInherit: true
+-
+-    Rectangle {
+-        id: searchRow
+-
+-        anchors.top: parent.top
+-        anchors.left: parent.left
+-        anchors.right: parent.right
+-        height: Tokens.rowH
+-        radius: Tokens.radius
+-        color: Tokens.paper
+-        border.width: Tokens.border
+-        border.color: Tokens.lineStrong
++    Row {
++        anchors { left: parent.left; right: parent.right; margins: 18 }
++        anchors.verticalCenter: parent.verticalCenter
++        spacing: 12
+ 
+         Text {
+-            id: brand
+-
+-            anchors.left: parent.left
+-            anchors.leftMargin: Tokens.s4
+             anchors.verticalCenter: parent.verticalCenter
+-            text: UiPreferences.brandMark("力")
+-            color: Tokens.sun
+-            font.family: Tokens.jp
+-            font.pixelSize: Tokens.fRow
+-            font.weight: Font.DemiBold
++            text: "search"
++            font.family: Tsukuyomi.Style.icons
++            font.pixelSize: 22
++            color: Tsukuyomi.Style.secondary
+         }
+-
+         Text {
+-            anchors.left: brand.right
+-            anchors.leftMargin: Tokens.s3
+-            anchors.right: helpKey.left
+-            anchors.rightMargin: Tokens.s4
+             anchors.verticalCenter: parent.verticalCenter
+-            text: I18n.tr("Search apps, type / for commands")
+-            color: Tokens.inkMuted
+-            elide: Text.ElideRight
++            text: I18n.tr("Search apps, files, and commands")
++            color: Tsukuyomi.Style.secondary
+             font.family: Tokens.ui
+-            font.pixelSize: Tokens.fBody
+-        }
+-
+-        Rectangle {
+-            id: helpKey
+-
+-            anchors.right: appGrid.left
+-            anchors.rightMargin: Tokens.s2
+-            anchors.verticalCenter: parent.verticalCenter
+-            width: Tokens.s5
+-            height: Tokens.s5
+-            radius: Tokens.radius
+-            color: Tokens.tint5
+-            border.width: Tokens.border
+-            border.color: Tokens.line
+-
+-            Text {
+-                anchors.centerIn: parent
+-                text: "?"
+-                color: Tokens.inkDim
+-                font.family: Tokens.ui
+-                font.pixelSize: Tokens.fSmall
+-                font.weight: Font.DemiBold
+-            }
+-        }
+-
+-        Grid {
+-            id: appGrid
+-
+-            anchors.right: parent.right
+-            anchors.rightMargin: Tokens.s4
+-            anchors.verticalCenter: parent.verticalCenter
+-            columns: 3
+-            rowSpacing: Tokens.s1
+-            columnSpacing: Tokens.s1
+-
+-            Repeater {
+-                model: 9
+-
+-                Rectangle {
+-                    width: Tokens.s1
+-                    height: Tokens.s1
+-                    radius: Tokens.radius
+-                    color: Tokens.inkMuted
+-                }
+-            }
+-        }
+-    }
+-
+-    Rectangle {
+-        id: dashboard
+-
+-        anchors.top: searchRow.bottom
+-        anchors.topMargin: Tokens.s3
+-        anchors.left: parent.left
+-        anchors.right: parent.right
+-        anchors.bottom: parent.bottom
+-        radius: Tokens.radius
+-        color: Tokens.paperLift
+-
+-        HeroCrop {
+-            id: hero
+-
+-            anchors.fill: parent
+-            anchors.margins: Tokens.border
+-            source: root.heroSource
+-            fallbackSource: Qt.resolvedUrl("../../shared/art/hands-adam.png")
+-            focalX: root.heroPosX
+-            focalY: root.heroPosY
+-            strength: root.heroStrength
+-        }
+-
+-        Column {
+-            anchors.left: parent.left
+-            anchors.leftMargin: Tokens.s5
+-            anchors.top: parent.top
+-            anchors.topMargin: Tokens.s4
+-            spacing: Tokens.s1
+-
+-            Text {
+-                visible: root.showGreeting
+-                text: I18n.tr("GOOD MORNING")
+-                color: Tokens.inkDim
+-                font.family: Tokens.mono
+-                font.pixelSize: Tokens.fTiny
+-                font.weight: Font.DemiBold
+-                font.letterSpacing: Tokens.trackLabel
+-            }
+-
+-            Text {
+-                text: "09:41"
+-                color: Tokens.ink
+-                font.family: Tokens.mono
+-                font.pixelSize: Tokens.fHero
+-                font.weight: Font.Medium
+-                font.features: ({ "tnum": 1 })
+-            }
+-        }
+-
+-        Column {
+-            anchors.right: parent.right
+-            anchors.rightMargin: Tokens.s5
+-            anchors.top: parent.top
+-            anchors.topMargin: Tokens.s4
+-            spacing: Tokens.s1
+-
+-            Text {
+-                anchors.right: parent.right
+-                visible: root.showWeather
+-                text: I18n.tr("21°C")
+-                color: Tokens.ink
+-                font.family: Tokens.ui
+-                font.pixelSize: Tokens.fValue
+-                font.weight: Font.Medium
+-                font.features: ({ "tnum": 1 })
+-            }
+-
+-            Text {
+-                anchors.right: parent.right
+-                visible: root.showWeather
+-                text: I18n.tr("Clear sky")
+-                color: Tokens.inkMuted
+-                font.family: Tokens.ui
+-                font.pixelSize: Tokens.fSmall
+-            }
+-
+-            Text {
+-                anchors.right: parent.right
+-                text: I18n.tr("THURSDAY, JUL 30")
+-                color: Tokens.inkDim
+-                font.family: Tokens.mono
+-                font.pixelSize: Tokens.fMicro
+-                font.letterSpacing: Tokens.trackLabel
+-            }
+-        }
+-
+-        Rectangle {
+-            anchors.left: parent.left
+-            anchors.right: parent.right
+-            anchors.bottom: parent.bottom
+-            anchors.leftMargin: Tokens.s5
+-            anchors.rightMargin: Tokens.s5
+-            anchors.bottomMargin: Tokens.s4
+-            height: Tokens.border
+-            color: Tokens.lineStrong
+-        }
+-
+-        Rectangle {
+-            anchors.fill: parent
+-            radius: Tokens.radius
+-            color: "transparent"
+-            border.width: Tokens.border
+-            border.color: Tokens.lineStrong
++            font.pixelSize: 15
+         }
+     }
+ }
+--- a/shell/modules/launcher/shared/providers/actions/catalog.js
++++ b/shell/modules/launcher/shared/providers/actions/catalog.js
+@@ -33,7 +33,7 @@
+     { id: "recognize-music",  name: "Recognize Music",    category: "Media",      icon: "music",       exec: ["ryoku-cmd-songrec"] },
+     { id: "media-visualizer", name: "Audio Visualizer",   category: "Media",      icon: "wave",        exec: ["ryoku-shell", "visualizer"] },
+ 
+-    { id: "open-settings",    name: "Ryoku Settings",     category: "Settings",   icon: "settings",    exec: ["sh", "-c", "flock -n -o /tmp/ryoku-hub.lock qs -c hub"] },
++    { id: "open-settings",    name: "Tsukuyomi Hub",     category: "Settings",   icon: "settings",    exec: ["sh", "-c", "flock -n -o /tmp/ryoku-hub.lock qs -c hub"] },
+     { id: "keybind-legend",   name: "Keybind Reference",  category: "Settings",   icon: "keyboard",    exec: ["sh", "-c", "flock -n -o /tmp/ryoku-keys.lock qs -c keys"] },
+     { id: "reload-shell",     name: "Reload Shell",       category: "Settings",   icon: "refresh",     exec: ["ryoku-shell", "reload"] }
+ ];
