@@ -1,0 +1,49 @@
+--- a/DeferredFileView.qml
++++ b/DeferredFileView.qml
+@@ -4,7 +4,7 @@
+ import Quickshell.Io
+ 
+ FileView {
+-    id: root
++    id: view
+ 
+     property int readRetryLimit: 3
+     property string readLabel: path
+@@ -12,22 +12,25 @@
+ 
+     signal textReady(string content)
+ 
+-    function _readText(): void {
+-        try {
+-            root.textReady(root.text());
+-        } catch (error) {
+-            if (root._readAttempt < root.readRetryLimit) {
+-                root._readAttempt++;
+-                Qt.callLater(() => root._readText());
+-                return;
++    property Timer _deferredRead: Timer {
++        id: readTimer
++        interval: 0
++        onTriggered: {
++            try {
++                view.textReady(view.text());
++            } catch (error) {
++                if (view._readAttempt < view.readRetryLimit) {
++                    view._readAttempt++;
++                    readTimer.restart();
++                    return;
++                }
++                console.warn("FileView text read failed for " + view.readLabel + ":", error);
+             }
+-            console.warn("FileView text read failed for " + root.readLabel + ":", error);
+         }
+     }
+ 
+     onLoaded: {
+-        root._readAttempt = 0;
+-        Qt.callLater(() => root._readText());
++        view._readAttempt = 0;
++        readTimer.restart();
+     }
+-
+ }
