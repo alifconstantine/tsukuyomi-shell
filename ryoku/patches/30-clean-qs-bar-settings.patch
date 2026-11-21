@@ -1,0 +1,597 @@
+--- a/shell/modules/bar/barstyles/qsbar/controlcenter/ControlCenter.qml
++++ b/shell/modules/bar/barstyles/qsbar/controlcenter/ControlCenter.qml
+@@ -7,6 +7,7 @@
+ import "kit/Routes.js" as Routes
+ import Ryoku.Ui
+ import Ryoku.Ui.Singletons
++import "../../../../../tsukuyomi" as Tsukuyomi
+ 
+ // QS Bar Settings: the panel the bar's 力 logo opens. It keeps the bar's form,
+ // panel appearance and picker style together, then gives identity, layout,
+@@ -172,7 +173,7 @@
+             }
+         }
+         radius: tk.corner
+-        color: Tokens.paper
++        color: Tsukuyomi.Style.surface
+         border.width: 1
+         border.color: Tokens.line
+         clip: true
+@@ -265,8 +266,8 @@
+             Behavior on opacity { NumberAnimation { duration: tk.fade } }
+             gradient: Gradient {
+                 GradientStop { position: 0.0; color: "transparent" }
+-                GradientStop { position: 0.6; color: Qt.rgba(Tokens.paper.r, Tokens.paper.g, Tokens.paper.b, 0.8) }
+-                GradientStop { position: 1.0; color: Tokens.paper }
++                GradientStop { position: 0.6; color: Qt.alpha(Tsukuyomi.Style.surface, 0.8) }
++                GradientStop { position: 1.0; color: Tsukuyomi.Style.surface }
+             }
+         }
+ 
+@@ -283,7 +284,7 @@
+ 
+             Rectangle {
+                 anchors.fill: parent
+-                color: Tokens.paper
++                color: Tsukuyomi.Style.surface
+                 opacity: 0.96
+             }
+             CcSearch {
+@@ -300,17 +301,6 @@
+             }
+         }
+ 
+-        // Instrument-panel corner ticks: the panel's frame chrome, the same
+-        // L-bracket vocabulary Decor's art panel and the reference sheet use. It
+-        // marks the plate as a registered surface. Anchored to the plate and inset
+-        // past its corner radius, so the frame reframes as the plate resizes on a
+-        // route change rather than sitting outside the motion.
+-        Item {
+-            anchors.fill: parent
+-            anchors.margins: tk.corner
+-            z: 10
+-            Ticks { color: Tokens.line; arm: 10 }
+-        }
+ 
+     }
+ }
+--- a/shell/modules/bar/barstyles/qsbar/controlcenter/CcHead.qml
++++ b/shell/modules/bar/barstyles/qsbar/controlcenter/CcHead.qml
+@@ -2,14 +2,9 @@
+ import "../modules"
+ import Ryoku.Ui
+ import Ryoku.Ui.Singletons
++import "../../../../../tsukuyomi" as Tsukuyomi
+ 
+-// The body's head: the panel's fixed eyebrow (QS BAR // SETTINGS) in tracked
+-// mono, then the route's name in the display face with its kanji seal, and the
+-// route's one-line summary. A running-head marginalia strip dresses the top-right
+-// corner beside the close mark, so the summary line owns the full width and is
+-// never cut by chrome. It carries no live state readout: every route already
+-// opens with a live figure of its own (the bar silhouette, the lanes, the
+-// widget at bar density, the dock), so the head only has to name where you are.
++
+ Item {
+     id: head
+ 
+@@ -23,72 +18,24 @@
+ 
+     implicitHeight: head.tk ? head.tk.headH : 80
+ 
+-    // ── the eyebrow, name and summary ──
+-    UiText {
+-        id: eyebrow
+-        anchors.left: parent.left
+-        anchors.top: parent.top
+-        anchors.topMargin: head.tk ? head.tk.gap / 2 : 6
+-        text: I18n.tr("QS BAR // SETTINGS")
+-        color: Tokens.inkFaint
+-        font.family: Tokens.mono
+-        font.pixelSize: Tokens.fMicro
+-        font.letterSpacing: Tokens.trackMark
++    Text {
++        id: name
++        anchors { left: parent.left; right: shut.left; rightMargin: Tokens.s3; top: parent.top }
++        text: head.title
++        color: Tsukuyomi.Style.text
++        font.family: Tokens.ui
++        font.pixelSize: Tokens.px(26)
+         font.weight: Font.DemiBold
++        elide: Text.ElideRight
+     }
+ 
+-    // The name row is sized by the display face; the seal hangs on its baseline
+-    // (not the other way round, which lifted the name up into the eyebrow).
+-    Item {
+-        id: name
+-        anchors.left: parent.left
+-        anchors.right: parent.right
+-        anchors.top: eyebrow.bottom
+-        anchors.topMargin: 2
+-        height: nameText.implicitHeight
+-
+-        UiText {
+-            id: nameText
+-            anchors.left: parent.left
+-            text: I18n.tr(head.title)
+-            color: Tokens.ink
+-            font.family: Tokens.display
+-            font.pixelSize: Tokens.fHero
+-        }
+-        UiText {
+-            id: glossText
+-            anchors.left: nameText.right
+-            anchors.leftMargin: head.tk ? head.tk.gap : 12
+-            anchors.baseline: nameText.baseline
+-            text: UiPreferences.text(head.gloss, "")
+-            color: Tokens.inkFaint
+-            font.family: Tokens.jp
+-            font.pixelSize: Tokens.fBody
+-        }
+-    }
+-
+-    UiText {
+-        anchors.left: parent.left
+-        anchors.right: parent.right
+-        anchors.top: name.bottom
+-        anchors.topMargin: 2
+-        text: I18n.tr(head.desc)
+-        color: Tokens.inkFaint
++    Text {
++        anchors { left: parent.left; right: parent.right; top: name.bottom; topMargin: Tokens.s1 }
++        text: head.desc
++        color: Tsukuyomi.Style.secondary
+         font.family: Tokens.ui
+         font.pixelSize: Tokens.fSmall
+         elide: Text.ElideRight
+-    }
+-
+-    // ── the running head: a printed marginalia strip beside the close mark ──
+-    Marginalia {
+-        id: marg
+-        anchors.right: shut.left
+-        anchors.rightMargin: head.tk ? head.tk.gap : 12
+-        anchors.verticalCenter: shut.verticalCenter
+-        kana: head.gloss
+-        index: String(head.index + 1).padStart(2, "0")
+-        label: String(head.title).toUpperCase()
+-        chevrons: false
+     }
+ 
+     // ── close ──
+@@ -99,7 +46,15 @@
+         width: Tokens.ctlH
+         height: Tokens.ctlH
+         radius: Tokens.radius
+-        color: shutMa.containsMouse ? Tokens.tint5 : "transparent"
++        color: shutMa.containsMouse ? Tsukuyomi.Style.hover : Tsukuyomi.Style.panel
++        activeFocusOnTab: true
++        border.color: Tsukuyomi.Style.accent
++        border.width: activeFocus ? 2 : 0
++        Accessible.role: Accessible.Button
++        Accessible.name: I18n.tr("Close")
++        Accessible.onPressAction: head.closed()
++        Keys.onReturnPressed: head.closed()
++        Keys.onSpacePressed: head.closed()
+         Behavior on color { ColorAnimation { duration: Tokens.snap } }
+ 
+         UiText {
+--- a/shell/modules/bar/barstyles/qsbar/controlcenter/CcRail.qml
++++ b/shell/modules/bar/barstyles/qsbar/controlcenter/CcRail.qml
+@@ -3,14 +3,9 @@
+ import "kit/Routes.js" as Routes
+ import Ryoku.Ui
+ import Ryoku.Ui.Singletons
++import "../../../../../tsukuyomi" as Tsukuyomi
+ import shell.services
+ 
+-// QS Bar Settings' left rail: five first-party routes as one flat group, then,
+-// parted by a rule and a COMMUNITY eyebrow, the route for every bar widget
+-// installed from outside Ryoku. The panel is about one thing, the bar, so the
+-// first group has no headers and stays one click away. Latin names the route,
+-// kanji seals it. The active route takes a bone plate with a `//` lead, the
+-// desktop's only emphasis; nothing here is coloured except the 力 seal.
+ Item {
+     id: rail
+ 
+@@ -34,78 +29,25 @@
+         ? rail.tk.headH + nav.implicitHeight + rail.tk.gap * 2 + rail.tk.pad * 2
+         : 560
+ 
+-    // one route in the rail; a count on the right when the route carries one.
+-    component NavItem: Rectangle {
+-        id: item
++    component NavItem: Tsukuyomi.NavRow {
+         required property var modelData
+         property int count: -1
+-        readonly property bool on: rail.current === item.modelData.id
+-
+         width: nav.width - rail.tk.gap * 2
+         x: rail.tk.gap
+         height: rail.tk.navH
+-        radius: Tokens.radius
+-        color: item.on ? Tokens.bone : (ma.containsMouse ? Tokens.tint5 : "transparent")
+-        Behavior on color { ColorAnimation { duration: Tokens.snap } }
+-
+-        Row {
+-            anchors.left: parent.left
+-            anchors.leftMargin: rail.tk.gap
+-            anchors.verticalCenter: parent.verticalCenter
+-            spacing: rail.tk.gap / 2
+-
+-            // the `//` lead: the desktop's mark of the live surface,
+-            // printed only on the selected route.
+-            UiText {
+-                anchors.verticalCenter: parent.verticalCenter
+-                visible: item.on
+-                text: "//"
+-                color: Tokens.inkOnBoneDim
+-                font.family: Tokens.mono
+-                font.pixelSize: Tokens.fMicro
+-            }
+-            UiText {
+-                anchors.verticalCenter: parent.verticalCenter
+-                text: I18n.tr(item.modelData.label)
+-                color: item.on ? Tokens.inkOnBone : Tokens.inkDim
+-                font.family: Tokens.ui
+-                font.pixelSize: Tokens.fBody
+-                font.weight: item.on ? Font.DemiBold : Font.Normal
+-            }
+-        }
+-        Row {
+-            anchors.right: parent.right
+-            anchors.rightMargin: rail.tk.gap
+-            anchors.verticalCenter: parent.verticalCenter
+-            spacing: rail.tk.gap / 2
+-            UiText {
+-                anchors.verticalCenter: parent.verticalCenter
+-                visible: item.count >= 0
+-                text: String(item.count)
+-                color: item.on ? Tokens.inkOnBoneDim : Tokens.inkFaint
+-                font.family: Tokens.mono
+-                font.pixelSize: Tokens.fTiny
+-            }
+-            UiText {
+-                anchors.verticalCenter: parent.verticalCenter
+-                text: UiPreferences.text(item.modelData.gloss || "", "")
+-                color: item.on ? Tokens.inkOnBoneDim : Tokens.inkFaint
+-                font.family: Tokens.jp
+-                font.pixelSize: Tokens.fTiny
+-            }
+-        }
+-        MouseArea {
+-            id: ma
+-            anchors.fill: parent
+-            hoverEnabled: true
+-            cursorShape: Qt.PointingHandCursor
+-            onClicked: rail.chose(item.modelData.id)
+-        }
++        section: String(modelData.id)
++        label: I18n.tr(modelData.label)
++        current: rail.current === modelData.id
++        detail: count < 0 ? "" : String(count)
++        onActivated: rail.chose(modelData.id)
+     }
+ 
+-    // the register sheet rides behind the rail only, exactly as the Hub's does:
+-    // the chrome carries the print texture, the content plate stays clean paper.
+-    Reg { anchors.fill: parent }
++    Rectangle {
++        anchors.fill: parent
++        topLeftRadius: rail.tk.corner
++        bottomLeftRadius: rail.tk.corner
++        color: Tsukuyomi.Style.sidebar
++    }
+ 
+     // ── masthead ─────────────────────────────────────────────────────────────
+     Item {
+@@ -113,36 +55,9 @@
+         anchors { top: parent.top; left: parent.left; right: parent.right }
+         height: rail.tk.headH
+ 
+-        Row {
+-            anchors.left: parent.left
+-            anchors.leftMargin: rail.tk.pad
+-            anchors.verticalCenter: parent.verticalCenter
+-            spacing: rail.tk.gap / 2
+-
+-            UiText {
+-                anchors.verticalCenter: parent.verticalCenter
+-                text: UiPreferences.text("月", "T")
+-                color: Tokens.sun
+-                font.family: Tokens.jp
+-                font.pixelSize: Tokens.fBody
+-            }
+-            UiText {
+-                anchors.verticalCenter: parent.verticalCenter
+-                text: "TSUKUYOMI"
+-                color: Tokens.ink
+-                font.family: Tokens.mono
+-                font.pixelSize: Tokens.fMicro
+-                font.letterSpacing: Tokens.trackMark
+-                font.weight: Font.DemiBold
+-            }
+-            UiText {
+-                anchors.verticalCenter: parent.verticalCenter
+-                text: I18n.tr("QS BAR SETTINGS")
+-                color: Tokens.inkFaint
+-                font.family: Tokens.mono
+-                font.pixelSize: Tokens.fTiny
+-                font.letterSpacing: Tokens.trackLabel
+-            }
++        Tsukuyomi.Brand {
++            anchors { left: parent.left; leftMargin: rail.tk.gap; verticalCenter: parent.verticalCenter }
++            title: I18n.tr("QS Bar Settings")
+         }
+         Rectangle {
+             anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
+@@ -165,29 +80,11 @@
+             delegate: NavItem {}
+         }
+ 
+-        // ── the part: a rule and the COMMUNITY eyebrow, then its route ──
+-        Item {
+-            width: nav.width
+-            height: rail.tk.gap * 2 + partLabel.implicitHeight
+-            Rectangle {
+-                anchors { left: parent.left; right: parent.right; top: parent.top; topMargin: rail.tk.gap - 2 }
+-                anchors.leftMargin: rail.tk.gap * 2
+-                anchors.rightMargin: rail.tk.gap * 2
+-                height: 1
+-                color: Tokens.lineSoft
+-            }
+-            UiText {
+-                id: partLabel
+-                anchors.left: parent.left
+-                anchors.leftMargin: rail.tk.gap * 2
+-                anchors.bottom: parent.bottom
+-                text: I18n.tr("COMMUNITY")
+-                color: Tokens.inkFaint
+-                font.family: Tokens.mono
+-                font.pixelSize: Tokens.fMicro
+-                font.letterSpacing: Tokens.trackMark
+-                font.weight: Font.DemiBold
+-            }
++        Rectangle {
++            width: nav.width - rail.tk.gap * 4
++            x: rail.tk.gap * 2
++            height: 1
++            color: Tsukuyomi.Style.line
+         }
+         Repeater {
+             model: Routes.inSection("community")
+--- a/shell/modules/bar/barstyles/qsbar/controlcenter/kit/CcTokens.qml
++++ b/shell/modules/bar/barstyles/qsbar/controlcenter/kit/CcTokens.qml
+@@ -15,7 +15,7 @@
+     // The plate is exactly the rail plus the form column plus their insets: no
+     // dead gutter to the right of a card, and a route that needs less scrolls
+     // less, because the height comes from the page too (see ControlCenter).
+-    readonly property int railW: Tokens.px(216)
++    readonly property int railW: Tokens.px(192)
+     readonly property int contentW: Tokens.px(640) // the form column
+     readonly property int plateW: t.railW + t.contentW + t.pad * 2
+     readonly property int plateH: Tokens.px(940)   // the cap; the page decides
+@@ -28,7 +28,7 @@
+     readonly property int gap: Tokens.s3          // between rows of a group
+     readonly property int sectionGap: Tokens.s5   // between titled sections
+     readonly property int colGap: Tokens.s4       // between grid columns
+-    readonly property int headH: Tokens.px(96)
++    readonly property int headH: Tokens.px(68)
+     readonly property int rowH: Tokens.px(40)
+     readonly property int tileH: Tokens.px(40)
+     readonly property int chipH: Tokens.px(28)   // a layout-lane widget chip
+--- a/shell/modules/bar/barstyles/qsbar/controlcenter/routes/CommunityRoute.qml
++++ b/shell/modules/bar/barstyles/qsbar/controlcenter/routes/CommunityRoute.qml
+@@ -5,6 +5,7 @@
+ import "../../modules"
+ import Ryoku.Ui
+ import Ryoku.Ui.Singletons
++import "../../../../../../tsukuyomi" as Tsukuyomi
+ 
+ // Community route (有志): every bar plugin installed from outside Ryoku, kept
+ // apart from the shipped set so a widget someone else wrote is never mixed in
+@@ -277,7 +278,7 @@
+             Entrance {
+                 width: page.colW
+                 index: 3
+-                SettingCard {
++                Tsukuyomi.SectionCard {
+                     width: page.colW
+                     title: I18n.tr("ADD")
+                     kana: "\u8ffd\u52a0"
+--- a/shell/modules/bar/barstyles/qsbar/controlcenter/routes/DockRoute.qml
++++ b/shell/modules/bar/barstyles/qsbar/controlcenter/routes/DockRoute.qml
+@@ -3,6 +3,7 @@
+ import "../../modules"
+ import Ryoku.Ui
+ import Ryoku.Ui.Singletons
++import "../../../../../../tsukuyomi" as Tsukuyomi
+ 
+ Item {
+     id: page
+@@ -33,7 +34,7 @@
+             Entrance {
+                 width: page.colW
+                 index: 0
+-                SettingCard {
++                Tsukuyomi.SectionCard {
+                     width: page.colW
+                     title: I18n.tr("DOCK")
+                     kana: "\u53f0"
+--- a/shell/modules/bar/barstyles/qsbar/controlcenter/routes/BarsRoute.qml
++++ b/shell/modules/bar/barstyles/qsbar/controlcenter/routes/BarsRoute.qml
+@@ -3,6 +3,7 @@
+ import "../../modules"
+ import Ryoku.Ui
+ import Ryoku.Ui.Singletons
++import "../../../../../../tsukuyomi" as Tsukuyomi
+ import shell.services
+ 
+ // Bar route (帯) on the QS Bar Settings kit. A live bar-surface panel: every
+@@ -102,9 +103,9 @@
+                 width: page.colW
+                 height: sil.implicitHeight + (page.tk ? page.tk.gap * 2 : 24)
+                 radius: page.tk ? Tokens.radius : 6
+-                color: page.tk ? Tokens.paperLift : "#161616"
++                color: Tsukuyomi.Style.panel
+                 border.width: 1
+-                border.color: page.tk ? Tokens.line : "#333333"
++                border.color: Tsukuyomi.Style.line
+ 
+                 BarSilhouette {
+                     id: sil
+@@ -122,9 +123,9 @@
+             Entrance {
+                 width: page.colW
+                 index: 0
+-                SettingCard {
+-                    width: page.colW
+-                    title: I18n.tr("01 POSITION")
++                Tsukuyomi.SectionCard {
++                    width: page.colW
++                    title: I18n.tr("Position")
+                     kana: "\u4f4d\u7f6e"
+ 
+                     SettingRow {
+@@ -187,9 +188,9 @@
+             Entrance {
+                 width: page.colW
+                 index: 1
+-                SettingCard {
+-                    width: page.colW
+-                    title: I18n.tr("02 MOTION")
++                Tsukuyomi.SectionCard {
++                    width: page.colW
++                    title: I18n.tr("Motion")
+                     kana: "\u52d5\u304d"
+ 
+                     SettingRow {
+@@ -232,9 +233,9 @@
+             Entrance {
+                 width: page.colW
+                 index: 2
+-                SettingCard {
+-                    width: page.colW
+-                    title: I18n.tr("03 FORM")
++                Tsukuyomi.SectionCard {
++                    width: page.colW
++                    title: I18n.tr("Form")
+                     kana: "\u5f62"
+ 
+                     Item {
+@@ -313,9 +314,9 @@
+             Entrance {
+                 width: page.colW
+                 index: 3
+-                SettingCard {
+-                    width: page.colW
+-                    title: I18n.tr("04 SURFACE")
++                Tsukuyomi.SectionCard {
++                    width: page.colW
++                    title: I18n.tr("Surface")
+                     kana: "\u8868\u9762"
+ 
+                     SettingRow {
+@@ -415,9 +416,9 @@
+             Entrance {
+                 width: page.colW
+                 index: 4
+-                SettingCard {
+-                    width: page.colW
+-                    title: I18n.tr("05 GAPS")
++                Tsukuyomi.SectionCard {
++                    width: page.colW
++                    title: I18n.tr("Gaps")
+                     kana: "\u9593\u9694"
+ 
+                     SettingRow {
+@@ -502,9 +503,9 @@
+             Entrance {
+                 width: page.colW
+                 index: 5
+-                SettingCard {
+-                    width: page.colW
+-                    title: I18n.tr("06 ACCENT")
++                Tsukuyomi.SectionCard {
++                    width: page.colW
++                    title: I18n.tr("Accent")
+                     kana: "\u8272"
+ 
+                     // Following the wallpaper is the honest default: matugen already
+@@ -554,9 +555,9 @@
+             Entrance {
+                 width: page.colW
+                 index: 6
+-                SettingCard {
+-                    width: page.colW
+-                    title: I18n.tr("07 PICKERS")
++                Tsukuyomi.SectionCard {
++                    width: page.colW
++                    title: I18n.tr("Pickers")
+                     kana: "\u9078"
+ 
+                     SettingRow {
+--- a/shell/modules/bar/barstyles/qsbar/controlcenter/routes/IdentityRoute.qml
++++ b/shell/modules/bar/barstyles/qsbar/controlcenter/routes/IdentityRoute.qml
+@@ -3,6 +3,7 @@
+ import "../../modules"
+ import Ryoku.Ui
+ import Ryoku.Ui.Singletons
++import "../../../../../../tsukuyomi" as Tsukuyomi
+ 
+ // Identity route (id "identity"): what makes this bar this user's. The launcher
+ // mark first - wordmark or kanji glyph (launcherLogoMode "text" | "icon"), then
+@@ -76,7 +77,7 @@
+             Entrance {
+                 width: page.colW
+                 index: 0
+-                SettingCard {
++                Tsukuyomi.SectionCard {
+                     width: page.colW
+                     title: I18n.tr("Mark")
+                     kana: "\u5370"
+@@ -172,7 +173,7 @@
+             Entrance {
+                 width: page.colW
+                 index: 1
+-                SettingCard {
++                Tsukuyomi.SectionCard {
+                     width: page.colW
+                     title: page.mode === "icon" ? I18n.tr("GLYPH") : I18n.tr("WORDMARK")
+                     kana: page.mode === "icon" ? "\u7d0b" : "\u6587\u5b57"
+@@ -252,7 +253,7 @@
+             Entrance {
+                 width: page.colW
+                 index: 2
+-                SettingCard {
++                Tsukuyomi.SectionCard {
+                     width: page.colW
+                     title: I18n.tr("COUNT")
+                     kana: "\u6570"
+@@ -279,7 +280,7 @@
+             Entrance {
+                 width: page.colW
+                 index: 3
+-                SettingCard {
++                Tsukuyomi.SectionCard {
+                     width: page.colW
+                     title: I18n.tr("MARKER")
+                     kana: "\u70b9"
+@@ -308,7 +309,7 @@
+             Entrance {
+                 width: page.colW
+                 index: 4
+-                SettingCard {
++                Tsukuyomi.SectionCard {
+                     width: page.colW
+                     title: I18n.tr("ISOLATE")
+                     kana: "\u5206"
+@@ -334,7 +335,7 @@
+             Entrance {
+                 width: page.colW
+                 index: 5
+-                SettingCard {
++                Tsukuyomi.SectionCard {
+                     width: page.colW
+                     title: I18n.tr("PREVIEW")
+                     kana: "\u898b\u672c"
