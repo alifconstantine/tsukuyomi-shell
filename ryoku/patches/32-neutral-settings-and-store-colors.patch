@@ -1,0 +1,764 @@
+--- a/hub/Hub.qml
++++ b/hub/Hub.qml
+@@ -1146,13 +1146,13 @@
+             height: Tokens.ctlH
+             Rectangle {
+                 anchors { left: parent.left; right: parent.right; top: parent.top; topMargin: -Tokens.s3 }
+-                height: 1; color: Tokens.lineSoft
++                height: 1; color: Tsukuyomi.Style.line
+             }
+             Text {
+                 anchors { left: parent.left; right: advSw.left; rightMargin: Tokens.s3; verticalCenter: parent.verticalCenter }
+                 elide: Text.ElideRight
+                 text: I18n.tr("Advanced")
+-                color: hub.advanced ? Tokens.ink : Tokens.inkMuted
++                color: hub.advanced ? Tsukuyomi.Style.text : Tsukuyomi.Style.secondary
+                 font.family: Tokens.ui; font.pixelSize: Tokens.fSmall
+                 font.weight: Font.Medium; font.letterSpacing: Tokens.trackLabel
+             }
+@@ -1451,23 +1451,23 @@
+             spacing: Tokens.s2
+             Row {
+                 spacing: Tokens.s2
+-                Rectangle { width: 16; height: 1; color: Tokens.ink; anchors.verticalCenter: parent.verticalCenter }
++                Rectangle { width: 16; height: 1; color: Tsukuyomi.Style.text; anchors.verticalCenter: parent.verticalCenter }
+                 Text {
+-                    text: I18n.tr(hub.groupFor(hub.section)); color: Tokens.inkMuted
++                    text: I18n.tr(hub.groupFor(hub.section)); color: Tsukuyomi.Style.secondary
+                     font.family: Tokens.ui; font.pixelSize: 9; font.weight: Font.Medium
+                     font.letterSpacing: Tokens.trackMark; anchors.verticalCenter: parent.verticalCenter
+                 }
+             }
+-            Text { text: I18n.tr(hub.nameFor(hub.section)); color: Tokens.ink; font.family: Tokens.display; font.pixelSize: Tokens.fTitle }
++            Text { text: I18n.tr(hub.nameFor(hub.section)); color: Tsukuyomi.Style.text; font.family: Tokens.display; font.pixelSize: Tokens.fTitle }
+             Item { width: 1; height: Tokens.s4 }
+             Text {
+-                text: I18n.tr("PORTING IN PROGRESS"); color: Tokens.inkDim; font.family: Tokens.ui
++                text: I18n.tr("PORTING IN PROGRESS"); color: Tsukuyomi.Style.secondary; font.family: Tokens.ui
+                 font.pixelSize: 11; font.weight: Font.Medium; font.letterSpacing: 2
+             }
+             Text {
+                 width: 520
+                 text: I18n.tr("This page is being rebuilt into the monochrome instrument. Its settings and surfaces are wired page by page; the Shell page is the proven pattern.")
+-                color: Tokens.inkMuted; font.family: Tokens.ui; font.pixelSize: 13; wrapMode: Text.WordWrap
++                color: Tsukuyomi.Style.secondary; font.family: Tokens.ui; font.pixelSize: 13; wrapMode: Text.WordWrap
+             }
+         }
+     }
+@@ -1494,9 +1494,9 @@
+         Rectangle {
+             anchors.fill: parent
+             radius: Tokens.radius
+-            color: updatesBtn.here ? Tokens.bone : (ubh.hovered ? Tokens.paperLift : Tokens.paper)
++            color: updatesBtn.here ? Tsukuyomi.Style.selected : (ubh.hovered ? Tsukuyomi.Style.panel : Tsukuyomi.Style.input)
+             border.width: Tokens.border
+-            border.color: (updatesBtn.here || ubh.hovered) ? Tokens.lineStrong : Tokens.line
++            border.color: (updatesBtn.here || ubh.hovered) ? Tsukuyomi.Style.lineStrong : Tsukuyomi.Style.line
+             antialiasing: false
+             Behavior on color { ColorAnimation { duration: Tokens.snap } }
+             Behavior on border.color { ColorAnimation { duration: Tokens.snap } }
+@@ -1505,7 +1505,7 @@
+             id: ubLabel
+             anchors.centerIn: parent
+             text: I18n.tr("UPDATES")
+-            color: updatesBtn.here ? Tokens.inkOnBone : Tokens.inkDim
++            color: updatesBtn.here ? Tsukuyomi.Style.text : Tsukuyomi.Style.secondary
+             font.family: Tokens.ui; font.pixelSize: Tokens.fSmall
+             font.weight: Font.Medium; font.letterSpacing: Tokens.trackLabel
+             Behavior on color { ColorAnimation { duration: Tokens.snap } }
+@@ -1515,7 +1515,7 @@
+             visible: Updates.available
+             width: 8; height: 8; radius: 4
+             color: Tokens.alert
+-            border.width: 1; border.color: Tokens.paper
++            border.width: 1; border.color: Tsukuyomi.Style.input
+             antialiasing: true
+             anchors { right: parent.right; top: parent.top; rightMargin: -2; topMargin: -2 }
+         }
+@@ -1537,9 +1537,9 @@
+         Rectangle {
+             anchors.fill: parent
+             radius: Tokens.radius
+-            color: filesPop.open ? Tokens.bone : (fbh.hovered ? Tokens.paperLift : Tokens.paper)
++            color: filesPop.open ? Tsukuyomi.Style.selected : (fbh.hovered ? Tsukuyomi.Style.panel : Tsukuyomi.Style.input)
+             border.width: Tokens.border
+-            border.color: (filesPop.open || fbh.hovered) ? Tokens.lineStrong : Tokens.line
++            border.color: (filesPop.open || fbh.hovered) ? Tsukuyomi.Style.lineStrong : Tsukuyomi.Style.line
+             antialiasing: false
+             Behavior on color { ColorAnimation { duration: Tokens.snap } }
+             Behavior on border.color { ColorAnimation { duration: Tokens.snap } }
+@@ -1548,7 +1548,7 @@
+             id: fbLabel
+             anchors.centerIn: parent
+             text: I18n.tr("FILES")
+-            color: filesPop.open ? Tokens.inkOnBone : Tokens.inkDim
++            color: filesPop.open ? Tsukuyomi.Style.text : Tsukuyomi.Style.secondary
+             font.family: Tokens.ui; font.pixelSize: Tokens.fSmall
+             font.weight: Font.Medium; font.letterSpacing: Tokens.trackLabel
+             Behavior on color { ColorAnimation { duration: Tokens.snap } }
+@@ -1584,7 +1584,7 @@
+         anchors { right: parent.right; rightMargin: Tokens.s6; bottom: bar.top; bottomMargin: Tokens.s2 }
+         width: Math.min(560, implicitWidth)
+         text: hub.wmSaveError
+-        color: Tokens.ink
++        color: Tsukuyomi.Style.text
+         font.family: Tokens.ui
+         font.pixelSize: Tokens.fSmall
+         wrapMode: Text.WordWrap
+@@ -1681,10 +1681,10 @@
+ 
+         Rectangle {
+             anchors.fill: parent
+-            color: Tokens.paperLift
++            color: Tsukuyomi.Style.panel
+             radius: Tokens.radius
+             border.width: Tokens.border
+-            border.color: Tokens.lineStrong
++            border.color: Tsukuyomi.Style.lineStrong
+         }
+         // sink so a click on the card's chrome never falls through to the rail.
+         MouseArea { anchors.fill: parent; hoverEnabled: true }
+@@ -1693,19 +1693,19 @@
+             anchors { left: parent.left; right: parent.right; top: parent.top; margins: Tokens.s3 }
+             height: 14
+             Text {
+-                text: "// RESULTS_"; color: Tokens.inkMuted
++                text: "// RESULTS_"; color: Tsukuyomi.Style.secondary
+                 font.family: Tokens.mono; font.pixelSize: 9; font.letterSpacing: 1.2
+                 anchors.verticalCenter: parent.verticalCenter
+             }
+             Item { width: Math.max(0, parent.width - 210); height: 1 }
+             Text {
+                 text: (hub.searchCursor + 1) + " / " + hub.searchResults.length
+-                color: Tokens.ink; font.family: Tokens.mono; font.pixelSize: 9; font.weight: Font.Medium
++                color: Tsukuyomi.Style.text; font.family: Tokens.mono; font.pixelSize: 9; font.weight: Font.Medium
+                 anchors.verticalCenter: parent.verticalCenter
+             }
+             Text {
+                 text: hub.searchResults.length + (hub.searchResults.length === 1 ? I18n.tr(" HIT") : I18n.tr(" HITS"))
+-                color: Tokens.inkFaint; font.family: Tokens.mono; font.pixelSize: 9
++                color: Tsukuyomi.Style.muted; font.family: Tokens.mono; font.pixelSize: 9
+                 anchors.verticalCenter: parent.verticalCenter
+             }
+         }
+@@ -1739,13 +1739,13 @@
+                         width: parent.width
+                         text: hub.hlLabel(I18n.tr(rr.modelData.label))
+                         textFormat: Text.StyledText
+-                        color: Tokens.ink; font.family: Tokens.ui; font.pixelSize: 13
++                        color: Tsukuyomi.Style.text; font.family: Tokens.ui; font.pixelSize: 13
+                         elide: Text.ElideRight
+                     }
+                     Text {
+                         width: parent.width
+                         text: rr.modelData.isPage ? I18n.tr("Page") : (rr.modelData.sectionName + (rr.modelData.group ? "  \u203a  " + rr.modelData.group : ""))
+-                        color: Tokens.inkFaint; font.family: Tokens.mono; font.pixelSize: 9
++                        color: Tsukuyomi.Style.muted; font.family: Tokens.mono; font.pixelSize: 9
+                         elide: Text.ElideRight
+                     }
+                 }
+@@ -1753,7 +1753,7 @@
+                     id: kseal
+                     anchors { right: parent.right; rightMargin: Tokens.s3; verticalCenter: parent.verticalCenter }
+                     text: hub.showJapaneseGloss ? (hub.jpName[rr.modelData.section] || "") : ""
+-                    color: Tokens.inkFaint; font.family: Tokens.jp; font.pixelSize: 12
++                    color: Tsukuyomi.Style.muted; font.family: Tokens.jp; font.pixelSize: 12
+                 }
+                 MouseArea {
+                     id: rrh
+@@ -1788,18 +1788,18 @@
+             width: 480
+             anchors { left: parent.left; leftMargin: Tokens.s5; bottom: parent.bottom; bottomMargin: (bar.visible ? bar.height : 0) + Tokens.s2 }
+             height: Math.min(440, dcol.height + dhead.height + Tokens.s3 * 3)
+-            color: Tokens.paperLift
++            color: Tsukuyomi.Style.panel
+             radius: Tokens.radius
+             border.width: Tokens.border
+-            border.color: Tokens.lineStrong
++            border.color: Tsukuyomi.Style.lineStrong
+             TapHandler {}
+             Row {
+                 id: dhead
+                 anchors { left: parent.left; right: parent.right; top: parent.top; margins: Tokens.s3 }
+                 height: 14
+-                Text { text: "// PENDING WRITE_"; color: Tokens.inkMuted; font.family: Tokens.mono; font.pixelSize: 9; font.letterSpacing: 1.2; anchors.verticalCenter: parent.verticalCenter }
++                Text { text: "// PENDING WRITE_"; color: Tsukuyomi.Style.secondary; font.family: Tokens.mono; font.pixelSize: 9; font.letterSpacing: 1.2; anchors.verticalCenter: parent.verticalCenter }
+                 Item { width: Math.max(0, parent.width - 200); height: 1 }
+-                Text { text: I18n.tr("DIFF"); color: Tokens.inkFaint; font.family: Tokens.mono; font.pixelSize: 9; anchors.verticalCenter: parent.verticalCenter }
++                Text { text: I18n.tr("DIFF"); color: Tsukuyomi.Style.muted; font.family: Tokens.mono; font.pixelSize: 9; anchors.verticalCenter: parent.verticalCenter }
+             }
+             Flickable {
+                 id: dflick
+@@ -1822,9 +1822,9 @@
+                             spacing: Tokens.s1
+                             Row {
+                                 spacing: Tokens.s2
+-                                Rectangle { width: 3; height: 3; color: Tokens.ink; anchors.verticalCenter: parent.verticalCenter }
+-                                Text { text: fg.modelData.file; color: Tokens.inkDim; font.family: Tokens.mono; font.pixelSize: 10; anchors.verticalCenter: parent.verticalCenter }
+-                                Text { text: "\u00b7 " + fg.modelData.changes.length; color: Tokens.inkFaint; font.family: Tokens.mono; font.pixelSize: 10; anchors.verticalCenter: parent.verticalCenter }
++                                Rectangle { width: 3; height: 3; color: Tsukuyomi.Style.text; anchors.verticalCenter: parent.verticalCenter }
++                                Text { text: fg.modelData.file; color: Tsukuyomi.Style.secondary; font.family: Tokens.mono; font.pixelSize: 10; anchors.verticalCenter: parent.verticalCenter }
++                                Text { text: "\u00b7 " + fg.modelData.changes.length; color: Tsukuyomi.Style.muted; font.family: Tokens.mono; font.pixelSize: 10; anchors.verticalCenter: parent.verticalCenter }
+                             }
+                             Repeater {
+                                 model: fg.modelData.changes
+@@ -1832,14 +1832,14 @@
+                                     required property var modelData
+                                     width: fg.width
+                                     topPadding: 2
+-                                    Text { text: modelData.key + ":"; color: Tokens.inkDim; font.family: Tokens.mono; font.pixelSize: 12 }
++                                    Text { text: modelData.key + ":"; color: Tsukuyomi.Style.secondary; font.family: Tokens.mono; font.pixelSize: 12 }
+                                     Row {
+                                         spacing: Tokens.s2
+-                                        Text { text: modelData.was; color: Tokens.inkFaint; font.strikeout: true; font.family: Tokens.mono; font.pixelSize: 12 }
+-                                        Text { text: "\u2192"; color: Tokens.inkFaint; font.family: Tokens.mono; font.pixelSize: 12 }
+-                                        Text { text: modelData.now; color: Tokens.ink; font.family: Tokens.mono; font.pixelSize: 12 }
++                                        Text { text: modelData.was; color: Tsukuyomi.Style.muted; font.strikeout: true; font.family: Tokens.mono; font.pixelSize: 12 }
++                                        Text { text: "\u2192"; color: Tsukuyomi.Style.muted; font.family: Tokens.mono; font.pixelSize: 12 }
++                                        Text { text: modelData.now; color: Tsukuyomi.Style.text; font.family: Tokens.mono; font.pixelSize: 12 }
+                                     }
+-                                    Rectangle { width: parent.width; height: 1; color: Tokens.lineSoft }
++                                    Rectangle { width: parent.width; height: 1; color: Tsukuyomi.Style.line }
+                                 }
+                             }
+                         }
+@@ -1865,18 +1865,18 @@
+             width: Math.min(460, filesPop.width - Tokens.s4 * 2)
+             anchors { right: parent.right; rightMargin: Tokens.s4; top: parent.top; topMargin: Tokens.s2 + 24 + Tokens.s2 }
+             height: Math.min(520, fcol.height + fhead.height + Tokens.s3 * 3)
+-            color: Tokens.paperLift
++            color: Tsukuyomi.Style.panel
+             radius: Tokens.radius
+             border.width: Tokens.border
+-            border.color: Tokens.lineStrong
++            border.color: Tsukuyomi.Style.lineStrong
+             TapHandler {}
+             Row {
+                 id: fhead
+                 anchors { left: parent.left; right: parent.right; top: parent.top; margins: Tokens.s3 }
+                 height: 14
+-                Text { text: I18n.tr("SETTINGS FILES"); color: Tokens.inkMuted; font.family: Tokens.mono; font.pixelSize: 9; font.letterSpacing: 1.2; anchors.verticalCenter: parent.verticalCenter }
++                Text { text: I18n.tr("SETTINGS FILES"); color: Tsukuyomi.Style.secondary; font.family: Tokens.mono; font.pixelSize: 9; font.letterSpacing: 1.2; anchors.verticalCenter: parent.verticalCenter }
+                 Item { width: Math.max(0, parent.width - 240); height: 1 }
+-                Text { text: I18n.tr(hub.nameFor(hub.section)); color: Tokens.inkFaint; font.family: Tokens.mono; font.pixelSize: 9; anchors.verticalCenter: parent.verticalCenter }
++                Text { text: I18n.tr(hub.nameFor(hub.section)); color: Tsukuyomi.Style.muted; font.family: Tokens.mono; font.pixelSize: 9; anchors.verticalCenter: parent.verticalCenter }
+             }
+             Flickable {
+                 anchors { left: parent.left; right: parent.right; top: fhead.bottom; bottom: parent.bottom }
+@@ -1892,7 +1892,7 @@
+                     Text {
+                         width: fcol.width
+                         text: I18n.tr("Each page's settings live in one full file below: the complete config you edit in place (the GUI writes the very same file). The shipped base underneath refreshes on update; your file wins. Run `ryoku reset <path>` to drop an override.")
+-                        color: Tokens.inkMuted; font.family: Tokens.ui; font.pixelSize: 11; wrapMode: Text.WordWrap
++                        color: Tsukuyomi.Style.secondary; font.family: Tokens.ui; font.pixelSize: 11; wrapMode: Text.WordWrap
+                     }
+                     Repeater {
+                         model: hub.settingsFiles()
+@@ -1900,10 +1900,10 @@
+                             required property var modelData
+                             width: fcol.width
+                             height: fentry.height + Tokens.s3 * 2
+-                            color: rowH.hovered && !modelData.noOpen ? Tokens.paper : "transparent"
++                            color: rowH.hovered && !modelData.noOpen ? Tsukuyomi.Style.input : "transparent"
+                             radius: Tokens.radius
+                             border.width: Tokens.border
+-                            border.color: Tokens.line
++                            border.color: Tsukuyomi.Style.line
+                             HoverHandler { id: rowH; cursorShape: modelData.noOpen ? Qt.ArrowCursor : Qt.PointingHandCursor }
+                             TapHandler { enabled: !modelData.noOpen; onTapped: { hub.openSettingsFile(modelData); filesPop.open = false; } }
+                             Column {
+@@ -1914,15 +1914,15 @@
+                                     spacing: Tokens.s2
+                                     Rectangle {
+                                         width: 6; height: 6; radius: 3; anchors.verticalCenter: parent.verticalCenter
+-                                        color: modelData.role === "yours" ? Tokens.ink : Tokens.inkFaint
++                                        color: modelData.role === "yours" ? Tsukuyomi.Style.text : Tsukuyomi.Style.muted
+                                     }
+-                                    Text { text: I18n.tr(modelData.label); color: Tokens.ink; font.family: Tokens.ui; font.pixelSize: 13; font.weight: Font.Medium; anchors.verticalCenter: parent.verticalCenter }
+-                                    Text { visible: modelData.role === "yours"; text: I18n.tr("EDIT HERE"); color: Tokens.ink; font.family: Tokens.mono; font.pixelSize: 8; font.letterSpacing: 1; anchors.verticalCenter: parent.verticalCenter }
+-                                    Text { visible: modelData.role === "advanced"; text: I18n.tr("ADVANCED"); color: Tokens.inkFaint; font.family: Tokens.mono; font.pixelSize: 8; font.letterSpacing: 1; anchors.verticalCenter: parent.verticalCenter }
+-                                    Text { visible: modelData.role === "base"; text: I18n.tr("SHIPPED"); color: Tokens.inkFaint; font.family: Tokens.mono; font.pixelSize: 8; font.letterSpacing: 1; anchors.verticalCenter: parent.verticalCenter }
++                                    Text { text: I18n.tr(modelData.label); color: Tsukuyomi.Style.text; font.family: Tokens.ui; font.pixelSize: 13; font.weight: Font.Medium; anchors.verticalCenter: parent.verticalCenter }
++                                    Text { visible: modelData.role === "yours"; text: I18n.tr("EDIT HERE"); color: Tsukuyomi.Style.text; font.family: Tokens.mono; font.pixelSize: 8; font.letterSpacing: 1; anchors.verticalCenter: parent.verticalCenter }
++                                    Text { visible: modelData.role === "advanced"; text: I18n.tr("ADVANCED"); color: Tsukuyomi.Style.muted; font.family: Tokens.mono; font.pixelSize: 8; font.letterSpacing: 1; anchors.verticalCenter: parent.verticalCenter }
++                                    Text { visible: modelData.role === "base"; text: I18n.tr("SHIPPED"); color: Tsukuyomi.Style.muted; font.family: Tokens.mono; font.pixelSize: 8; font.letterSpacing: 1; anchors.verticalCenter: parent.verticalCenter }
+                                 }
+-                                Text { visible: !!modelData.path; text: hub.tildePath(modelData.path || ""); color: Tokens.inkDim; font.family: Tokens.mono; font.pixelSize: 11; width: fentry.width; elide: Text.ElideMiddle }
+-                                Text { text: modelData.note; color: Tokens.inkMuted; font.family: Tokens.ui; font.pixelSize: 11; width: fentry.width; wrapMode: Text.WordWrap }
++                                Text { visible: !!modelData.path; text: hub.tildePath(modelData.path || ""); color: Tsukuyomi.Style.secondary; font.family: Tokens.mono; font.pixelSize: 11; width: fentry.width; elide: Text.ElideMiddle }
++                                Text { text: modelData.note; color: Tsukuyomi.Style.secondary; font.family: Tokens.ui; font.pixelSize: 11; width: fentry.width; wrapMode: Text.WordWrap }
+                             }
+                         }
+                     }
+--- a/hub/SchemaPage.qml
++++ b/hub/SchemaPage.qml
+@@ -101,7 +101,7 @@
+             visible: page.blurb !== ""
+             width: Math.min(parent.width, 720)
+             text: I18n.tr(page.blurb)
+-            color: Tokens.inkMuted
++            color: Tsukuyomi.Style.secondary
+             font.family: Tokens.ui
+             font.pixelSize: Tokens.fBody
+             wrapMode: Text.WordWrap
+--- a/ryostore/App.qml
++++ b/ryostore/App.qml
+@@ -638,7 +638,7 @@
+             Text {
+                 width: parent.width
+                 text: app.pageTitle
+-                color: Tokens.ink
++                color: Tsukuyomi.Style.text
+                 font.family: Tokens.ui
+                 font.pixelSize: Tokens.px(28)
+                 font.weight: Font.DemiBold
+@@ -647,7 +647,7 @@
+             Text {
+                 width: Math.min(parent.width, 680)
+                 text: app.pageDescription
+-                color: Tokens.inkMuted
++                color: Tsukuyomi.Style.secondary
+                 font.family: Tokens.ui
+                 font.pixelSize: Tokens.fSmall
+                 maximumLineCount: 2
+@@ -668,7 +668,7 @@
+         Rectangle {
+             anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
+             height: Tokens.border
+-            color: Tokens.line
++            color: Tsukuyomi.Style.line
+         }
+     }
+     ProviderTabs {
+@@ -731,7 +731,7 @@
+         Text {
+             anchors { left: parent.left; leftMargin: Tokens.s6; verticalCenter: parent.verticalCenter }
+             text: I18n.tr("A TO Z")
+-            color: Tokens.inkMuted
++            color: Tsukuyomi.Style.secondary
+             font.family: Tokens.mono
+             font.pixelSize: Tokens.fTiny
+             font.letterSpacing: Tokens.trackLabel
+@@ -759,7 +759,7 @@
+         Rectangle {
+             anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
+             height: Tokens.border
+-            color: Tokens.line
++            color: Tsukuyomi.Style.line
+         }
+     }
+ 
+@@ -864,7 +864,7 @@
+             anchors.rightMargin: setupFlatpak.visible ? Tokens.s4 : 0
+             anchors.verticalCenter: parent.verticalCenter
+             text: app.flatpakMessage
+-            color: Tokens.inkMuted
++            color: Tsukuyomi.Style.secondary
+             font.family: Tokens.ui
+             font.pixelSize: Tokens.fBody
+             wrapMode: Text.WordWrap
+@@ -922,7 +922,7 @@
+             Rectangle {
+                 anchors { left: parent.left; right: parent.right; top: parent.top }
+                 height: Tokens.border
+-                color: Tokens.line
++                color: Tsukuyomi.Style.line
+             }
+             Text {
+                 anchors { left: parent.left; leftMargin: Tokens.s6; verticalCenter: parent.verticalCenter }
+@@ -933,7 +933,7 @@
+                            : (app.view === "library" && app.updateCount > 0
+                               ? I18n.tr("%1 UPDATES READY").arg(app.updateCount)
+                               : I18n.tr("READY")))
+-                color: Store.busyKey !== "" || Store.offline || app.updateCount > 0 ? Tokens.ink : Tokens.inkMuted
++                color: Store.busyKey !== "" || Store.offline || app.updateCount > 0 ? Tsukuyomi.Style.text : Tsukuyomi.Style.secondary
+                 font.family: Tokens.mono
+                 font.pixelSize: Tokens.fMicro
+                 font.letterSpacing: Tokens.trackLabel
+@@ -941,7 +941,7 @@
+             Text {
+                 anchors { right: parent.right; rightMargin: Tokens.s6; verticalCenter: parent.verticalCenter }
+                 text: I18n.tr("ARROWS BROWSE  /  ENTER OPEN  /  ESC BACK")
+-                color: Tokens.inkFaint
++                color: Tsukuyomi.Style.muted
+                 font.family: Tokens.mono
+                 font.pixelSize: Tokens.fTiny
+                 font.letterSpacing: Tokens.trackLabel
+@@ -989,19 +989,19 @@
+                         ? parent.width - iconSize - Tokens.s3 * 3 : parent.width * 0.52
+                 width: productGrid.cellW
+                 height: productGrid.cellH
+-                color: Tokens.paper
++                color: Tsukuyomi.Style.surface
+                 border.width: Tokens.border
+-                border.color: Tokens.line
++                border.color: Tsukuyomi.Style.line
+ 
+                 Rectangle {
+                     visible: !parent.appShape
+                     anchors { left: parent.left; right: parent.right; top: parent.top }
+                     height: Math.round(parent.height * 0.67)
+-                    color: Tokens.paperLift
++                    color: Tsukuyomi.Style.panel
+                     Rectangle {
+                         width: parent.width * 0.24
+                         height: parent.height
+-                        color: Tokens.tint5
++                        color: Tsukuyomi.Style.hover
+                         x: app.reducedMotion || !app.Window.window || !app.Window.window.active
+                                 ? (parent.width - width) / 2 : -width
+                         XAnimator on x {
+@@ -1020,21 +1020,21 @@
+                     y: Tokens.s3
+                     width: parent.iconSize
+                     height: parent.iconSize
+-                    color: Tokens.paperLift
++                    color: Tsukuyomi.Style.panel
+                 }
+                 Rectangle {
+                     x: parent.textX
+                     y: parent.appShape ? Tokens.s3 : Math.round(parent.height * 0.67) + Tokens.s3
+                     width: parent.barW
+                     height: Tokens.border * 4
+-                    color: Tokens.line
++                    color: Tsukuyomi.Style.line
+                 }
+                 Rectangle {
+                     x: parent.textX
+                     y: parent.appShape ? Tokens.s5 : Math.round(parent.height * 0.67) + Tokens.s5
+                     width: parent.appShape ? parent.barW : parent.width * 0.72
+                     height: Tokens.border * 3
+-                    color: Tokens.lineSoft
++                    color: Tsukuyomi.Style.line
+                 }
+             }
+         }
+@@ -1050,7 +1050,7 @@
+         Text {
+             anchors.horizontalCenter: parent.horizontalCenter
+             text: I18n.tr("CATALOGUE UNAVAILABLE")
+-            color: Tokens.ink
++            color: Tsukuyomi.Style.text
+             font.family: Tokens.mono
+             font.pixelSize: Tokens.fSmall
+             font.letterSpacing: Tokens.trackLabel
+@@ -1062,7 +1062,7 @@
+             text: Store.error
+             visible: text !== ""
+             horizontalAlignment: Text.AlignHCenter
+-            color: Tokens.inkDim
++            color: Tsukuyomi.Style.secondary
+             font.family: Tokens.ui
+             font.pixelSize: Tokens.fSmall
+             wrapMode: Text.Wrap
+--- a/ryostore/AppsTile.qml
++++ b/ryostore/AppsTile.qml
+@@ -23,7 +23,7 @@
+     readonly property bool verified: String(item && item.verificationStatus || "").toLowerCase() === "verified"
+     readonly property var status: StoreLogic.statusLabels(item)
+     readonly property string statusTag: !showUnavailable && StoreLogic.isUnavailable(item) ? "" : StoreLogic.statusTag(item)
+-    readonly property color fallbackSurface: item && item.surface ? item.surface : Tokens.paperLift
++    readonly property color fallbackSurface: item && item.surface ? item.surface : Tsukuyomi.Style.input
+     readonly property string initials: StoreLogic.initials(item, title)
+ 
+     Accessible.role: Accessible.Button
+@@ -67,7 +67,7 @@
+                 active: card.enabled && card.Window.window && card.Window.window.active
+                 fallbackText: card.initials
+                 fallbackSurface: card.fallbackSurface
+-                fallbackInk: Tokens.inkMuted
++                fallbackInk: Tsukuyomi.Style.secondary
+             }
+ 
+             Column {
+@@ -114,7 +114,7 @@
+                         anchors { right: parent.right; verticalCenter: parent.verticalCenter }
+                         text: card.statusTag === "" ? "" : I18n.tr(card.statusTag)
+                         visible: text !== ""
+-                        color: StoreLogic.isUnavailable(card.item) ? Tokens.alert : Tokens.inkMuted
++                        color: StoreLogic.isUnavailable(card.item) ? Tokens.alert : Tsukuyomi.Style.secondary
+                         font.family: Tokens.mono
+                         font.pixelSize: Tokens.fTiny
+                         font.letterSpacing: Tokens.trackLabel
+--- a/ryostore/CategorySearch.qml
++++ b/ryostore/CategorySearch.qml
+@@ -1,5 +1,6 @@
+ import QtQuick
+ import Ryoku.Ui.Singletons
++import "tsukuyomi" as Tsukuyomi
+ 
+ // A local category filter. Typing narrows the loaded category in place; the
+ // header search still reaches the whole store or Flathub.
+@@ -21,15 +22,15 @@
+     Rectangle {
+         anchors.fill: parent
+         radius: Tokens.radius
+-        color: input.activeFocus ? Tokens.tint5 : Tokens.paper
++        color: input.activeFocus ? Tsukuyomi.Style.hover : Tsukuyomi.Style.input
+         border.width: Tokens.border
+-        border.color: input.activeFocus ? Tokens.lineStrong : Tokens.line
++        border.color: input.activeFocus ? Tsukuyomi.Style.accent : Tsukuyomi.Style.line
+ 
+         Text {
+             id: glyph
+             anchors { left: parent.left; leftMargin: Tokens.s3; verticalCenter: parent.verticalCenter }
+             text: "⌕"
+-            color: Tokens.inkDim
++            color: Tsukuyomi.Style.secondary
+             font.family: Tokens.ui
+             font.pixelSize: Tokens.fRow
+         }
+@@ -42,9 +43,9 @@
+                 right: parent.right; rightMargin: Tokens.s3
+                 verticalCenter: parent.verticalCenter
+             }
+-            color: Tokens.ink
+-            selectionColor: Tokens.tint16
+-            selectedTextColor: Tokens.ink
++            color: Tsukuyomi.Style.text
++            selectionColor: Tsukuyomi.Style.selected
++            selectedTextColor: Tsukuyomi.Style.text
+             font.family: Tokens.ui
+             font.pixelSize: Tokens.fBody
+             clip: true
+@@ -66,7 +67,7 @@
+                 anchors.fill: parent
+                 visible: input.text === ""
+                 text: field.placeholder
+-                color: Tokens.inkMuted
++                color: Tsukuyomi.Style.secondary
+                 font: input.font
+                 verticalAlignment: Text.AlignVCenter
+                 elide: Text.ElideRight
+--- a/ryostore/ProductCard.qml
++++ b/ryostore/ProductCard.qml
+@@ -20,11 +20,11 @@
+         objectName: "ryostore-card-frame"
+         anchors.fill: parent
+         anchors.margins: Tokens.s2
+-        color: card.selected ? Tokens.tint5
+-              : (card.pressed ? Tokens.tint16 : (card.hovered ? Tokens.tint5 : Tokens.paper))
++        color: card.selected ? Tsukuyomi.Style.hover
++              : (card.pressed ? Tsukuyomi.Style.selected : (card.hovered ? Tsukuyomi.Style.hover : Tsukuyomi.Style.panel))
+         border.width: card.focusVisible || card.selected ? Tokens.border * 2 : Tokens.border
+-        border.color: card.focusVisible ? Tokens.bone
+-                      : (card.selected || card.hovered ? Tokens.lineStrong : Tokens.line)
++        border.color: card.focusVisible ? Tsukuyomi.Style.accent
++                      : (card.selected || card.hovered ? Tsukuyomi.Style.lineStrong : Tsukuyomi.Style.line)
+         scale: card.pressed ? 0.992 : (card.hovered ? 1.012 : 1)
+ 
+         transform: Translate {
+@@ -74,7 +74,7 @@
+                 Text {
+                     width: parent.width - position.implicitWidth - parent.spacing
+                     text: String(card.item && (card.item.name || card.item.id) || I18n.tr("Untitled"))
+-                    color: Tokens.ink
++                    color: Tsukuyomi.Style.text
+                     font.family: Tokens.ui
+                     font.pixelSize: Tokens.fRow
+                     font.weight: Font.Medium
+@@ -84,7 +84,7 @@
+                 Text {
+                     id: position
+                     text: String(card.item && (card.item.categoryName || card.item.category) || "").toUpperCase()
+-                    color: Tokens.inkMuted
++                    color: Tsukuyomi.Style.secondary
+                     font.family: Tokens.mono
+                     font.pixelSize: Tokens.fTiny
+                     font.letterSpacing: Tokens.trackLabel
+@@ -96,7 +96,7 @@
+                 width: parent.width
+                 text: String(card.item && card.item.summary || "")
+                 visible: text !== ""
+-                color: Tokens.inkDim
++                color: Tsukuyomi.Style.secondary
+                 font.family: Tokens.ui
+                 font.pixelSize: Tokens.fSmall
+                 maximumLineCount: 2
+@@ -109,7 +109,7 @@
+             anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
+             height: Tokens.border * 2
+             visible: card.selected
+-            color: Tokens.bone
++            color: Tsukuyomi.Style.accent
+         }
+     }
+ 
+--- a/ryostore/ProviderTabs.qml
++++ b/ryostore/ProviderTabs.qml
+@@ -35,9 +35,10 @@
+         height: 30
+         radius: Tokens.radius
+         color: plate.on ? Tsukuyomi.Style.selected
+-              : (plateTap.pressed ? Tokens.tint16 : (ph.hovered ? Tokens.tint5 : "transparent"))
++              : (plateTap.pressed ? Tsukuyomi.Style.selected : (ph.hovered ? Tsukuyomi.Style.hover : "transparent"))
+         border.width: Tokens.border
+-        border.color: plate.on ? Tsukuyomi.Style.selected : (ph.hovered ? Tokens.lineStrong : Tokens.line)
++        border.color: plate.activeFocus ? Tsukuyomi.Style.accent
++                    : (plate.on || ph.hovered ? Tsukuyomi.Style.lineStrong : Tsukuyomi.Style.line)
+         scale: plateTap.pressed ? 0.97 : 1
+         activeFocusOnTab: true
+         Accessible.role: Accessible.Button
+@@ -68,7 +69,7 @@
+             Text {
+                 id: plateText
+                 text: I18n.tr(plate.label)
+-                color: plate.on ? Tsukuyomi.Style.text : (plate.activeFocus ? Tokens.ink : Tokens.inkDim)
++                color: plate.on ? Tsukuyomi.Style.text : (plate.activeFocus ? Tsukuyomi.Style.text : Tsukuyomi.Style.secondary)
+                 font.family: Tokens.ui
+                 font.pixelSize: 11
+                 font.weight: Font.Medium
+@@ -82,7 +83,7 @@
+                 id: noteText
+                 visible: plate.note !== ""
+                 text: plate.note
+-                color: plate.on ? Tsukuyomi.Style.text : Tokens.inkMuted
++                color: plate.on ? Tsukuyomi.Style.text : Tsukuyomi.Style.secondary
+                 font.family: Tokens.ui
+                 font.pixelSize: Tokens.fTiny
+                 font.letterSpacing: 0
+@@ -170,6 +171,6 @@
+     Rectangle {
+         anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
+         height: Tokens.border
+-        color: Tokens.line
++        color: Tsukuyomi.Style.line
+     }
+ }
+--- a/ryostore/StoreHeader.qml
++++ b/ryostore/StoreHeader.qml
+@@ -81,15 +81,15 @@
+             width: parent.width
+             height: 36
+             radius: Tokens.radius
+-            color: searchField.activeFocus ? Tokens.tint5 : Tokens.paper
++            color: searchField.activeFocus ? Tsukuyomi.Style.hover : Tsukuyomi.Style.input
+             border.width: Tokens.border
+-            border.color: searchField.activeFocus ? Tokens.lineStrong : Tokens.line
++            border.color: searchField.activeFocus ? Tsukuyomi.Style.accent : Tsukuyomi.Style.line
+ 
+             Text {
+                 id: searchGlyph
+                 anchors { left: parent.left; leftMargin: Tokens.s3; verticalCenter: parent.verticalCenter }
+                 text: "⌕"
+-                color: Tokens.inkDim
++                color: Tsukuyomi.Style.secondary
+                 font.family: Tokens.ui
+                 font.pixelSize: Tokens.fRow
+             }
+@@ -103,9 +103,9 @@
+                     verticalCenter: parent.verticalCenter
+                 }
+                 Component.onCompleted: text = header.query
+-                color: Tokens.ink
+-                selectionColor: Tokens.tint16
+-                selectedTextColor: Tokens.ink
++                color: Tsukuyomi.Style.text
++                selectionColor: Tsukuyomi.Style.selected
++                selectedTextColor: Tsukuyomi.Style.text
+                 font.family: Tokens.ui
+                 font.pixelSize: Tokens.fBody
+                 clip: true
+@@ -128,7 +128,7 @@
+                     anchors.fill: parent
+                     visible: searchField.text === ""
+                     text: header.offline ? I18n.tr("Search offline") : I18n.tr("Search the store")
+-                    color: Tokens.inkMuted
++                    color: Tsukuyomi.Style.secondary
+                     font: searchField.font
+                     verticalAlignment: Text.AlignVCenter
+                     elide: Text.ElideRight
+@@ -144,7 +144,7 @@
+             text: header.resultCount === 1
+                     ? I18n.tr("%1 RESULT").arg(header.resultCount)
+                     : I18n.tr("%1 RESULTS").arg(header.resultCount)
+-            color: Tokens.inkMuted
++            color: Tsukuyomi.Style.secondary
+             font.family: Tokens.mono
+             font.pixelSize: Tokens.fTiny
+             font.letterSpacing: Tokens.trackLabel
+@@ -154,7 +154,7 @@
+     Rectangle {
+         anchors { left: parent.left; right: parent.right; top: masthead.bottom; topMargin: Tokens.s4 }
+         height: Tokens.border
+-        color: Tokens.line
++        color: Tsukuyomi.Style.line
+     }
+ 
+     Flickable {
+@@ -206,7 +206,7 @@
+ 
+             Text {
+                 text: I18n.tr("Browse")
+-                color: header.view === "discover" ? Tokens.inkDim : Tokens.inkFaint
++                color: header.view === "discover" ? Tsukuyomi.Style.secondary : Tsukuyomi.Style.muted
+                 font.family: Tokens.mono
+                 font.pixelSize: Tokens.fMicro
+                 font.letterSpacing: Tokens.trackLabel
+@@ -235,7 +235,7 @@
+ 
+             Text {
+                 text: I18n.tr("Your collection")
+-                color: header.view === "library" ? Tokens.inkDim : Tokens.inkFaint
++                color: header.view === "library" ? Tsukuyomi.Style.secondary : Tsukuyomi.Style.muted
+                 font.family: Tokens.mono
+                 font.pixelSize: Tokens.fMicro
+                 font.letterSpacing: Tokens.trackLabel
+@@ -270,7 +270,7 @@
+         Rectangle {
+             anchors { left: parent.left; right: parent.right; top: parent.top }
+             height: Tokens.border
+-            color: Tokens.line
++            color: Tsukuyomi.Style.line
+         }
+ 
+         Btn {
+--- a/shell/modules/bar/barstyles/qsbar/controlcenter/CcHead.qml
++++ b/shell/modules/bar/barstyles/qsbar/controlcenter/CcHead.qml
+@@ -60,7 +60,7 @@
+         UiText {
+             anchors.centerIn: parent
+             text: "\u2715"
+-            color: shutMa.containsMouse ? Tokens.ink : Tokens.inkFaint
++            color: shutMa.containsMouse ? Tsukuyomi.Style.text : Tsukuyomi.Style.muted
+             font.family: Tokens.mono
+             font.pixelSize: Tokens.fSmall
+         }
+@@ -77,6 +77,6 @@
+         id: rule
+         anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
+         height: 1
+-        color: Tokens.lineSoft
++        color: Tsukuyomi.Style.line
+     }
+ }
+--- a/shell/modules/bar/barstyles/qsbar/controlcenter/CcRail.qml
++++ b/shell/modules/bar/barstyles/qsbar/controlcenter/CcRail.qml
+@@ -62,7 +62,7 @@
+         Rectangle {
+             anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
+             height: 1
+-            color: Tokens.lineSoft
++            color: Tsukuyomi.Style.line
+         }
+     }
+ 
+@@ -95,6 +95,6 @@
+     Rectangle {
+         anchors { top: parent.top; bottom: parent.bottom; right: parent.right }
+         width: 1
+-        color: Tokens.lineSoft
++        color: Tsukuyomi.Style.line
+     }
+ }
+--- a/shell/modules/bar/barstyles/qsbar/controlcenter/ControlCenter.qml
++++ b/shell/modules/bar/barstyles/qsbar/controlcenter/ControlCenter.qml
+@@ -175,7 +175,7 @@
+         radius: tk.corner
+         color: Tsukuyomi.Style.surface
+         border.width: 1
+-        border.color: Tokens.line
++        border.color: Tsukuyomi.Style.line
+         clip: true
+ 
+         // it floats over the desktop, so it is the one surface here allowed a

@@ -5,15 +5,18 @@ import Ryoku.Ui.Singletons
 
 QtObject {
     readonly property bool dark: !Tokens.light
-    readonly property color surface: dark ? "#1a1c22" : "#f5f6f9"
-    readonly property color sidebar: dark ? "#20232b" : "#ebedf3"
-    readonly property color panel: dark ? "#252932" : "#ffffff"
-    readonly property color text: dark ? "#f2f4f8" : "#252a36"
-    readonly property color secondary: dark ? "#b2bac9" : "#555f71"
-    readonly property color line: dark ? "#373d49" : "#dce0e9"
-    readonly property color hover: dark ? "#2c303a" : "#e1e4ec"
-    readonly property color selected: dark ? "#3a2c35" : "#f2dde2"
-    readonly property color accent: dark ? "#ff9e92" : "#9f3045"
+    readonly property color surface: dark ? "#161616" : "#f5f5f5"
+    readonly property color sidebar: dark ? "#1c1c1c" : "#ededed"
+    readonly property color panel: dark ? "#222222" : "#ffffff"
+    readonly property color input: dark ? "#191919" : "#ffffff"
+    readonly property color text: dark ? "#efefef" : "#242424"
+    readonly property color secondary: dark ? "#b9b9b9" : "#555555"
+    readonly property color muted: dark ? "#a1a1a1" : "#626262"
+    readonly property color line: dark ? "#383838" : "#d7d7d7"
+    readonly property color lineStrong: dark ? "#626262" : "#8a8a8a"
+    readonly property color hover: dark ? "#2b2b2b" : "#e8e8e8"
+    readonly property color selected: dark ? "#383838" : "#dedede"
+    readonly property color accent: dark ? "#d0d0d0" : "#4b4b4b"
     readonly property string icons: "Material Symbols Outlined"
 
     function sectionIcon(key) {
