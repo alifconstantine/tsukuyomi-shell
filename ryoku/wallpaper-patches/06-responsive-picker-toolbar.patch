@@ -1,0 +1,113 @@
+--- a/FilterBar.qml
++++ b/FilterBar.qml
+@@ -182,7 +182,8 @@
+ 
+     Rectangle {
+         id: slab
+-        width: Math.min(root.width - 96 * Theme.scale, 1320 * Theme.scale)
++        width: Math.min(root.width - 48 * Theme.scale, 1320 * Theme.scale)
++        readonly property bool compact: width < 780 * Theme.scale
+         height: head.height + 1 + line.height
+         x: (root.width - width) * 0.5
+         y: root.edge
+@@ -200,17 +201,17 @@
+         // through the hover palette preview as the pointer crossed the bar.
+         MouseArea { anchors.fill: parent; hoverEnabled: true }
+ 
+-        // ── head: seal, libraries, search, count ─────────────────────────────
++        // Collections, search and picker controls
+         Item {
+             id: head
+             width: parent.width
+-            height: 58 * Theme.scale
++            height: (slab.compact ? 92 : 58) * Theme.scale
+ 
+             CollectionTabs {
+                 id: tabsBlock
+                 anchors.left: parent.left
+                 anchors.leftMargin: 8 * Theme.scale
+-                anchors.verticalCenter: parent.verticalCenter
++                y: slab.compact ? 6 * Theme.scale : (head.height - height) / 2
+                 state: root.state
+             }
+ 
+@@ -218,12 +219,12 @@
+                 id: headRight
+                 anchors.right: parent.right
+                 anchors.rightMargin: 12 * Theme.scale
+-                anchors.verticalCenter: parent.verticalCenter
++                y: slab.compact ? head.height - height - 3 * Theme.scale : (head.height - height) / 2
+                 spacing: 4 * Theme.scale
+ 
+                 Item {
+                     id: countMark
+-                    visible: root.view !== null
++                    visible: root.view !== null && slab.width >= 520 * Theme.scale
+                     width: countCol.implicitWidth + 18 * Theme.scale
+                     height: 44 * Theme.scale
+                     property real shown: root.view ? root.view.count : 0
+@@ -258,6 +259,7 @@
+                     }
+                 }
+                 Rectangle {
++                    visible: countMark.visible
+                     anchors.verticalCenter: parent.verticalCenter
+                     width: 1
+                     height: 30 * Theme.scale
+@@ -296,9 +298,10 @@
+             SearchTrigger {
+                 visible: root.show("filterBar.show.tagcloud")
+                 anchors.right: headRight.left
+-                anchors.rightMargin: 18 * Theme.scale
+-                anchors.verticalCenter: parent.verticalCenter
+-                width: Math.max(Math.min(headRight.x - 18 * Theme.scale - (tabsBlock.x + tabsBlock.width + 32 * Theme.scale), 360 * Theme.scale), 120 * Theme.scale)
++                anchors.rightMargin: 12 * Theme.scale
++                anchors.verticalCenter: headRight.verticalCenter
++                width: Math.max(0, Math.min(360 * Theme.scale, headRight.x - anchors.rightMargin
++                    - (slab.compact ? 14 * Theme.scale : tabsBlock.x + tabsBlock.width + 18 * Theme.scale)))
+                 state: root.state
+             }
+         }
+@@ -318,13 +321,15 @@
+             id: line
+             y: head.height + 1
+             width: parent.width
+-            height: 44 * Theme.scale
+-
+-            Row {
++            height: Math.max(44 * Theme.scale, lineLeft.implicitHeight + 10 * Theme.scale)
++
++            Flow {
+                 id: lineLeft
+                 anchors.left: parent.left
+                 anchors.leftMargin: 10 * Theme.scale
+-                anchors.verticalCenter: parent.verticalCenter
++                anchors.top: parent.top
++                anchors.topMargin: 5 * Theme.scale
++                width: Math.max(0, lineRight.x - x - 8 * Theme.scale)
+                 spacing: 2 * Theme.scale
+                 opacity: root.lineSwap
+                 transform: Translate { x: (1 - root.lineSwap) * 10 * Theme.scale }
+@@ -416,7 +421,8 @@
+                 id: lineRight
+                 anchors.right: parent.right
+                 anchors.rightMargin: 10 * Theme.scale
+-                anchors.verticalCenter: parent.verticalCenter
++                anchors.top: parent.top
++                anchors.topMargin: 5 * Theme.scale
+                 spacing: 2 * Theme.scale
+ 
+                 Repeater {
+--- a/SelectionPreview.qml
++++ b/SelectionPreview.qml
+@@ -24,8 +24,8 @@
+     }
+ 
+     onStateChanged: loadThemePalette()
+-    readonly property string art: String(entry.preview || entry.thumb
+-        || (entry.type === "static" ? entry.path : "") || "")
++    readonly property string art: String((entry.type === "static" ? entry.path : "")
++        || entry.preview || entry.thumb || "")
+ 
+     Keys.onEscapePressed: if (state) state.closeSheet()
+ 
