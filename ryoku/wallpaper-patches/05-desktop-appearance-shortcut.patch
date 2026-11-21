@@ -1,0 +1,215 @@
+--- a/PlaybackTab.qml
++++ b/PlaybackTab.qml
+@@ -28,8 +28,8 @@
+                   key: "wallpaper.video_engine",
+                   kind: "chips",
+                   label: I18n.tr("Video engine"),
+-                  help: I18n.tr("Ryoku plays videos with its own GPU player by default. The in-shell engine keeps audio inside the desktop."),
+-                  options: [{ value: "ryogami", label: I18n.tr("Ryoku") }, { value: "in_shell", label: I18n.tr("Ryoku in-shell") }],
++                  help: I18n.tr("The dedicated video player uses the GPU by default. The in-shell engine keeps audio inside the desktop."),
++                  options: [{ value: "ryogami", label: I18n.tr("Dedicated player") }, { value: "in_shell", label: I18n.tr("In-shell player") }],
+                   store: "shell",
+                   search: ["wallpaper.video_engine", "video", "engine", "in-shell", "chips"] },
+                 { id: "playback.overviewOnly",
+--- a/IntegrationsTab.qml
++++ b/IntegrationsTab.qml
+@@ -73,7 +73,7 @@
+             ]
+         },
+         {
+-            title: I18n.tr("Ryoku shell"),
++            title: I18n.tr("Desktop shell"),
+             subtitle: "",
+             controls: [
+                 { id: "shell.hoverPreview",
+--- a/LightingTab.qml
++++ b/LightingTab.qml
+@@ -8,7 +8,7 @@
+     sections: [
+         {
+             title: I18n.tr("RGB lighting"),
+-            subtitle: I18n.tr("Choose when Ryoku may reach lighting hardware, see the live Matugen accent, and detect connected devices."),
++            subtitle: I18n.tr("Choose when the desktop may access lighting hardware, see the live Matugen accent, and detect connected devices."),
+             controls: [
+                 { id: "lighting.overview",
+                   key: null,
+@@ -21,7 +21,7 @@
+         },
+         {
+             title: I18n.tr("Devices"),
+-            subtitle: I18n.tr("Adopt only the hardware Ryoku should control, then choose its effect, colours and live behaviour."),
++            subtitle: I18n.tr("Choose which lighting hardware to control, then choose its effect, colours and live behaviour."),
+             controls: [
+                 { id: "lighting.devices",
+                   key: null,
+--- a/LightingDeviceCard.qml
++++ b/LightingDeviceCard.qml
+@@ -157,7 +157,7 @@
+                     spacing: 3 * Theme.scale
+                     Text {
+                         width: parent.width
+-                        text: I18n.tr("Ryoku controls this device")
++                        text: I18n.tr("Desktop controls this device")
+                         font.family: Theme.sans
+                         font.weight: Font.Medium
+                         font.pixelSize: Theme.fontField
+@@ -199,7 +199,7 @@
+                 visible: deviceCard.managed && deviceCard.effects.length > 0
+                 spacing: 6 * Theme.scale
+                 Text {
+-                    text: I18n.tr("Ryoku-painted effects")
++                    text: I18n.tr("Desktop effects")
+                     font.family: Theme.sans
+                     font.weight: Font.Medium
+                     font.pixelSize: Theme.fontField
+@@ -208,7 +208,7 @@
+                 }
+                 Text {
+                     width: parent.width
+-                    text: I18n.tr("Drawn live by Ryoku in the device's per-key mode. These effects need Ryoku running.")
++                    text: I18n.tr("Drawn live by the desktop in the device’s per-key mode.")
+                     font.family: Theme.sans
+                     font.pixelSize: Theme.fontBase
+                     color: Theme.withAlpha(Theme.surfaceText, 0.55)
+@@ -238,7 +238,7 @@
+                 }
+                 Text {
+                     width: parent.width
+-                    text: I18n.tr("Run by the device itself, so they keep going when Ryoku closes.")
++                    text: I18n.tr("Run by the device itself, so they keep going when the desktop closes.")
+                     font.family: Theme.sans
+                     font.pixelSize: Theme.fontBase
+                     color: Theme.withAlpha(Theme.surfaceText, 0.55)
+@@ -499,7 +499,7 @@
+             Text {
+                 width: parent.width
+                 visible: deviceCard.managed && !deviceCard.painted && !deviceCard.canSave
+-                text: I18n.tr("This device cannot store the selected look in onboard memory. Ryoku reapplies it after login instead.")
++                text: I18n.tr("This device cannot store the selected look in onboard memory. The desktop reapplies it after login.")
+                 font.family: Theme.sans
+                 font.pixelSize: Theme.fontFine
+                 color: Theme.withAlpha(Theme.surfaceText, 0.48)
+--- a/LightingOverview.qml
++++ b/LightingOverview.qml
+@@ -39,13 +39,13 @@
+         if (!overview.report)
+             return I18n.tr("Checking lighting support…")
+         if (!overview.providerAvailable)
+-            return I18n.tr("OpenRGB is not installed. Run ryoku doctor, or open Ryoku Hub > Updates, to install the default app set.")
++            return I18n.tr("Install OpenRGB to manage connected RGB devices.")
+         if (overview.controller.busy && overview.controller.operation === "scan")
+             return I18n.tr("Detecting devices… the first OpenRGB start can take up to a minute.")
+         if (overview.controller.busy)
+             return I18n.tr("Applying lighting changes…")
+         if (!overview.enabled)
+-            return I18n.tr("Lighting is off. Ryoku does not scan or write to RGB hardware while it is off.")
++            return I18n.tr("Lighting is off. RGB hardware is left alone.")
+         if (overview.onlineCount === 0)
+             return I18n.tr("Lighting is on. Detect devices to look for connected hardware.")
+         return I18n.tr("%1 devices connected · %2 following the palette").arg(overview.onlineCount).arg(overview.followingCount)
+@@ -69,7 +69,7 @@
+ 
+                 Text {
+                     width: parent.width
+-                    text: I18n.tr("Let Ryoku control lighting")
++                    text: I18n.tr("Let the desktop control lighting")
+                     font.family: Theme.sans
+                     font.weight: Font.Medium
+                     font.pixelSize: Theme.fontField
+--- a/LightingRow.qml
++++ b/LightingRow.qml
+@@ -20,7 +20,7 @@
+         Text {
+             width: parent.width
+             visible: !row.bridgeAvailable
+-            text: I18n.tr("Lighting controls need the Ryoku Hub backend. Run ryoku doctor, or open Ryoku Hub > Updates, to restore the default app set.")
++            text: I18n.tr("Lighting controls are unavailable in this session.")
+             font.family: Theme.sans
+             font.weight: Font.Medium
+             font.pixelSize: Theme.fontBase
+--- a/ThemeAudition.qml
++++ b/ThemeAudition.qml
+@@ -33,7 +33,7 @@
+ 
+     readonly property var _applyKeys: ["theme.staticTheme"]
+ 
+-    readonly property var _backendLabels: ({ "ryoku": I18n.tr("Ryoku") })
++    readonly property var _backendLabels: ({ "ryoku": I18n.tr("Desktop") })
+     function backendLabel(b) {
+         var l = root._backendLabels[b]
+         return (l !== undefined) ? l : String(b)
+--- a/PerformanceTab.qml
++++ b/PerformanceTab.qml
+@@ -109,7 +109,7 @@
+                   key: "resource_tier",
+                   kind: "chips",
+                   label: I18n.tr("Video decode budget"),
+-                  help: I18n.tr("How much memory and CPU Ryoku's own video engine may use."),
++                  help: I18n.tr("How much memory and CPU the dedicated video engine may use."),
+                   options: [{ value: "low", label: I18n.tr("Low") }, { value: "medium", label: I18n.tr("Medium") }, { value: "high", label: I18n.tr("High") }],
+                   search: ["resource", "tier", "memory", "video"] }
+             ]
+--- a/LightingDevices.qml
++++ b/LightingDevices.qml
+@@ -34,7 +34,7 @@
+         Text {
+             width: parent.width
+             visible: devicesView.report && !devicesView.providerAvailable
+-            text: I18n.tr("OpenRGB is not installed. Run ryoku doctor, or open Ryoku Hub > Updates, to install the default app set.")
++            text: I18n.tr("Install OpenRGB to manage connected RGB devices.")
+             font.family: Theme.sans
+             font.weight: Font.Medium
+             font.pixelSize: Theme.fontBase
+--- a/FilterBar.qml
++++ b/FilterBar.qml
+@@ -1,4 +1,5 @@
+ import QtQuick
++import Quickshell
+ import Ryoku.Ui.Singletons
+ 
+ Item {
+@@ -270,23 +271,16 @@
+                     mode: "action"
+                     onTriggered: root.state.openPreview()
+                 }
+-                // Wallpaper colours: matugen derives the desktop palette from each wallpaper
+-                // you apply. Off holds the current colours; a theme tile picks a fixed one.
+-                BarButton {
+-                    anchors.verticalCenter: parent.verticalCenter
+-                    glyph: "\u{f020a}"
+-                    tooltip: root.followWall ? I18n.tr("Colours follow the wallpaper") : I18n.tr("Take colours from the wallpaper")
+-                    active: root.followWall
+-                    hpad: 9
+-                    onTriggered: Settings.set("theme.policy", root.followWall ? "off" : "wallpaper")
+-                }
+                 BarButton {
+                     anchors.verticalCenter: parent.verticalCenter
+                     visible: root.show("filterBar.show.theme")
+-                    glyph: root.light ? "\u{f0599}" : "\u{f0594}"
+-                    tooltip: root.light ? I18n.tr("Switch to dark") : I18n.tr("Switch to light")
++                    glyph: "\u{f020a}"
++                    tooltip: I18n.tr("Theme & Accent")
+                     hpad: 9
+-                    onTriggered: Settings.set("theme.mode", root.light ? "dark" : "light")
++                    onTriggered: {
++                        root.state.hideRequested()
++                        Quickshell.execDetached(["ryoku-shell", "hub", "open", "appearance"])
++                    }
+                 }
+                 BarButton {
+                     anchors.verticalCenter: parent.verticalCenter
+--- a/Theme.qml
++++ b/Theme.qml
+@@ -27,9 +27,9 @@
+ 
+     // Role order per entry: primary, primaryText, surface, surfaceText, surfaceVariant, surfaceContainer, background, outline, tertiary.
+     readonly property var fallbackPalette: ({
+-        primary: "#ffb4ab", primaryText: "#1d100e", surface: "#1d100e",
+-        surfaceText: "#f1dedb", surfaceVariant: "#534341", surfaceContainer: "#271815",
+-        background: "#1d100e", outline: "#a08c89", tertiary: "#dfc38c"
++        primary: "#d0d0d0", primaryText: "#161616", surface: "#161616",
++        surfaceText: "#efefef", surfaceVariant: "#383838", surfaceContainer: "#222222",
++        background: "#161616", outline: "#8a8a8a", tertiary: "#ffb4ab"
+     })
+ 
+     readonly property var presets: ({

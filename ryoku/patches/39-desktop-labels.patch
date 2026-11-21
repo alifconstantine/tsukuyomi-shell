@@ -1,0 +1,74 @@
+--- a/ryostore/App.qml
++++ b/ryostore/App.qml
+@@ -217,7 +217,7 @@
+                : (currentCategory
+                   ? (categoryID === "flatpak" ? I18n.tr("Applications from Flathub, installed with Flatpak.")
+                      : String(currentCategory.description || I18n.tr("Browse this collection.")))
+-                  : I18n.tr("A changing edit of additions from across Ryoku.")))
++                  : I18n.tr("Explore additions for your desktop.")))
+     // The Themes category browses per provider through a subtab strip; the filter
+     // narrows the collection to one provider or to the installed library.
+     readonly property bool themesBrowse: app.categoryID === "colorschemes" && app.view === "discover" && !app.searchOpen
+--- a/ryostore/InstallProgress.qml
++++ b/ryostore/InstallProgress.qml
+@@ -19,12 +19,14 @@
+     readonly property string activationHint: {
+         if (!installed)
+             return "";
++        if (category === "colorschemes")
++            return I18n.tr("Apply it in Tsukuyomi Hub → Appearance → Theme & Accent.");
+         if (category === "rices")
+-            return I18n.tr("Apply it in the Ryogami picker.");
++            return I18n.tr("Apply it in Wallpapers → Rices.");
+         if (category === "decors")
+             return I18n.tr("Choose it in Tsukuyomi Hub → Profile → Hero.");
+         if (category === "barstyles")
+-            return I18n.tr("Switch it in Tsukuyomi Hub → Bar Studio or Subshells.");
++            return I18n.tr("Switch it in Tsukuyomi Hub → Appearance → Bar Studio.");
+         return "";
+     }
+     readonly property bool showingHint: !active && activationHint !== ""
+--- a/hub/pages/LauncherPage.qml
++++ b/hub/pages/LauncherPage.qml
+@@ -489,7 +489,7 @@
+                                             return item.downloadPauseReason.length > 0
+                                                 ? I18n.tr("Under construction") + " \u00b7 " + item.downloadPauseReason
+                                                 : I18n.tr("Under construction");
+-                                        return I18n.tr("Available \u00b7 install from RyoStore");
++                                        return I18n.tr("Available \u00b7 install from Tsukuyomi Store");
+                                     }
+ 
+                                     objectName: "launcher-style-" + styleTile.modelData.id
+--- a/hub/pages/OverlaysPage.qml
++++ b/hub/pages/OverlaysPage.qml
+@@ -12,7 +12,7 @@
+ 
+     property var hub
+     readonly property var shippedDesigns: [
+-        { id: "ryoku", name: I18n.tr("Default"), description: I18n.tr("The default Tsukuyomi overlay, based on Ryoku.") }
++        { id: "ryoku", name: I18n.tr("Default"), description: I18n.tr("The default Tsukuyomi overlay.") }
+     ]
+ 
+     function wear(setting, designId) {
+--- a/hub/pages/AddonsPage.qml
++++ b/hub/pages/AddonsPage.qml
+@@ -1371,7 +1371,7 @@
+                             Text {
+                                 anchors.verticalCenter: parent.verticalCenter
+                                 width: parent.width - Tokens.fRow - parent.spacing
+-                                text: I18n.tr("Community plugin. Ryoku does not review or maintain it: it runs inside your shell with your permissions, so inspect its code before you trust it.")
++                                text: I18n.tr("Community plugin. It runs inside the shell with your user permissions.")
+                                 color: Tokens.inkDim; font.family: Tokens.ui; font.pixelSize: Tokens.fSmall
+                                 wrapMode: Text.WordWrap
+                             }
+--- a/ryostore/ProductDetail.qml
++++ b/ryostore/ProductDetail.qml
+@@ -745,7 +745,7 @@
+                                       : I18n.tr("This plugin runs unsandboxed code inside your shell with your permissions. Review its source before enabling it."))
+                                    : (dossier.compact
+                                       ? I18n.tr("Community plugin. Inspect its code before granting shell access.")
+-                                      : I18n.tr("Community plugin. Ryoku does not review or maintain it: it runs inside your shell with your permissions, so inspect its code before you trust it.")))
++                                      : I18n.tr("Community plugin. It runs inside the shell with your user permissions.")))
+                         color: Tokens.inkDim
+                         font.family: Tokens.ui
+                         font.pixelSize: Tokens.fSmall
