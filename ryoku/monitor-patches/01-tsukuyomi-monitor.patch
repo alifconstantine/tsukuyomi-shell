@@ -1,0 +1,469 @@
+--- a/main.go
++++ b/main.go
+@@ -17,7 +17,7 @@
+ 	app := NewApp()
+ 
+ 	if err := wails.Run(&options.App{
+-		Title:     "RyoManager",
++		Title:     "Tsukuyomi Monitor",
+ 		Width:     1380,
+ 		Height:    860,
+ 		MinWidth:  980,
+@@ -25,7 +25,7 @@
+ 		AssetServer: &assetserver.Options{
+ 			Assets: assets,
+ 		},
+-		BackgroundColour: &options.RGBA{R: 9, G: 9, B: 10, A: 1},
++		BackgroundColour: &options.RGBA{R: 22, G: 22, B: 22, A: 1},
+ 		OnStartup:        app.startup,
+ 		Linux: &linux.Options{
+ 			WebviewGpuPolicy: linux.WebviewGpuPolicyAlways,
+--- a/app.go
++++ b/app.go
+@@ -21,7 +21,7 @@
+ func (a *App) Snapshot() Snapshot          { return a.collector.Snapshot() }
+ func (a *App) AppIcon(key string) *string  { return a.collector.AppIcon(key) }
+ 
+-var errProtected = errors.New("RyoManager will not terminate this protected process")
++var errProtected = errors.New("Tsukuyomi Monitor will not terminate this protected process")
+ 
+ func validateIdentity(pid int, start uint64) error {
+ 	if pid <= 1 || pid == os.Getpid() {
+--- a/frontend/index.html
++++ b/frontend/index.html
+@@ -4,7 +4,7 @@
+     <meta charset="UTF-8" />
+     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+     <meta name="theme-color" content="#050505" />
+-    <title>RyoManager</title>
++    <title>Tsukuyomi Monitor</title>
+   </head>
+   <body>
+     <div id="app"></div>
+--- a/frontend/src/App.svelte
++++ b/frontend/src/App.svelte
+@@ -237,30 +237,19 @@
+   });
+ </script>
+ 
+-<svelte:head><title>RyoManager</title></svelte:head>
+-
+-<div class="app-shell" style={`--ryo-signal:${snapshot?.accent ?? "#7898a5"}`}>
++<svelte:head><title>Tsukuyomi Monitor</title></svelte:head>
++
++<div class="app-shell">
+   <aside class="sidebar">
+     <div class="rail-head">
+-      <div class="brand-plate">
+-        <div class="brand-mark">力</div>
+-        <div class="brand-copy"><div class="brand-name">RYOMANAGER</div><div class="brand-sub">//SYSTEM_CONTROL_</div></div>
+-        <div class="brand-kanji">管</div>
+-      </div>
++      <span>Tsukuyomi</span>
++      <strong>Monitor</strong>
+     </div>
+ 
+-    <nav class="nav" aria-label="RyoManager sections">
+-      <div class="nav-group">
+-        <div class="nav-heading"><span>01</span><b>MONITOR</b><i></i></div>
+-        <button class:active={page === "processes"} onclick={() => page = "processes"}><span>Processes</span><span class="nav-jp">処理</span></button>
+-        <button class:active={page === "performance"} onclick={() => page = "performance"}><span>Performance</span><span class="nav-jp">性能</span></button>
+-        <button class:active={page === "system"} onclick={() => page = "system"}><span>System</span><span class="nav-jp">機体</span></button>
+-      </div>
+-      <div class="nav-group">
+-        <div class="nav-heading"><span>02</span><b>CONTROL</b><i></i></div>
+-        <button class="future" disabled><span>Startup</span><span class="nav-jp">起動</span><small>NEXT</small></button>
+-        <button class="future" disabled><span>Services</span><span class="nav-jp">服務</span><small>NEXT</small></button>
+-      </div>
++    <nav class="nav" aria-label="Monitor sections">
++      <button aria-current={page === "processes" ? "page" : undefined} class:active={page === "processes"} onclick={() => page = "processes"}>Processes</button>
++      <button aria-current={page === "performance" ? "page" : undefined} class:active={page === "performance"} onclick={() => page = "performance"}>Performance</button>
++      <button aria-current={page === "system" ? "page" : undefined} class:active={page === "system"} onclick={() => page = "system"}>System</button>
+     </nav>
+ 
+     <div class="sidebar-status">
+@@ -269,16 +258,10 @@
+       <div class="status-row"><span>MEM</span><strong>{snapshot ? pct(memoryPercent) : "—"}</strong></div>
+       <div class="status-row"><span>PROC</span><strong>{snapshot?.processCount ?? "—"}</strong></div>
+       <div class="host">{snapshot?.system.hostname ?? "COLLECTING…"}</div>
+-      <div class="rail-foot-meta"><div><span>ED.</span><strong>001</strong></div><div class="barcode" aria-hidden="true"></div><span class="rail-plus">+</span></div>
+     </div>
+   </aside>
+ 
+   <main class="main">
+-    <header class="topbar">
+-      <div class="eyebrow"><span class="eyebrow-rule"></span><span>RYOKU DESKTOP / RYOMANAGER</span><span class="jp">管理</span></div>
+-      <div class="top-metrics"><span>CPU {snapshot ? pct(snapshot.cpu.usage) : "—"}</span><span class="dot">/</span><span>MEM {snapshot ? pct(memoryPercent) : "—"}</span><span class="dot">/</span><span class="top-runtime">{snapshot?.system.kernel ?? "—"}</span></div>
+-    </header>
+-
+     {#if error}<div class="error-strip"><span>FAULT</span>{error}<button onclick={() => error = ""} aria-label="Dismiss error">×</button></div>{/if}
+ 
+     {#if page === "processes"}
+--- a/frontend/src/app.css
++++ b/frontend/src/app.css
+@@ -4,21 +4,21 @@
+   background: var(--ryo-paper);
+   font-synthesis: none;
+ 
+-  --ryo-signal: #7898a5;
++  --ryo-signal: #d0d0d0;
+   --ryo-alert: #d33b32;
+ 
+-  --ryo-paper: #07090b;
+-  --ryo-paper-lift: #0b0e12;
+-  --ryo-rail: #090c10;
+-  --ryo-panel: #0d1116;
+-  --ryo-panel-low: #0a0d11;
+-  --ryo-key: #121820;
+-
+-  --ryo-ink: #e1e6ea;
+-  --ryo-ink-dim: #bcc5cb;
+-  --ryo-ink-muted: #89959d;
+-  --ryo-ink-faint: #68747c;
+-  --ryo-ink-ghost: #475159;
++  --ryo-paper: #161616;
++  --ryo-paper-lift: #1c1c1c;
++  --ryo-rail: #1c1c1c;
++  --ryo-panel: #222222;
++  --ryo-panel-low: #1b1b1b;
++  --ryo-key: #2a2a2a;
++
++  --ryo-ink: #efefef;
++  --ryo-ink-dim: #d0d0d0;
++  --ryo-ink-muted: #b9b9b9;
++  --ryo-ink-faint: #a1a1a1;
++  --ryo-ink-ghost: #909090;
+ 
+   --ryo-line: color-mix(in srgb, var(--ryo-ink) 17%, transparent);
+   --ryo-line-soft: color-mix(in srgb, var(--ryo-ink) 8%, transparent);
+@@ -26,22 +26,19 @@
+   --ryo-tint5: color-mix(in srgb, var(--ryo-ink) 5%, transparent);
+   --ryo-tint10: color-mix(in srgb, var(--ryo-ink) 9%, transparent);
+ 
+-  --ryo-display: "Fraunces", Georgia, serif;
++  --ryo-display: var(--ryo-ui);
+   --ryo-ui: "Space Grotesk", Inter, system-ui, sans-serif;
+   --ryo-mono: "JetBrainsMono Nerd Font", "SpaceMono Nerd Font", ui-monospace, monospace;
+   --ryo-jp: "Noto Sans CJK JP", sans-serif;
+   --ryo-snap: 120ms;
+   --ryo-move: 240ms;
+-  --ryo-radius: 6px;
++  --ryo-radius: 10px;
+ }
+ 
+ * { box-sizing: border-box; }
+ html, body, #app { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+ body {
+-  background:
+-    radial-gradient(circle at 77% 7%, rgba(98, 42, 53, .14), transparent 30%),
+-    radial-gradient(circle at 18% 86%, rgba(43, 76, 94, .13), transparent 28%),
+-    var(--ryo-paper);
++  background: var(--ryo-paper);
+   color: var(--ryo-ink);
+ }
+ button, input { font: inherit; }
+@@ -52,7 +49,7 @@
+   width: 100%;
+   height: 100%;
+   display: grid;
+-  grid-template-columns: 220px minmax(0, 1fr);
++  grid-template-columns: 196px minmax(0, 1fr);
+ }
+ 
+ .sidebar {
+@@ -63,50 +60,19 @@
+   border-right: 1px solid var(--ryo-line);
+ }
+ 
+-.rail-head { padding: 14px 12px 10px; }
+-.brand-plate {
+-  min-height: 58px;
+-  display: grid;
+-  grid-template-columns: 34px minmax(0, 1fr);
+-  grid-template-areas:
+-    "mark copy"
+-    "mark kanji";
+-  align-items: center;
+-  gap: 3px 8px;
+-  padding: 9px 10px;
+-  border: 1px solid var(--ryo-line);
+-  border-radius: var(--ryo-radius);
+-  background: var(--ryo-paper-lift);
+-}
+-.brand-mark { grid-area: mark; }
+-.brand-copy { grid-area: copy; min-width: 0; }
+-.brand-name {
+-  overflow: hidden;
+-  font-family: var(--ryo-ui);
+-  font-size: 11px;
+-  line-height: 1;
+-  letter-spacing: .07em;
++.rail-head {
++  display: grid;
++  gap: 3px;
++  padding: 23px 20px 18px;
++}
++.rail-head span {
++  color: var(--ryo-ink-muted);
++  text-transform: uppercase;
++  letter-spacing: .12em;
++  font-size: 10px;
+   font-weight: 600;
+-  text-overflow: ellipsis;
+-  white-space: nowrap;
+-}
+-.brand-sub {
+-  margin-top: 6px;
+-  overflow: hidden;
+-  color: var(--ryo-ink-faint);
+-  font-family: var(--ryo-mono);
+-  font-size: 10px;
+-  letter-spacing: .08em;
+-  text-overflow: ellipsis;
+-  white-space: nowrap;
+-}
+-.brand-kanji {
+-  grid-area: kanji;
+-  justify-self: end;
+-  color: var(--ryo-ink-ghost);
+-  font-family: var(--ryo-jp);
+-  font-size: 10px;
+-}
++}
++.rail-head strong { font-size: 22px; font-weight: 600; }
+ 
+ .nav {
+   min-height: 0;
+@@ -115,28 +81,11 @@
+   scrollbar-width: thin;
+   scrollbar-color: var(--ryo-line-strong) transparent;
+ }
+-.nav-group + .nav-group { margin-top: 14px; }
+-.nav-heading {
+-  height: 28px;
+-  padding-inline: 5px;
+-  display: grid;
+-  grid-template-columns: 22px auto 1fr;
+-  align-items: center;
+-  gap: 8px;
+-  color: var(--ryo-ink-ghost);
+-  font-family: var(--ryo-mono);
+-  font-size: 10px;
+-  letter-spacing: .16em;
+-}
+-.nav-heading b { font-family: var(--ryo-ui); font-weight: 600; letter-spacing: .2em; }
+-.nav-heading i { height: 1px; background: var(--ryo-line-soft); }
+ .nav button {
+   width: 100%;
+   min-height: 38px;
+-  display: grid;
+-  grid-template-columns: minmax(0, 1fr) auto auto;
+-  align-items: center;
+-  gap: 7px;
++  display: flex;
++  align-items: center;
+   padding: 0 11px;
+   border: 1px solid transparent;
+   border-radius: var(--ryo-radius);
+@@ -149,32 +98,14 @@
+ }
+ .nav button:hover:not(:disabled) { background: var(--ryo-tint5); color: var(--ryo-ink); }
+ .nav button.active {
+-  border-color: var(--ryo-line-strong);
+-  background: var(--ryo-tint10);
++  background: #383838;
+   color: var(--ryo-ink);
+ }
+-.nav-jp {
+-  font-family: var(--ryo-jp);
+-  color: var(--ryo-ink-faint);
+-  font-size: 11px;
+-}
+-.nav button.active .nav-jp { color: var(--ryo-ink-muted); }
+-.nav button.future { opacity: .36; cursor: default; }
+-.nav small {
+-  border: 1px solid currentColor;
+-  border-radius: 3px;
+-  padding: 2px 4px;
+-  font-family: var(--ryo-mono);
+-  font-size: 8px;
+-  letter-spacing: .1em;
+-}
+-
+ .sidebar-status { margin-top: auto; padding: 13px 14px; }
+ .status-rule { height: 1px; margin-bottom: 11px; background: var(--ryo-line-soft); }
+ .status-row { display: flex; justify-content: space-between; padding: 3px 0; }
+ .status-row span,
+-.host,
+-.rail-foot-meta {
++.host {
+   color: var(--ryo-ink-faint);
+   font-family: var(--ryo-mono);
+   font-size: 10px;
+@@ -182,63 +113,13 @@
+ }
+ .status-row strong { color: var(--ryo-ink-dim); font-family: var(--ryo-mono); font-size: 11px; font-weight: 500; }
+ .host { margin-top: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-transform: uppercase; }
+-.rail-foot-meta {
+-  margin-top: 14px;
+-  padding-top: 12px;
+-  display: grid;
+-  grid-template-columns: auto 1fr auto;
+-  align-items: end;
+-  gap: 12px;
+-  border-top: 1px solid var(--ryo-line-soft);
+-}
+-.rail-foot-meta > div:first-child { display: grid; gap: 2px; }
+-.rail-foot-meta strong { color: var(--ryo-ink-dim); font-size: 11px; font-weight: 500; }
+-.barcode {
+-  height: 14px;
+-  opacity: .32;
+-  background: repeating-linear-gradient(90deg, var(--ryo-ink-muted) 0 1px, transparent 1px 3px, var(--ryo-ink-muted) 3px 5px, transparent 5px 7px);
+-}
+-.rail-plus { color: var(--ryo-ink-ghost); }
+-
+ .main {
+   min-width: 0;
+   min-height: 0;
+   display: flex;
+   flex-direction: column;
+-  background:
+-    radial-gradient(circle at 72% 2%, rgba(108, 44, 57, .12), transparent 25%),
+-    linear-gradient(180deg, rgba(255, 255, 255, .012), transparent 18%),
+-    transparent;
+-}
+-.topbar {
+-  height: 38px;
+-  padding: 0 16px;
+-  display: flex;
+-  align-items: center;
+-  justify-content: space-between;
+-  border-bottom: 1px solid var(--ryo-line);
+-  background: color-mix(in srgb, var(--ryo-paper) 92%, transparent);
+-  flex: 0 0 auto;
+-}
+-.eyebrow {
+-  display: flex;
+-  align-items: center;
+-  gap: 8px;
+-  color: var(--ryo-ink-muted);
+-  font-family: var(--ryo-mono);
+-  font-size: 10px;
+-  letter-spacing: .16em;
+-}
+-.eyebrow-rule { width: 17px; height: 1px; background: var(--ryo-ink-dim); }
+-.jp { font-family: var(--ryo-jp); font-size: 11px; letter-spacing: 0; color: var(--ryo-ink-faint); }
+-.top-metrics { display: flex; align-items: center; color: var(--ryo-ink-faint); font-family: var(--ryo-mono); font-size: 10px; }
+-.dot { margin: 0 7px; color: var(--ryo-ink-ghost); }
+-.top-runtime {
+-  max-width: 220px;
+-  overflow: hidden;
+-  text-overflow: ellipsis;
+-  white-space: nowrap;
+-}
++}
++
+ .error-strip {
+   padding: 7px 22px;
+   display: flex;
+@@ -302,8 +183,8 @@
+   font-size: 9px;
+   font-weight: 500;
+ }
+-h1, h2 { margin: 0; font-family: var(--ryo-display); font-weight: 400; letter-spacing: -.025em; }
+-h1 { margin-top: 5px; font-size: 38px; line-height: 1; }
++h1, h2 { margin: 0; font-family: var(--ryo-display); font-weight: 600; letter-spacing: -.025em; }
++h1 { font-size: 32px; line-height: 1; }
+ h2 { margin-top: 3px; font-size: 27px; }
+ .page-head p { max-width: 560px; margin: 7px 0 0; color: var(--ryo-ink-muted); font-size: 12px; line-height: 1.5; }
+ 
+@@ -1144,7 +1025,7 @@
+ .system-hero {
+   min-height: 112px;
+   display: grid;
+-  grid-template-columns: 58px minmax(0, 1fr) auto;
++  grid-template-columns: minmax(0, 1fr);
+   align-items: center;
+   gap: 17px;
+   padding: 16px 18px;
+@@ -1157,32 +1038,9 @@
+   overflow: hidden;
+ }
+ .system-hero::after { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--ryo-signal); }
+-.system-mark {
+-  width: 56px;
+-  height: 56px;
+-  display: grid;
+-  place-items: center;
+-  border: 1px solid var(--ryo-line-strong);
+-  border-radius: var(--ryo-radius);
+-  background: var(--ryo-tint10);
+-  color: var(--ryo-ink);
+-  font-family: var(--ryo-jp);
+-  font-size: 25px;
+-}
+ .system-copy span { color: var(--ryo-ink-faint); font-family: var(--ryo-mono); font-size: 10px; letter-spacing: .17em; }
+ .system-copy h2 { margin-top: 5px; font-size: 30px; }
+ .system-copy p { margin: 6px 0 0; color: var(--ryo-ink-muted); font-size: 12px; }
+-.system-seal {
+-  min-width: 54px;
+-  padding: 10px 8px;
+-  border: 1px solid var(--ryo-line);
+-  border-radius: 4px;
+-  color: var(--ryo-ink-muted);
+-  font-family: var(--ryo-jp);
+-  font-size: 23px;
+-  line-height: 1;
+-  text-align: center;
+-}
+ .system-seal small { color: var(--ryo-ink-faint); font-family: var(--ryo-mono); font-size: 9px; letter-spacing: .14em; }
+ .system-grid { margin-top: 10px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+ .system-grid > div {
+--- a/frontend/src/lib/pages/ProcessesPage.svelte
++++ b/frontend/src/lib/pages/ProcessesPage.svelte
+@@ -641,7 +641,6 @@
+ <section class="page processes-page">
+   <div class="page-head processes-head">
+     <div class="title-block">
+-      <div class="section-label"><i></i><span class="section-mark">力</span> SYSTEM / PROCESSES <span>処理</span><b>01</b></div>
+       <h1>Processes</h1>
+       <p>Apps and services grouped by identity, with every reading tied to a live process.</p>
+     </div>
+--- a/frontend/src/lib/pages/PerformancePage.svelte
++++ b/frontend/src/lib/pages/PerformancePage.svelte
+@@ -130,7 +130,6 @@
+ <section class="page performance-page performance-workspace-page">
+   <header class="page-head compact">
+     <div class="title-block">
+-      <div class="section-label"><i></i><span class="section-mark">性能</span><span>PERFORMANCE</span></div>
+       <h1>Performance</h1>
+       <p>Live hardware readings with gaps left visible when collection pauses.</p>
+     </div>
+--- a/frontend/src/lib/pages/SystemPage.svelte
++++ b/frontend/src/lib/pages/SystemPage.svelte
+@@ -36,21 +36,18 @@
+ <section class="page system-page">
+   <div class="page-head compact">
+     <div class="title-block">
+-      <div class="section-label"><i></i><span class="section-mark">力</span> SYSTEM / OVERVIEW <span>機体</span><b>03</b></div>
+       <h1>System</h1>
+-      <p>Hardware, kernel and live resource state for this Ryoku workstation.</p>
++      <p>Hardware, kernel and live resource state for this computer.</p>
+     </div>
+   </div>
+ 
+-  <div class="system-hero panel-ticks">
+-    <div class="system-mark">力</div>
+-    <div class="system-copy"><span>RYOKU WORKSTATION // 機体</span><h2>{snapshot?.system.hostname ?? "Collecting…"}</h2><p>{snapshot?.system.os ?? "Linux"}</p></div>
+-    <div class="system-seal">緑<br /><small>RM</small></div>
++  <div class="system-hero">
++    <div class="system-copy"><h2>{snapshot?.system.hostname ?? "Collecting…"}</h2><p>{snapshot?.system.os ?? "Linux"}</p></div>
+   </div>
+   <div class="system-grid">
+     <div><span>PROCESSOR</span><strong>{snapshot?.system.cpuModel ?? "—"}</strong><small>{snapshot?.system.physicalCores ?? "—"} cores / {snapshot?.system.logicalCpus ?? "—"} threads</small></div>
+     <div><span>MEMORY</span><strong>{snapshot ? formatBytes(snapshot.memory.total) : "—"}</strong><small>{snapshot ? `${formatBytes(snapshot.memory.used)} currently in use` : ""}</small></div>
+-    <div><span>KERNEL</span><strong>{snapshot?.system.kernel ?? "—"}</strong><small>Linux / Ryoku host</small></div>
++    <div><span>KERNEL</span><strong>{snapshot?.system.kernel ?? "—"}</strong><small>Linux</small></div>
+     <div><span>LIVE PROCESSES</span><strong>{snapshot?.processCount ?? "—"}</strong><small>Visible to the current user session</small></div>
+   </div>
+ 
