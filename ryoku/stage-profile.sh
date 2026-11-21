@@ -79,6 +79,12 @@ for change in "$here"/hypr-patches/*.patch; do
     patch --batch --forward --fuzz=0 -d "$draft/.config/hypr" -p1 < "$change"
 done
 
+widget_catalog="$draft/.config/quickshell/shell/modules/bar/barstyles/qsbar/core"
+{
+    printf '.pragma library\nvar entries = '
+    jq -ac . "$widget_catalog/widgets.json"
+} > "$widget_catalog/WidgetCatalogData.js"
+
 mv -T --no-clobber -- "$draft" "$profile"
 if [[ -d $draft ]]; then
     echo "Profile already exists: $profile" >&2

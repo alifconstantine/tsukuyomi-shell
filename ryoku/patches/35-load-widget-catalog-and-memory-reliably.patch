@@ -1,0 +1,120 @@
+--- a/shell/modules/bar/barstyles/qsbar/core/BarCatalog.qml
++++ b/shell/modules/bar/barstyles/qsbar/core/BarCatalog.qml
+@@ -1,71 +1,30 @@
+ pragma ComponentBehavior: Bound
+ 
+ import QtQuick
+-import Ryoku.Ui
++import "WidgetCatalogData.js" as WidgetData
+ 
+-// The single source of truth for the qsbar's built-in widgets: it loads the
+-// shipped widgets.json (the same file the daemon reads) and hands out the id
+-// <-> gid mapping the rest of the bar needs. Everything that used to hand-list
+-// widgets - the layout migration, the settings catalogue, the daemon crib -
+-// reads this instead, so a widget is described in exactly one place.
+-//
+-// blockLoading is deliberate: the layout migration and the id<->gid lookups run
+-// during first load, so the array has to be present synchronously rather than a
+-// frame later.
++// The packaged widgets.json also feeds the daemon. The build compiles the same
++// list into the UI so layout restoration can run before any file I/O completes.
+ Item {
+     id: catalog
+ 
+-    // Parsed widgets.json: an array of { id, gid, label, gloss?, category?,
+-    // desc?, visKey?, settings? }. Empty until the file loads (it is shipped
+-    // beside this component, so the load never really fails in practice).
+-    property var entries: []
+-
+-    // id -> entry, for the callers that want a whole row.
+-    property var _byId: ({})
+-    // gid -> id and id -> gid, the two lookups the layout core lives on.
+-    property var _idOfGid: ({})
+-    property var _gidOfId: ({})
+-
+-    function _load(content) {
+-        var parsed
+-        try {
+-            parsed = JSON.parse(content || "[]")
+-        } catch (error) {
+-            console.warn("qsbar catalogue: widgets.json could not be parsed:", error)
+-            return
++    readonly property var entries: WidgetData.entries
++    readonly property var _index: {
++        const byId = ({});
++        const idOfGid = ({});
++        const gidOfId = ({});
++        for (let i = 0; i < entries.length; i++) {
++            const entry = entries[i];
++            byId[entry.id] = entry;
++            if (entry.gid) {
++                idOfGid[entry.gid] = entry.id;
++                gidOfId[entry.id] = entry.gid;
++            }
+         }
+-        if (!Array.isArray(parsed)) {
+-            console.warn("qsbar catalogue: widgets.json is not an array")
+-            return
+-        }
+-        catalog._reindex(parsed)
++        return { byId, idOfGid, gidOfId };
+     }
+ 
+-    function _reindex(list) {
+-        var byId = ({})
+-        var idOfGid = ({})
+-        var gidOfId = ({})
+-        for (var i = 0; i < list.length; i++) {
+-            var e = list[i]
+-            if (!e || !e.id) continue
+-            byId[e.id] = e
+-            if (e.gid) { idOfGid[e.gid] = e.id; gidOfId[e.id] = e.gid }
+-        }
+-        catalog._byId = byId
+-        catalog._idOfGid = idOfGid
+-        catalog._gidOfId = gidOfId
+-        catalog.entries = list
+-    }
+-
+-    function byId(id) { return catalog._byId[id] !== undefined ? catalog._byId[id] : null }
+-    function gidOf(id) { return catalog._gidOfId[id] !== undefined ? catalog._gidOfId[id] : "" }
+-    function idOf(gid) { return catalog._idOfGid[gid] !== undefined ? catalog._idOfGid[gid] : "" }
+-
+-    DeferredFileView {
+-        path: Qt.resolvedUrl("widgets.json")
+-        blockLoading: true
+-        printErrors: false
+-        readLabel: "qsbar widgets.json"
+-        onTextReady: content => catalog._load(content)
+-    }
++    function byId(id) { return catalog._index.byId[id] ?? null }
++    function gidOf(id) { return catalog._index.gidOfId[id] ?? "" }
++    function idOf(gid) { return catalog._index.idOfGid[gid] ?? "" }
+ }
+--- a/shell/modules/bar/barstyles/qsbar/Theme.qml
++++ b/shell/modules/bar/barstyles/qsbar/Theme.qml
+@@ -1726,11 +1726,10 @@
+         onTextReady: content => theme.kernelRelease = String(content || "").trim()
+     }
+ 
+-    DeferredFileView {
+-        id: systemMemFile
+-        path: "/proc/meminfo"
+-        readLabel: "/proc/meminfo"
+-        onTextReady: content => theme.parseSystemMem(content)
++    Process {
++        id: systemMemProc
++        command: ["cat", "/proc/meminfo"]
++        stdout: StdioCollector { onStreamFinished: theme.parseSystemMem(text) }
+     }
+ 
+     Process {
+@@ -1831,7 +1830,7 @@
+                 systemLoadFile.reload()
+             }
+             if (theme.modMemory || theme.memVisible)
+-                systemMemFile.reload()
++                systemMemProc.running = true
+         }
+     }
+ 
