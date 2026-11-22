@@ -1,0 +1,132 @@
+--- a/ryostore/App.qml	2026-11-22 15:52:00.322671367 +0700
++++ b/ryostore/App.qml	2026-11-22 15:52:00.341464240 +0700
+@@ -86,7 +86,66 @@
+         onTriggered: if (app.remoteQuery.length >= 2) Store.searchRemote("flatpak", app.remoteQuery)
+     }
+ 
+-    readonly property var searchableItems: Store.items.concat(app.remoteExtras)
++    property var compatInstalled: ({})
++    readonly property var compatItems: [
++        {
++            id: "winboat",
++            category: "compat-addons",
++            name: "WinBoat (Windows VM Desktop)",
++            author: "WinBoat",
++            version: "0.9.2",
++            kind: "VM Runtime",
++            license: "MIT",
++            tags: ["windows", "vm", "desktop", "compatibility"],
++            description: "Run seamless full Windows desktop applications (Office, Adobe, Windows-only enterprise software) inside a containerized Windows VM when Wine isn't enough.",
++            installed: !!app.compatInstalled["winboat"],
++            compatPackage: "winboat"
++        },
++        {
++            id: "faugus-launcher",
++            category: "compat-addons",
++            name: "Faugus Launcher (UMU Gaming)",
++            author: "Faugus",
++            version: "2.5.7",
++            kind: "Game Launcher",
++            license: "MIT",
++            tags: ["windows", "gaming", "umu", "proton"],
++            description: "Lightweight GTK4 Windows game and launcher manager powered by UMU-Launcher and Proton.",
++            installed: !!app.compatInstalled["faugus-launcher"],
++            compatPackage: "faugus-launcher"
++        },
++        {
++            id: "proton-cachyos-native",
++            category: "compat-addons",
++            name: "Proton CachyOS Native",
++            author: "CachyOS",
++            version: "11.0",
++            kind: "Proton Runtime",
++            license: "Custom",
++            tags: ["windows", "proton", "gaming", "wine"],
++            description: "CachyOS-tuned native Proton runtime for UMU Launcher and demanding Windows games.",
++            installed: !!app.compatInstalled["proton-cachyos-native"],
++            compatPackage: "proton-cachyos-native"
++        }
++    ]
++
++    Process {
++        id: compatStatus
++        command: ["/usr/lib/tsukuyomi/compat-store-setup", "status"]
++        running: true
++        stdout: StdioCollector {
++            onStreamFinished: {
++                try { app.compatInstalled = JSON.parse(text); } catch (e) {}
++            }
++        }
++    }
++
++    Process {
++        id: compatPkgProc
++        onExited: compatStatus.running = true
++    }
++
++    readonly property var searchableItems: Store.items.concat(app.compatItems).concat(app.remoteExtras)
+             .filter(item => item.category !== "ryotunes-skins"
+                     && (item.category !== "omarchy-plugins" || app.nomarchyActive))
+             .map(item => {
+@@ -94,7 +153,9 @@
+                 Object.keys(item).forEach(key => copy[key] = item[key]);
+                 if (app.remoteMatches[StoreLogic.itemKey(item)] === true)
+                     copy.remoteMatch = true;
+-                const category = Store.category(item.category);
++                const category = item.category === "compat-addons"
++                        ? { id: "compat-addons", name: I18n.tr("Compat Add-ons") }
++                        : Store.category(item.category);
+                 copy.categoryName = StoreLogic.categoryName(item, category);
+                 copy.searchIndex = StoreLogic.searchText(copy);
+                 return copy;
+@@ -109,6 +170,12 @@
+                     && Number(category.count || 0) > 0
+                     && app.decorFamily.indexOf(String(category.id || "")) <= 0
+                     && (String(category.id || "") !== "omarchy-plugins" || app.nomarchyActive))
++            .concat([{
++                id: "compat-addons",
++                name: I18n.tr("Compat Add-ons"),
++                description: I18n.tr("Optional Windows VM and gaming runtimes (WinBoat, Faugus Launcher, Proton CachyOS)."),
++                count: 3
++            }])
+     // Discover rotates daily: the day number seeds the hero pick and the order in
+     // StoreLogic.collection, so the landing holds still while you browse but
+     // changes each day. Absent on category/search/library views, which ignore it.
+@@ -197,8 +264,8 @@
+     property string appsQuery: ""
+     readonly property bool appsFiltered: app.appsBrowse && (app.appsTag !== "" || app.appsQuery !== "")
+     readonly property var appTabs: StoreLogic.appCategories(Store.items)
+-    readonly property var currentCategory: categoryID === "subshells"
+-        ? app.navigationCategories.find(category => category.id === "subshells")
++    readonly property var currentCategory: (categoryID === "subshells" || categoryID === "compat-addons")
++        ? app.navigationCategories.find(category => category.id === categoryID)
+         : (categoryID !== "" ? Store.category(categoryID) : null)
+     readonly property string pageTitle: searchOpen ? I18n.tr("Search")
+             : (view === "library" ? I18n.tr("Library")
+@@ -1131,10 +1198,24 @@
+         installError: Store.installError
+         reducedMotion: app.reducedMotion
+         onCloseRequested: app.closeDetail()
+-        onInstallRequested: (item, dither, components) => Store.install(item, dither, components)
++        onInstallRequested: (item, dither, components) => {
++            if (item && item.compatPackage) {
++                compatPkgProc.command = ["kitty", "-e", "/usr/lib/tsukuyomi/compat-store-setup", "install", String(item.compatPackage)];
++                compatPkgProc.running = true;
++            } else {
++                Store.install(item, dither, components);
++            }
++        }
+         onRetryRequested: (item, dither, components) => Store.retryInstall(item, dither, components)
+         onSettingsRequested: item => Store.openSettings(item)
+-        onRemoveRequested: item => Store.remove(item)
++        onRemoveRequested: item => {
++            if (item && item.compatPackage) {
++                compatPkgProc.command = ["kitty", "-e", "/usr/lib/tsukuyomi/compat-store-setup", "remove", String(item.compatPackage)];
++                compatPkgProc.running = true;
++            } else {
++                Store.remove(item);
++            }
++        }
+         onEnabledRequested: (item, enabled) => Store.setOmarchyEnabled(item, enabled)
+     }
+ }
