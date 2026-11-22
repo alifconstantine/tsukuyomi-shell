@@ -69,7 +69,7 @@ Item {
 
         NotchTheme { id: nt; root: panel.root }
 
-    readonly property var tabs: Registry.visibleTabs(NotchConfig.hiddenTabs)
+    readonly property var tabs: Registry.visibleTabs(NotchConfig.hiddenTabs, NotchConfig.tabOrder)
     property string activeTabId: "home"
     property bool settingsOpen: false
     property bool switcherOpen: false
@@ -91,9 +91,10 @@ Item {
     readonly property bool tpDistractionFree: panel.tpActive && NotchTeleprompterStore.focusMode
     readonly property real scaleFactor: panel.tpActive ? (NotchTeleprompterStore.scalePct / 100.0) : 1.0
     readonly property int quickBarExtra: (panel.switcherOpen && !panel.settingsOpen && !panel.tpDistractionFree) ? 42 : 0
+    readonly property int homeExtraH: (!panel.settingsOpen && panel.activeTabId === "home" && (NotchConfig.homeTiles || []).length > 4) ? 56 : 0
 
     readonly property real targetW: Math.min(panel.maxW, Math.round(Number(panel.activeMeta.w || 468) * panel.scaleFactor))
-    readonly property real targetH: Math.min(panel.maxH, Math.round(Number(panel.activeMeta.h || 214) * panel.scaleFactor) + panel.quickBarExtra)
+    readonly property real targetH: Math.min(panel.maxH, Math.round((Number(panel.activeMeta.h || 214) + panel.homeExtraH) * panel.scaleFactor) + panel.quickBarExtra)
 
     function stepTab(delta) {
         if (panel.settingsOpen) return;
@@ -560,7 +561,7 @@ Item {
                     target: contentLoader.item
                     ignoreUnknownSignals: true
                     function onOpenSettingsRequested() {
-                        panel.openSettingsPopup("media");
+                        panel.openSettingsPopup(panel.activeTabId === "notif" ? "behavior" : "media");
                     }
                 }
             }

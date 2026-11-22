@@ -186,6 +186,8 @@ Item {
             if (app.length > 16) app = app.slice(0, 15) + "…";
             if (body.length > 26) body = body.slice(0, 25) + "…";
             pill.triggerLive("notif", "notifications", app, body, nt.accent, false);
+            if (!Notifs.dnd)
+                NotchConfig.playSound(NotchConfig.notifSound);
         }
     }
 

@@ -30,6 +30,42 @@ Singleton {
     property alias defaultTab: adapter.defaultTab             // "home" | "last"
     property alias lastTab: adapter.lastTab
     property alias hiddenTabs: adapter.hiddenTabs             // array of hidden tab IDs
+    property alias tabOrder: adapter.tabOrder                 // ordered tab IDs
+
+    property alias timerRingtone: adapter.timerRingtone       // "alarm-clock-elapsed" | "complete" | "bell" | "message" | "none"
+    property alias notifSound: adapter.notifSound             // "message-new-instant" | "bell" | "dialog-information" | "none"
+    property alias homeTiles: adapter.homeTiles               // active Home quick control IDs
+
+    function isHomeTileEnabled(id) {
+        var arr = cfg.homeTiles || ["wifi", "bluetooth", "focus", "coffee"];
+        return arr.indexOf(id) >= 0;
+    }
+
+    function toggleHomeTile(id) {
+        var arr = (cfg.homeTiles || ["wifi", "bluetooth", "focus", "coffee"]).slice();
+        var idx = arr.indexOf(id);
+        if (idx >= 0) {
+            if (arr.length <= 2) return; // keep at least 2 controls
+            arr.splice(idx, 1);
+        } else {
+            if (arr.length >= 8) return; // max 8 (2 rows of 4)
+            arr.push(id);
+        }
+        cfg.homeTiles = arr;
+    }
+
+    function playSound(soundId) {
+        var id = String(soundId || "");
+        if (id === "" || id === "none") return;
+        if (!/^[a-z0-9-]+$/.test(id)) return;
+        Quickshell.execDetached([
+            "sh", "-c",
+            "f=\"/usr/share/sounds/freedesktop/stereo/$1.oga\"; [ -r \"$f\" ] || exit 0; " +
+            "if command -v pw-play >/dev/null 2>&1; then pw-play \"$f\"; " +
+            "elif command -v paplay >/dev/null 2>&1; then paplay \"$f\"; fi",
+            "_", id
+        ]);
+    }
 
     function isTabEnabled(id) {
         if (id === "home") return true;
@@ -48,6 +84,24 @@ Singleton {
             h.push(id);
             cfg.hiddenTabs = h;
         }
+    }
+
+    function moveTab(id, delta, allTabIds) {
+        var cur = (cfg.tabOrder && cfg.tabOrder.length > 0) ? cfg.tabOrder.slice() : [];
+        for (var i = 0; i < allTabIds.length; i++) {
+            if (cur.indexOf(allTabIds[i]) < 0) cur.push(allTabIds[i]);
+        }
+        var idx = cur.indexOf(id);
+        var nextIdx = idx + delta;
+        if (idx < 0 || nextIdx < 0 || nextIdx >= cur.length) return;
+        var tmp = cur[idx];
+        cur[idx] = cur[nextIdx];
+        cur[nextIdx] = tmp;
+        cfg.tabOrder = cur;
+    }
+
+    function resetTabOrder() {
+        cfg.tabOrder = [];
     }
 
     function normalizeHex(raw, fallback) {
@@ -91,6 +145,11 @@ Singleton {
             property string defaultTab: "home"
             property string lastTab: "home"
             property var hiddenTabs: []
+            property var tabOrder: []
+
+            property string timerRingtone: "alarm-clock-elapsed"
+            property string notifSound: "message-new-instant"
+            property var homeTiles: ["wifi", "bluetooth", "focus", "coffee"]
         }
     }
 

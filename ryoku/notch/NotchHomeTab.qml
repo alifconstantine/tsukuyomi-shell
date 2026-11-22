@@ -22,8 +22,105 @@ Item {
     readonly property bool soundMuted: sinkAudio ? sinkAudio.muted : false
     readonly property int soundPct: sinkAudio ? Math.round(Math.max(0, Math.min(1.5, sinkAudio.volume)) * 100) : 0
 
+    readonly property var source: Audio.source
+    readonly property var sourceAudio: source ? source.audio : null
+    readonly property bool micMuted: sourceAudio ? sourceAudio.muted : false
+
     readonly property bool hasBacklight: Devices.backlightAvailable
     readonly property int displayPct: hasBacklight ? Math.max(1, Devices.backlightPct) : 100
+
+    readonly property var activeTileIds: {
+        var raw = NotchConfig.homeTiles;
+        return (raw && raw.length > 0) ? raw : ["wifi", "bluetooth", "focus", "coffee"];
+    }
+
+    function tileProps(tileId) {
+        switch (tileId) {
+        case "wifi":
+            return {
+                icon: Network.wifiRadio ? "wifi" : "wifi_off",
+                label: I18n.tr("Wi-Fi"),
+                active: Network.wifiRadio,
+                enabled: Network.wifiPresent,
+                activeColor: home.theme.accent
+            };
+        case "bluetooth":
+            return {
+                icon: BluetoothPower.enabled
+                    ? (home.btConnectedCount > 0 ? "bluetooth_connected" : "bluetooth")
+                    : "bluetooth_disabled",
+                label: I18n.tr("Bluetooth"),
+                active: BluetoothPower.enabled,
+                enabled: BluetoothPower.available,
+                activeColor: home.theme.accent
+            };
+        case "focus":
+            return {
+                icon: Flags.dnd ? "dark_mode" : "notifications_active",
+                label: I18n.tr("Focus"),
+                active: Flags.dnd,
+                enabled: true,
+                activeColor: home.theme.accent
+            };
+        case "coffee":
+            return {
+                icon: "local_cafe",
+                label: I18n.tr("Coffee"),
+                active: Flags.keepAwake,
+                enabled: true,
+                activeColor: home.theme.warning
+            };
+        case "nightlight":
+            return {
+                icon: "bedtime",
+                label: I18n.tr("Night"),
+                active: Nightlight.on,
+                enabled: true,
+                activeColor: home.theme.warning
+            };
+        case "mic":
+            return {
+                icon: home.micMuted ? "mic_off" : "mic",
+                label: I18n.tr("Mic"),
+                active: !home.micMuted,
+                enabled: home.sourceAudio !== null,
+                activeColor: home.theme.accent
+            };
+        case "gamemode":
+            return {
+                icon: "sports_esports",
+                label: I18n.tr("Game"),
+                active: Flags.gameMode,
+                enabled: true,
+                activeColor: home.theme.accent
+            };
+        case "screenshot":
+            return {
+                icon: "screenshot_region",
+                label: I18n.tr("Capture"),
+                active: Capture.selecting !== "",
+                enabled: true,
+                activeColor: home.theme.accent
+            };
+        default:
+            return { icon: "tune", label: tileId, active: false, enabled: false, activeColor: home.theme.accent };
+        }
+    }
+
+    function triggerTile(tileId) {
+        switch (tileId) {
+        case "wifi": Network.setWifiEnabled(!Network.wifiRadio); break;
+        case "bluetooth": BluetoothPower.toggle(); break;
+        case "focus": Flags.dnd = !Flags.dnd; break;
+        case "coffee": Flags.keepAwake = !Flags.keepAwake; break;
+        case "nightlight": Nightlight.toggle(); break;
+        case "mic":
+            if (home.sourceAudio) home.sourceAudio.muted = !home.sourceAudio.muted;
+            break;
+        case "gamemode": Flags.gameMode = !Flags.gameMode; break;
+        case "screenshot": Capture.shoot("region"); break;
+        }
+    }
 
     readonly property int btConnectedCount: {
         var list = BluetoothPower.devices || [];
@@ -37,14 +134,13 @@ Item {
         id: pill
         property string icon: ""
         property string label: ""
-        property string sublabel: ""
         property bool active: false
         property bool enabledControl: true
         property color activeColor: home.theme.accent
         signal triggered()
 
-        height: 54
-        radius: 14
+        height: 48
+        radius: 13
         opacity: enabledControl ? 1.0 : 0.45
         color: active
             ? Qt.rgba(activeColor.r, activeColor.g, activeColor.b, 0.22)
@@ -61,7 +157,7 @@ Item {
 
         Column {
             anchors.centerIn: parent
-            width: parent.width - 14
+            width: parent.width - 12
             spacing: 2
 
             NotchIcon {
@@ -82,18 +178,6 @@ Item {
                 font.family: Tokens.ui
                 font.pixelSize: 11
                 font.weight: pill.active ? Font.DemiBold : Font.Medium
-                elide: Text.ElideRight
-            }
-
-            Text {
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: parent.width
-                horizontalAlignment: Text.AlignHCenter
-                visible: pill.sublabel !== ""
-                text: pill.sublabel
-                color: pill.active ? pill.activeColor : home.theme.muted
-                font.family: theme.monoFont
-                font.pixelSize: 9
                 elide: Text.ElideRight
             }
         }
@@ -226,55 +310,30 @@ Item {
         Column {
             id: homeCol
             width: parent.width
-            spacing: 10
+            spacing: 8
 
-            // Top row: 4 quick toggles (icons indicate Off state; show active details cleanly)
-            Row {
+            // Dynamic Quick Tiles grid (4 per row; clean uniform 48px pills, no text wrapping bloat)
+            Flow {
+                id: tileFlow
                 width: parent.width
                 spacing: 8
-                readonly property real tileW: Math.floor((width - 24) / 4)
+                readonly property int count: home.activeTileIds.length
+                readonly property int cols: count <= 4 ? Math.max(1, count) : 4
+                readonly property real tileW: Math.floor((width - (cols - 1) * 8) / cols)
 
-                ControlPill {
-                    width: parent.tileW
-                    icon: Network.wifiRadio ? "wifi" : "wifi_off"
-                    label: I18n.tr("Wi-Fi")
-                    sublabel: Network.wifiRadio && Network.activeSsid !== "" ? Network.activeSsid : ""
-                    active: Network.wifiRadio
-                    enabledControl: Network.wifiPresent
-                    onTriggered: Network.setWifiEnabled(!Network.wifiRadio)
-                }
-
-                ControlPill {
-                    width: parent.tileW
-                    icon: BluetoothPower.enabled
-                        ? (home.btConnectedCount > 0 ? "bluetooth_connected" : "bluetooth")
-                        : "bluetooth_disabled"
-                    label: I18n.tr("Bluetooth")
-                    sublabel: BluetoothPower.enabled && home.btConnectedCount > 0
-                        ? I18n.tr("%1 paired").arg(home.btConnectedCount)
-                        : ""
-                    active: BluetoothPower.enabled
-                    enabledControl: BluetoothPower.available
-                    onTriggered: BluetoothPower.toggle()
-                }
-
-                ControlPill {
-                    width: parent.tileW
-                    icon: Flags.dnd ? "dark_mode" : "notifications_active"
-                    label: I18n.tr("Focus")
-                    sublabel: Flags.dnd ? I18n.tr("Silenced") : ""
-                    active: Flags.dnd
-                    onTriggered: Flags.dnd = !Flags.dnd
-                }
-
-                ControlPill {
-                    width: parent.tileW
-                    icon: "local_cafe"
-                    label: I18n.tr("Coffee")
-                    sublabel: Flags.keepAwake ? I18n.tr("Awake") : ""
-                    active: Flags.keepAwake
-                    activeColor: home.theme.warning
-                    onTriggered: Flags.keepAwake = !Flags.keepAwake
+                Repeater {
+                    model: home.activeTileIds
+                    delegate: ControlPill {
+                        required property string modelData
+                        readonly property var info: home.tileProps(modelData)
+                        width: tileFlow.tileW
+                        icon: info.icon
+                        label: info.label
+                        active: info.active
+                        enabledControl: info.enabled
+                        activeColor: info.activeColor
+                        onTriggered: home.triggerTile(modelData)
+                    }
                 }
             }
 
@@ -286,6 +345,7 @@ Item {
 
                 QuickSlider {
                     width: parent.sliderW
+                    height: 42
                     icon: "light_mode"
                     label: I18n.tr("Display")
                     value: home.displayPct
@@ -297,6 +357,7 @@ Item {
 
                 QuickSlider {
                     width: parent.sliderW
+                    height: 42
                     icon: home.soundMuted || home.soundPct === 0 ? "volume_off" : "volume_up"
                     label: I18n.tr("Sound")
                     value: Math.min(100, home.soundPct)

@@ -5,19 +5,19 @@
 // smoothly to fit the active module's content rather than forcing a single box.
 
 var TABS = [
-    { id: "home",          label: "Home",          icon: "home",              w: 468, h: 214, file: "NotchHomeTab.qml" },
-    { id: "music",         label: "Music",         icon: "music_note",        w: 556, h: 204, file: "NotchMusicTab.qml" },
-    { id: "calendar",      label: "Calendar",      icon: "calendar_month",    w: 604, h: 282, file: "NotchCalendarTab.qml" },
-    { id: "todo",          label: "ToDo",          icon: "checklist",         w: 590, h: 278, file: "NotchTodoTab.qml" },
-    { id: "timer",         label: "Timer",         icon: "timer",             w: 552, h: 234, file: "NotchTimerTab.qml" },
-    { id: "notifications", label: "Notifications", icon: "notifications",     w: 608, h: 290, file: "NotchNotifTab.qml" },
-    { id: "clipboard",     label: "Clipboard",     icon: "content_paste",     w: 584, h: 274, file: "NotchClipboardTab.qml" },
-    { id: "files",         label: "Files",         icon: "folder_open",       w: 628, h: 316, file: "NotchFilesTab.qml" },
-    { id: "translate",     label: "Translate",     icon: "translate",         w: 588, h: 266, file: "NotchTranslateTab.qml" },
-    { id: "teleprompter",  label: "Teleprompter",  icon: "subtitles",         w: 588, h: 286, file: "NotchTeleprompterTab.qml" },
-    { id: "weather",       label: "Weather",       icon: "partly_cloudy_day", w: 624, h: 278, file: "NotchWeatherTab.qml" },
-    { id: "health",        label: "Health",        icon: "favorite",          w: 604, h: 268, file: "NotchHealthTab.qml" },
-    { id: "system",        label: "System",        icon: "monitoring",        w: 580, h: 246, file: "NotchSystemTab.qml" }
+    { id: "home",          label: "Home",          icon: "home",              w: 460, h: 184, file: "NotchHomeTab.qml" },
+    { id: "music",         label: "Music",         icon: "music_note",        w: 548, h: 198, file: "NotchMusicTab.qml" },
+    { id: "calendar",      label: "Calendar",      icon: "calendar_month",    w: 598, h: 274, file: "NotchCalendarTab.qml" },
+    { id: "todo",          label: "ToDo",          icon: "checklist",         w: 584, h: 268, file: "NotchTodoTab.qml" },
+    { id: "timer",         label: "Timer",         icon: "timer",             w: 486, h: 198, file: "NotchTimerTab.qml" },
+    { id: "notifications", label: "Notifications", icon: "notifications",     w: 604, h: 282, file: "NotchNotifTab.qml" },
+    { id: "clipboard",     label: "Clipboard",     icon: "content_paste",     w: 576, h: 264, file: "NotchClipboardTab.qml" },
+    { id: "files",         label: "Files",         icon: "folder_open",       w: 604, h: 286, file: "NotchFilesTab.qml" },
+    { id: "translate",     label: "Translate",     icon: "translate",         w: 584, h: 258, file: "NotchTranslateTab.qml" },
+    { id: "teleprompter",  label: "Teleprompter",  icon: "subtitles",         w: 604, h: 320, file: "NotchTeleprompterTab.qml" },
+    { id: "weather",       label: "Weather",       icon: "partly_cloudy_day", w: 620, h: 272, file: "NotchWeatherTab.qml" },
+    { id: "health",        label: "Health",        icon: "favorite",          w: 598, h: 262, file: "NotchHealthTab.qml" },
+    { id: "system",        label: "System",        icon: "monitoring",        w: 564, h: 210, file: "NotchSystemTab.qml" }
 ];
 
 var SETTINGS_META = {
@@ -36,12 +36,35 @@ function findTab(id) {
     return TABS[0];
 }
 
-function visibleTabs(hiddenList) {
-    var hidden = Array.isArray(hiddenList) ? hiddenList : [];
+function orderedTabs(orderList) {
+    if (!Array.isArray(orderList) || orderList.length === 0)
+        return TABS.slice();
     var out = [];
-    for (var i = 0; i < TABS.length; i++) {
-        if (TABS[i].id === "home" || hidden.indexOf(TABS[i].id) < 0)
-            out.push(TABS[i]);
+    var seen = {};
+    for (var i = 0; i < orderList.length; i++) {
+        var id = orderList[i];
+        for (var j = 0; j < TABS.length; j++) {
+            if (TABS[j].id === id && !seen[id]) {
+                out.push(TABS[j]);
+                seen[id] = true;
+                break;
+            }
+        }
+    }
+    for (var k = 0; k < TABS.length; k++) {
+        if (!seen[TABS[k].id])
+            out.push(TABS[k]);
+    }
+    return out;
+}
+
+function visibleTabs(hiddenList, orderList) {
+    var hidden = Array.isArray(hiddenList) ? hiddenList : [];
+    var ordered = orderedTabs(orderList);
+    var out = [];
+    for (var i = 0; i < ordered.length; i++) {
+        if (ordered[i].id === "home" || hidden.indexOf(ordered[i].id) < 0)
+            out.push(ordered[i]);
     }
     return out.length > 0 ? out : [TABS[0]];
 }
