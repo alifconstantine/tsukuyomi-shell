@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Controls as Controls
 import Quickshell
 import Quickshell.Io
 import Ryoku.Ui
@@ -12,7 +13,7 @@ ShellRoot {
 
     property string targetFile: Quickshell.env("TSUKUYOMI_COMPAT_FILE") || ""
     property string initialMode: Quickshell.env("TSUKUYOMI_COMPAT_MODE") || "isolated"
-    property string step: targetFile !== "" ? "configure" : "pick" // pick | configure | running | shortcuts | done | error
+    property string step: targetFile !== "" ? "inspecting" : "pick"
     property var inspectData: ({})
     readonly property bool hasIconPreview: Boolean(inspectData && inspectData.icon_preview && String(inspectData.icon_preview) !== "")
     property var prefixes: []
@@ -30,14 +31,15 @@ ShellRoot {
     property bool pinPortable: false
     property string errorText: ""
     property string activeSlug: ""
+    property bool cancelling: false
 
     readonly property var availableModes: {
         const list = [
-            { id: "isolated", title: I18n.tr("Install in Isolated Prefix (Recommended)"), desc: I18n.tr("Creates a clean sandboxed container and adds shortcuts to App Launcher.") },
-            { id: "portable", title: I18n.tr("Run Portable (Sandboxed)"), desc: I18n.tr("Runs directly in Bubblewrap without modifying system state.") }
+            { id: "isolated", title: I18n.tr("Install Windows App"), desc: I18n.tr("Set up the app in its own environment and add it to App Launcher.") },
+            { id: "portable", title: I18n.tr("Run Without Installing"), desc: I18n.tr("Open a portable app directly.") }
         ];
         if (root.prefixes.length > 0) {
-            list.push({ id: "existing", title: I18n.tr("Install into Existing Prefix"), desc: I18n.tr("Run inside an already installed application prefix.") });
+            list.push({ id: "existing", title: I18n.tr("Update or Use Existing Environment"), desc: I18n.tr("Run setup in an environment you already created.") });
         }
         return list;
     }
@@ -82,19 +84,6 @@ ShellRoot {
         }
     }
 
-    function computeSlug(rawName) {
-        const base = String(rawName || "win-app").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 56) || "win-app";
-        const used = {};
-        for (let i = 0; i < root.prefixes.length; i++)
-            used[String(root.prefixes[i].slug || "")] = true;
-        if (!used[base])
-            return base;
-        let idx = 2;
-        while (used[base + "-" + idx])
-            idx++;
-        return base + "-" + idx;
-    }
-
     function pickFile() {
         if (!filePicker.running)
             filePicker.running = true;
@@ -104,30 +93,26 @@ ShellRoot {
         if (!filePath || filePath === "")
             return;
         root.targetFile = filePath;
-        root.step = "configure";
+        root.step = "inspecting";
+        root.inspectData = {};
+        root.appName = "";
         inspectProc.command = ["/usr/lib/tsukuyomi/tsukuyomi-win", "inspect", filePath];
         inspectProc.running = true;
         listProc.running = true;
     }
 
     function startInstall() {
-        if (root.targetFile === "")
+        if (root.targetFile === "" || installProc.running || listProc.running)
             return;
         root.errorText = "";
         root.step = "running";
-        const chosenSlug = root.installMode === "existing"
-            ? (root.existingSlug || "win-app")
-            : (root.installMode === "portable" && !root.pinPortable
-               ? "portable-sandbox"
-               : root.computeSlug(root.appName || root.inspectData.product_name || "win-app"));
-        root.activeSlug = chosenSlug;
 
         const cmd = [
             "/usr/lib/tsukuyomi/tsukuyomi-win", "install",
             "--file", root.targetFile,
             "--name", root.appName,
             "--mode", root.installMode,
-            "--slug", chosenSlug,
+            "--slug", root.installMode === "existing" ? root.existingSlug : "",
             "--runner", root.runner,
             "--wayland", root.useWayland ? "true" : "false",
             "--sandbox", root.useSandbox ? "true" : "false",
@@ -140,17 +125,10 @@ ShellRoot {
     }
 
     function cancelInstall() {
-        if (installProc.running)
-            installProc.running = false;
-        if (root.activeSlug !== "") {
-            const args = ["/usr/lib/tsukuyomi/tsukuyomi-win", "cancel", root.activeSlug];
-            if (root.installMode === "isolated")
-                args.push("--cleanup");
-            cancelProc.command = args;
-            cancelProc.running = true;
-        } else {
-            Qt.quit();
-        }
+        if (root.cancelling || !installProc.running)
+            return;
+        root.cancelling = true;
+        installProc.signal(15);
     }
 
     function exportSelected() {
@@ -160,10 +138,9 @@ ShellRoot {
             if (root.selectedMap[c.exe] !== false)
                 picked.push(c);
         }
-        if (picked.length === 0) {
-            root.step = "done";
+        if (picked.length === 0 || exportProc.running)
             return;
-        }
+        root.step = "exporting";
         exportProc.command = [
             "/usr/lib/tsukuyomi/tsukuyomi-win", "export-desktop",
             root.activeSlug, "--select", JSON.stringify(picked)
@@ -180,7 +157,7 @@ ShellRoot {
 
     Process {
         id: filePicker
-        command: ["sh", "-c", "command -v kdialog >/dev/null && kdialog --getopenfilename \"$HOME\" '*.exe *.msi *.lnk|Windows Executables' || zenity --file-selection --title='Select Windows Installer or App' --file-filter='Windows Files | *.exe *.msi *.lnk'"]
+        command: ["sh", "-c", "if command -v kdialog >/dev/null; then exec kdialog --getopenfilename \"$HOME\" '*.exe *.msi *.lnk|Windows Executables'; else exec zenity --file-selection --title='Select Windows Installer or App' --file-filter='Windows Files | *.exe *.msi *.lnk'; fi"]
         stdout: StdioCollector {
             onStreamFinished: {
                 const picked = text.trim();
@@ -192,14 +169,20 @@ ShellRoot {
 
     Process {
         id: inspectProc
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    const obj = JSON.parse(text);
-                    root.inspectData = obj;
-                    if (obj.product_name)
-                        root.appName = String(obj.product_name);
-                } catch (e) {}
+        stdout: StdioCollector { id: inspectOut }
+        onExited: code => {
+            try {
+                const obj = JSON.parse(inspectOut.text);
+                if (code !== 0 || obj.error)
+                    throw new Error(obj.error);
+                if (obj.arch === "arm64")
+                    throw new Error(I18n.tr("This file is for ARM64. Choose the Windows x64 or x86 download."));
+                root.inspectData = obj;
+                root.appName = String(obj.product_name || "");
+                root.step = "configure";
+            } catch (e) {
+                root.errorText = e.message || I18n.tr("Could not read the selected Windows file.");
+                root.step = "error";
             }
         }
     }
@@ -211,9 +194,15 @@ ShellRoot {
             onStreamFinished: {
                 try {
                     const obj = JSON.parse(text);
-                    root.prefixes = obj.prefixes || [];
+                    root.prefixes = (obj.prefixes || []).filter(p => p.slug !== "portable-sandbox" && p.meta.appliedState);
                     if (root.prefixes.length > 0 && root.existingSlug === "")
                         root.existingSlug = String(root.prefixes[0].slug || "");
+                    if (obj.config) {
+                        root.useSandbox = obj.config.defaultSandbox !== false;
+                        root.useWayland = obj.config.defaultWayland === true;
+                        root.useDxvk = obj.config.defaultDxvk !== false;
+                        root.runner = obj.config.defaultRunner || "wine";
+                    }
                 } catch (e) {}
             }
         }
@@ -222,12 +211,19 @@ ShellRoot {
     Process {
         id: installProc
         stdout: StdioCollector { id: installOut }
-        stderr: StdioCollector { id: installErr }
+        stderr: StdioCollector {}
         onExited: code => {
-            if (cancelProc.running)
+            if (root.cancelling) {
+                Qt.quit();
                 return;
+            }
             try {
                 const res = JSON.parse(installOut.text);
+                if (!res.ok || code !== 0) {
+                    root.errorText = String(res.error || I18n.tr("Windows setup did not finish."));
+                    root.step = "error";
+                    return;
+                }
                 if (res.slug)
                     root.activeSlug = String(res.slug);
                 if (res.exported && res.exported.length > 0) {
@@ -236,12 +232,7 @@ ShellRoot {
                     return;
                 }
                 if (res.mode === "portable") {
-                    if (res.ok)
-                        Qt.quit();
-                    else {
-                        root.errorText = installErr.text.trim() || I18n.tr("Portable execution exited with error.");
-                        root.step = "error";
-                    }
+                    Qt.quit();
                     return;
                 }
                 const cands = res.candidates || [];
@@ -250,16 +241,16 @@ ShellRoot {
                 for (let i = 0; i < cands.length; i++)
                     map[cands[i].exe] = true;
                 root.selectedMap = map;
-                if (cands.length > 0)
+                if (cands.length === 1)
+                    root.exportSelected();
+                else if (cands.length > 1)
                     root.step = "shortcuts";
-                else if (res.ok)
-                    root.step = "done";
                 else {
-                    root.errorText = installErr.text.trim() || I18n.tr("Installer exited with an error.");
-                    root.step = "error";
+                    root.exportedApps = [];
+                    root.step = "done";
                 }
             } catch (e) {
-                root.errorText = installErr.text.trim() || I18n.tr("Failed to run Windows installer.");
+                root.errorText = I18n.tr("Could not run Windows setup. Choose the file again or try changing its setup options.");
                 root.step = "error";
             }
         }
@@ -271,15 +262,15 @@ ShellRoot {
         onExited: code => {
             try {
                 const res = JSON.parse(exportOut.text);
-                root.exportedApps = res.exported || [];
-            } catch (e) {}
-            root.step = "done";
+                if (!res.ok || code !== 0)
+                    throw new Error(res.error);
+                root.exportedApps = res.exported;
+                root.step = "done";
+            } catch (e) {
+                root.errorText = e.message || I18n.tr("Could not add the app to App Launcher.");
+                root.step = "error";
+            }
         }
-    }
-
-    Process {
-        id: cancelProc
-        onExited: Qt.quit()
     }
 
     FloatingWindow {
@@ -292,7 +283,12 @@ ShellRoot {
 
         Shortcut {
             sequence: "Escape"
-            onActivated: root.step === "running" ? root.cancelInstall() : Qt.quit()
+            onActivated: {
+                if (root.step === "running")
+                    root.cancelInstall();
+                else if (root.step !== "exporting")
+                    Qt.quit();
+            }
         }
 
         Column {
@@ -474,8 +470,8 @@ ShellRoot {
 
                         Tsukuyomi.SectionCard {
                             width: parent.width
-                            title: I18n.tr("Runtime & Security")
-                            collapsible: false
+                            title: I18n.tr("Advanced Options")
+                            expanded: false
 
                             Column {
                                 width: parent.width
@@ -519,9 +515,11 @@ ShellRoot {
 
                 // Step: Running
                 Tsukuyomi.SectionCard {
-                    visible: root.step === "running"
+                    visible: ["inspecting", "running", "exporting"].includes(root.step)
                     anchors.fill: parent
-                    title: I18n.tr("Running Windows Setup")
+                    title: root.step === "inspecting" ? I18n.tr("Reading Windows File")
+                        : root.step === "exporting" ? I18n.tr("Adding to App Launcher")
+                        : root.cancelling ? I18n.tr("Cancelling Setup") : I18n.tr("Setting Up Windows App")
                     collapsible: false
 
                     Column {
@@ -529,21 +527,15 @@ ShellRoot {
                         padding: Tokens.s5
                         spacing: Tokens.s3
 
-                        Rectangle {
-                            width: parent.width - Tokens.s5 * 2
-                            height: 6
-                            radius: 3
-                            color: Tsukuyomi.Style.line
-                            Rectangle {
-                                width: parent.width * 0.38
-                                height: parent.height
-                                radius: 3
-                                color: Tsukuyomi.Style.accent
-                            }
+                        Controls.BusyIndicator {
+                            width: 28
+                            height: 28
+                            running: parent.parent.visible
                         }
                         Text {
                             width: parent.width - Tokens.s5 * 2
-                            text: I18n.tr("Complete the Windows setup wizard if one appeared. Tsukuyomi WinBridge will scan new Start Menu shortcuts automatically when setup closes.")
+                            visible: root.step === "running" && !root.cancelling
+                            text: I18n.tr("Tsukuyomi prepares an environment for the app. Follow the app’s setup window when it opens.")
                             color: Tsukuyomi.Style.secondary
                             font.family: Tokens.ui
                             font.pixelSize: 12
@@ -593,7 +585,8 @@ ShellRoot {
                 Tsukuyomi.SectionCard {
                     visible: root.step === "done" || root.step === "error"
                     anchors.fill: parent
-                    title: root.step === "done" ? I18n.tr("Ready in App Launcher") : I18n.tr("Installation Failed")
+                    title: root.step === "error" ? I18n.tr("Windows Setup Could Not Finish")
+                        : root.exportedApps.length > 0 ? I18n.tr("Ready in App Launcher") : I18n.tr("Windows Setup Finished")
                     collapsible: false
 
                     Column {
@@ -604,7 +597,8 @@ ShellRoot {
                         Text {
                             width: parent.width - Tokens.s4 * 2
                             text: root.step === "done"
-                                ? I18n.tr("%1 shortcut(s) added to App Launcher (Super+Space).").arg(root.exportedApps.length)
+                                ? (root.exportedApps.length > 0 ? I18n.tr("Open the app from App Launcher (Super+Space).")
+                                   : I18n.tr("Setup finished. It did not create an application shortcut."))
                                 : root.errorText
                             color: Tsukuyomi.Style.text
                             font.family: Tokens.ui
@@ -623,12 +617,14 @@ ShellRoot {
 
                 Btn {
                     visible: root.step === "configure"
+                    enabled: !listProc.running && (root.installMode !== "existing" || root.existingSlug !== "")
                     text: root.installMode === "portable" && !root.pinPortable ? I18n.tr("Run Now") : I18n.tr("Install")
                     primary: true
                     onAct: root.startInstall()
                 }
                 Btn {
                     visible: root.step === "shortcuts"
+                    enabled: root.candidates.some(c => root.selectedMap[c.exe] !== false)
                     text: I18n.tr("Add to Launcher")
                     primary: true
                     onAct: root.exportSelected()
@@ -643,6 +639,19 @@ ShellRoot {
                     }
                 }
                 Btn {
+                    visible: root.step === "error"
+                    text: I18n.tr("Choose File")
+                    primary: true
+                    onAct: root.pickFile()
+                }
+                Btn {
+                    visible: root.step === "error" && !!root.inspectData.product_name
+                    text: I18n.tr("Setup Options")
+                    onAct: root.step = "configure"
+                }
+                Btn {
+                    visible: root.step !== "exporting"
+                    enabled: !root.cancelling
                     text: root.step === "running" ? I18n.tr("Cancel Setup") : (root.step === "done" ? I18n.tr("Close") : I18n.tr("Cancel"))
                     onAct: root.step === "running" ? root.cancelInstall() : Qt.quit()
                 }
