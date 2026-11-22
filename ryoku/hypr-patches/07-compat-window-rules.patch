@@ -11,7 +11,14 @@ diff -ruN hypr/modules/binds.lua hypr_new/modules/binds.lua
 diff -ruN hypr/modules/window_rules.lua hypr_new/modules/window_rules.lua
 --- a/modules/window_rules.lua	2026-11-22 15:42:47.663269320 +0700
 +++ b/modules/window_rules.lua	2026-11-22 15:43:53.810711564 +0700
-@@ -304,3 +304,28 @@
+@@ -65,5 +65,5 @@
+ hl.window_rule({
+     name           = "suppress-maximize",
+-    match          = { class = ".*" },
++    match          = { class = "negative:(?i)^(.*\\.exe|wine)$" },
+     suppress_event = "maximize",
+ })
+@@ -304,3 +304,35 @@
      workspace = "special:sharebar silent",
      no_focus  = true,
  })
@@ -28,7 +35,6 @@ diff -ruN hypr/modules/window_rules.lua hypr_new/modules/window_rules.lua
 +    name    = "float-waydroid-apps",
 +    match   = { class = "^(waydroid\\..*|Waydroid)$" },
 +    float   = true,
-+    size    = { "min(450, monitor_w * 0.45)", "min(900, monitor_h * 0.86)" },
 +    center  = true,
 +    no_blur = true,
 +    opaque  = true,
@@ -36,7 +42,15 @@ diff -ruN hypr/modules/window_rules.lua hypr_new/modules/window_rules.lua
 +
 +hl.window_rule({
 +    name    = "compat-wine-apps",
-+    match   = { class = "^(.*\\.exe|wine)$" },
++    match   = { class = "(?i)^(.*\\.exe|wine)$" },
 +    no_blur = true,
 +    opaque  = true,
++})
++
++hl.window_rule({
++    name   = "float-wine-antigravity",
++    match  = { initial_class = "(?i)^antigravity\\.exe$", initial_title = "(?i)^antigravity$" },
++    float  = true,
++    size   = fit(1080, 740),
++    center = true,
 +})
