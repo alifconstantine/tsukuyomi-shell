@@ -99,10 +99,14 @@ Item {
 
     Process {
         id: actionProc
+        stdout: StdioCollector { id: actionOut }
         stderr: StdioCollector { id: actionErr }
         onExited: code => {
-            if (code !== 0 && actionErr.text.trim() !== "")
-                page.statusNotice = actionErr.text.trim();
+            if (code !== 0) {
+                let detail = actionErr.text.trim();
+                try { detail = JSON.parse(actionOut.text).error || detail; } catch (e) {}
+                page.statusNotice = detail || I18n.tr("The action could not finish. Check runtime status and try again.");
+            }
             page.refreshAll();
         }
     }
@@ -122,7 +126,7 @@ Item {
         defaults: ({})
         title: I18n.tr("Compatibility")
         eyebrow: I18n.tr("SYSTEM")
-        blurb: I18n.tr("Run isolated Windows (.exe/.msi) applications and Waydroid Android (.apk/.xapk) apps natively from the App Launcher.")
+        blurb: I18n.tr("Install Windows and Android apps, manage their settings, and open them from App Launcher.")
 
         Column {
             width: parent.width
@@ -169,7 +173,8 @@ Item {
                             color: Tsukuyomi.Style.secondary
                             font.family: Tokens.ui
                             font.pixelSize: Tokens.fSmall
-                            text: I18n.tr("Wine: ") + (page.winStatus.wineVersion || (page.winStatus.wineAvailable ? "Available" : "Missing"))
+                            text: page.winStatus.wineAvailable
+                                ? I18n.tr("Bundled Windows runtime ready") : I18n.tr("Windows runtime unavailable")
                                 + "  ·  NTSync: " + (page.winStatus.ntsyncAvailable ? I18n.tr("Active") : I18n.tr("Unavailable"))
                                 + "  ·  Sandbox: " + (page.winStatus.bwrapAvailable ? I18n.tr("Bubblewrap Ready") : I18n.tr("Missing"))
                                 + "  ·  DXVK: " + (page.winStatus.dxvkAvailable ? I18n.tr("Ready") : I18n.tr("Missing"))
@@ -179,7 +184,7 @@ Item {
                             width: parent.width
                             spacing: Tokens.s2
                             Btn {
-                                text: I18n.tr("Install .exe / .msi")
+                                text: I18n.tr("Install Windows App")
                                 onAct: Quickshell.execDetached(["tsukuyomi-win-installer"])
                             }
                             Btn {
@@ -363,7 +368,7 @@ Item {
                             spacing: Tokens.s2
 
                             Btn {
-                                text: I18n.tr("Install .apk / .xapk")
+                                text: I18n.tr("Install Android App")
                                 onAct: Quickshell.execDetached(["tsukuyomi-droid-installer"])
                             }
                             Btn {
@@ -373,7 +378,7 @@ Item {
                                 onAct: page.runAction(["tsukuyomi-droid", "init", "--offline"], I18n.tr("Initialized Android runtime offline."))
                             }
                             Btn {
-                                text: I18n.tr("Full Android UI")
+                                text: I18n.tr("Open Android")
                                 onAct: Quickshell.execDetached(["tsukuyomi-droid", "open-ui"])
                             }
                             Btn {

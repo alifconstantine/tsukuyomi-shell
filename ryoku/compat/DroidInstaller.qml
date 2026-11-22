@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Controls as Controls
 import Quickshell
 import Quickshell.Io
 import Ryoku.Ui
@@ -11,12 +12,14 @@ ShellRoot {
     id: root
 
     property string targetFile: Quickshell.env("TSUKUYOMI_COMPAT_FILE") || ""
-    property string step: targetFile !== "" ? "configure" : "pick" // pick | configure | running | done | error
+    property string step: targetFile !== "" ? "inspecting" : "pick"
     property var inspectData: ({})
     readonly property bool hasIconPreview: Boolean(inspectData && inspectData.icon_preview && String(inspectData.icon_preview) !== "")
     property string launchMode: "phone" // phone | landscape | game-gamescope
     property string errorText: ""
     property bool installingAddon: false
+    property bool launcherReady: false
+    readonly property bool needsArm: !!inspectData.needs_arm_translation && !inspectData.arm_translation_installed
 
     function pickFile() {
         if (!filePicker.running)
@@ -27,7 +30,9 @@ ShellRoot {
         if (!filePath || filePath === "")
             return;
         root.targetFile = filePath;
-        root.step = "configure";
+        root.step = "inspecting";
+        root.inspectData = {};
+        root.errorText = "";
         inspectProc.command = ["/usr/lib/tsukuyomi/tsukuyomi-droid", "inspect", filePath];
         inspectProc.running = true;
     }
@@ -36,12 +41,11 @@ ShellRoot {
         if (root.installingAddon)
             return;
         root.installingAddon = true;
-        addonProc.command = ["kitty", "-e", "bash", "-lc", "/usr/lib/tsukuyomi/tsukuyomi-droid setup-addon libndk; echo; read -r -p 'Press Enter to close...'"];
         addonProc.running = true;
     }
 
     function startInstall() {
-        if (root.targetFile === "")
+        if (root.targetFile === "" || root.needsArm || root.installingAddon || installProc.running)
             return;
         root.errorText = "";
         root.step = "running";
@@ -59,7 +63,7 @@ ShellRoot {
 
     Process {
         id: filePicker
-        command: ["sh", "-c", "command -v kdialog >/dev/null && kdialog --getopenfilename \"$HOME\" '*.apk *.xapk *.apkm|Android Packages' || zenity --file-selection --title='Select Android Package' --file-filter='Android Packages | *.apk *.xapk *.apkm'"]
+        command: ["sh", "-c", "if command -v kdialog >/dev/null; then exec kdialog --getopenfilename \"$HOME\" '*.apk *.xapk *.apkm|Android Packages'; else exec zenity --file-selection --title='Select Android Package' --file-filter='Android Packages | *.apk *.xapk *.apkm'; fi"]
         stdout: StdioCollector {
             onStreamFinished: {
                 const picked = text.trim();
@@ -71,26 +75,34 @@ ShellRoot {
 
     Process {
         id: inspectProc
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    const obj = JSON.parse(text);
-                    root.inspectData = obj;
-                    if (obj.error) {
-                        root.errorText = String(obj.error);
-                        root.step = "error";
-                    }
-                } catch (e) {}
+        stdout: StdioCollector { id: inspectOut }
+        onExited: code => {
+            try {
+                const obj = JSON.parse(inspectOut.text);
+                if (code !== 0 || obj.error)
+                    throw new Error(obj.error);
+                root.inspectData = obj;
+                root.step = "configure";
+            } catch (e) {
+                root.errorText = e.message || I18n.tr("Could not read the Android package.");
+                root.step = "error";
             }
         }
     }
 
     Process {
         id: addonProc
+        command: ["/usr/lib/tsukuyomi/tsukuyomi-droid", "setup-addon", "libndk"]
+        stdout: StdioCollector {}
+        stderr: StdioCollector {}
         onExited: code => {
             root.installingAddon = false;
-            if (root.targetFile !== "")
+            if (code === 0)
                 root.loadInspect(root.targetFile);
+            else {
+                root.errorText = I18n.tr("Could not install ARM support. Check your connection and try again.");
+                root.step = "error";
+            }
         }
     }
 
@@ -101,7 +113,9 @@ ShellRoot {
         onExited: code => {
             try {
                 const res = JSON.parse(installOut.text);
-                if (res.ok) {
+                if (code === 0 && res.ok) {
+                    root.launcherReady = res.launcherReady === true;
+                    root.inspectData = Object.assign({}, root.inspectData, {package: res.package, name: res.name});
                     root.step = "done";
                     return;
                 }
@@ -123,7 +137,7 @@ ShellRoot {
 
         Shortcut {
             sequence: "Escape"
-            onActivated: if (root.step !== "running") Qt.quit()
+            onActivated: if (root.step !== "running" && !root.installingAddon) Qt.quit()
         }
 
         Column {
@@ -231,80 +245,87 @@ ShellRoot {
                     }
                 }
 
-                Column {
-                    visible: root.step === "configure"
+                Flickable {
+                    visible: root.step === "configure" && !root.installingAddon
                     anchors.fill: parent
-                    spacing: Tokens.s3
+                    clip: true
+                    contentHeight: settingsColumn.implicitHeight
 
-                    Rectangle {
+                    Column {
+                        id: settingsColumn
                         width: parent.width
-                        visible: !!root.inspectData.needs_arm_translation && !root.inspectData.arm_translation_installed
-                        height: visible ? 58 : 0
-                        radius: 10
-                        color: Qt.alpha(Tsukuyomi.Style.accent, 0.14)
-                        border.width: 1
-                        border.color: Tsukuyomi.Style.accent
+                        spacing: Tokens.s3
 
-                        Row {
-                            anchors.fill: parent
-                            anchors.margins: 10
-                            spacing: 10
-                            Text {
-                                width: parent.width - armBtn.width - 14
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: I18n.tr("This APK targets ARM (%1). Install ARM translation (libndk) first so it runs on x86_64.").arg((root.inspectData.abis || []).join(", "))
-                                color: Tsukuyomi.Style.text
-                                font.family: Tokens.ui
-                                font.pixelSize: 11
-                                wrapMode: Text.WordWrap
-                            }
-                            Btn {
-                                id: armBtn
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: root.installingAddon ? I18n.tr("Installing...") : I18n.tr("Install ARM")
-                                enabled: !root.installingAddon
-                                primary: true
-                                onAct: root.installArmTranslation()
+                        Rectangle {
+                            width: parent.width
+                            visible: root.needsArm
+                            height: visible ? 58 : 0
+                            radius: 10
+                            color: Qt.alpha(Tsukuyomi.Style.accent, 0.14)
+                            border.width: 1
+                            border.color: Tsukuyomi.Style.accent
+
+                            Row {
+                                anchors.fill: parent
+                                anchors.margins: 10
+                                spacing: 10
+                                Text {
+                                    width: parent.width - armBtn.width - 14
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: I18n.tr("This app requires ARM support. The add-on downloads once and can take a few minutes.")
+                                    color: Tsukuyomi.Style.text
+                                    font.family: Tokens.ui
+                                    font.pixelSize: 11
+                                    wrapMode: Text.WordWrap
+                                }
+                                Btn {
+                                    id: armBtn
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: root.installingAddon ? I18n.tr("Installing...") : I18n.tr("Install ARM")
+                                    enabled: !root.installingAddon
+                                    primary: true
+                                    onAct: root.installArmTranslation()
+                                }
                             }
                         }
-                    }
 
-                    Tsukuyomi.SectionCard {
-                        width: parent.width
-                        title: I18n.tr("Window & Orientation Profile")
-                        collapsible: false
-
-                        Column {
+                        Tsukuyomi.SectionCard {
                             width: parent.width
-                            padding: Tokens.s3
-                            spacing: Tokens.s2
+                            title: I18n.tr("Window & Orientation Profile")
+                            collapsible: false
 
-                            Repeater {
-                                model: [
-                                    { id: "phone", title: I18n.tr("Phone Window (9:16 Multi-Window)"), desc: I18n.tr("Best for messaging, social, and daily Android apps alongside Linux windows.") },
-                                    { id: "landscape", title: I18n.tr("Landscape Tablet (16:9 Multi-Window)"), desc: I18n.tr("Wide layout with mouse-as-touch enabled.") },
-                                    { id: "game-gamescope", title: I18n.tr("Game Mode (Gamescope 16:9 Resizable / Fullscreen)"), desc: I18n.tr("Hardware-scaled landscape viewport; drag resize or press Super+F cleanly.") }
-                                ]
-                                delegate: Rectangle {
-                                    id: modeBtn
-                                    required property var modelData
-                                    width: parent.width - Tokens.s3 * 2
-                                    height: 52
-                                    radius: 8
-                                    color: root.launchMode === modeBtn.modelData.id ? Qt.alpha(Tsukuyomi.Style.accent, 0.14) : Tsukuyomi.Style.surface
-                                    border.width: 1
-                                    border.color: root.launchMode === modeBtn.modelData.id ? Tsukuyomi.Style.accent : Tsukuyomi.Style.line
+                            Column {
+                                width: parent.width
+                                padding: Tokens.s3
+                                spacing: Tokens.s2
 
-                                    Column {
-                                        anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; margins: 10 }
-                                        spacing: 1
-                                        Text { text: modeBtn.modelData.title; color: Tsukuyomi.Style.text; font.family: Tokens.ui; font.pixelSize: 12; font.weight: Font.Medium }
-                                        Text { text: modeBtn.modelData.desc; color: Tsukuyomi.Style.muted; font.family: Tokens.ui; font.pixelSize: 10; elide: Text.ElideRight; width: parent.width }
-                                    }
-                                    MouseArea {
-                                        anchors.fill: parent
-                                        cursorShape: Qt.PointingHandCursor
-                                        onClicked: root.launchMode = modeBtn.modelData.id
+                                Repeater {
+                                    model: [
+                                        { id: "phone", title: I18n.tr("Phone Window (9:16 Multi-Window)"), desc: I18n.tr("Best for messaging, social, and daily Android apps alongside Linux windows.") },
+                                        { id: "landscape", title: I18n.tr("Landscape Tablet (16:9 Multi-Window)"), desc: I18n.tr("Wide layout with mouse-as-touch enabled.") },
+                                        { id: "game-gamescope", title: I18n.tr("Game Mode (Gamescope 16:9 Resizable / Fullscreen)"), desc: I18n.tr("Hardware-scaled landscape viewport; drag resize or press Super+F cleanly.") }
+                                    ]
+                                    delegate: Rectangle {
+                                        id: modeBtn
+                                        required property var modelData
+                                        width: parent.width - Tokens.s3 * 2
+                                        height: 52
+                                        radius: 8
+                                        color: root.launchMode === modeBtn.modelData.id ? Qt.alpha(Tsukuyomi.Style.accent, 0.14) : Tsukuyomi.Style.surface
+                                        border.width: 1
+                                        border.color: root.launchMode === modeBtn.modelData.id ? Tsukuyomi.Style.accent : Tsukuyomi.Style.line
+
+                                        Column {
+                                            anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; margins: 10 }
+                                            spacing: 1
+                                            Text { text: modeBtn.modelData.title; color: Tsukuyomi.Style.text; font.family: Tokens.ui; font.pixelSize: 12; font.weight: Font.Medium }
+                                            Text { text: modeBtn.modelData.desc; color: Tsukuyomi.Style.muted; font.family: Tokens.ui; font.pixelSize: 10; elide: Text.ElideRight; width: parent.width }
+                                        }
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: root.launchMode = modeBtn.modelData.id
+                                        }
                                     }
                                 }
                             }
@@ -313,30 +334,25 @@ ShellRoot {
                 }
 
                 Tsukuyomi.SectionCard {
-                    visible: root.step === "running"
+                    visible: root.step === "inspecting" || root.step === "running" || root.installingAddon
                     anchors.fill: parent
-                    title: I18n.tr("Installing Android App")
+                    title: root.installingAddon ? I18n.tr("Installing ARM Support")
+                        : root.step === "inspecting" ? I18n.tr("Reading Android Package") : I18n.tr("Installing Android App")
                     collapsible: false
 
                     Column {
                         width: parent.width
                         padding: Tokens.s5
                         spacing: Tokens.s3
-                        Rectangle {
-                            width: parent.width - Tokens.s5 * 2
-                            height: 6
-                            radius: 3
-                            color: Tsukuyomi.Style.line
-                            Rectangle {
-                                width: parent.width * 0.38
-                                height: parent.height
-                                radius: 3
-                                color: Tsukuyomi.Style.accent
-                            }
+                        Controls.BusyIndicator {
+                            width: 28
+                            height: 28
+                            running: parent.parent.visible
                         }
                         Text {
                             width: parent.width - Tokens.s5 * 2
-                            text: I18n.tr("Preparing Waydroid container, installing package, and syncing launcher shortcut...")
+                            visible: root.step === "running"
+                            text: I18n.tr("Starting Android and installing the app. The first start can take a minute.")
                             color: Tsukuyomi.Style.secondary
                             font.family: Tokens.ui
                             font.pixelSize: 12
@@ -348,7 +364,8 @@ ShellRoot {
                 Tsukuyomi.SectionCard {
                     visible: root.step === "done" || root.step === "error"
                     anchors.fill: parent
-                    title: root.step === "done" ? I18n.tr("Installed & Added to App Launcher") : I18n.tr("Installation Failed")
+                    title: root.step === "error" ? I18n.tr("Android App Could Not Install")
+                        : root.launcherReady ? I18n.tr("Ready in App Launcher") : I18n.tr("Android App Installed")
                     collapsible: false
 
                     Column {
@@ -358,7 +375,8 @@ ShellRoot {
                         Text {
                             width: parent.width - Tokens.s4 * 2
                             text: root.step === "done"
-                                ? I18n.tr("%1 is ready in App Launcher (Super+Space). Press Super+Alt+R while focused to cycle Phone/Tablet/Landscape sizes.").arg(root.inspectData.name || root.inspectData.package || "App")
+                                ? (root.launcherReady ? I18n.tr("Open the app from App Launcher (Super+Space).")
+                                   : I18n.tr("Android installed the package. App Launcher has no shortcut for it yet."))
                                 : root.errorText
                             color: Tsukuyomi.Style.text
                             font.family: Tokens.ui
@@ -375,13 +393,14 @@ ShellRoot {
                 spacing: Tokens.s2
 
                 Btn {
-                    visible: root.step === "configure"
+                    visible: root.step === "configure" && !root.installingAddon
+                    enabled: !root.needsArm
                     text: I18n.tr("Install App")
                     primary: true
                     onAct: root.startInstall()
                 }
                 Btn {
-                    visible: root.step === "done" && !!root.inspectData.package
+                    visible: root.step === "done" && root.launcherReady
                     text: I18n.tr("Launch App")
                     primary: true
                     onAct: {
@@ -390,7 +409,23 @@ ShellRoot {
                     }
                 }
                 Btn {
-                    visible: root.step !== "running"
+                    visible: root.step === "error"
+                    text: I18n.tr("Choose File")
+                    primary: true
+                    onAct: root.pickFile()
+                }
+                Btn {
+                    visible: root.step === "error" && !!root.inspectData.package
+                    text: I18n.tr("Try Again")
+                    onAct: root.step = "configure"
+                }
+                Btn {
+                    visible: root.step === "error" && !!root.inspectData.split
+                    text: I18n.tr("Open Android")
+                    onAct: Quickshell.execDetached(["/usr/lib/tsukuyomi/tsukuyomi-droid", "open-ui"])
+                }
+                Btn {
+                    visible: root.step !== "running" && !root.installingAddon
                     text: root.step === "done" ? I18n.tr("Close") : I18n.tr("Cancel")
                     onAct: Qt.quit()
                 }
