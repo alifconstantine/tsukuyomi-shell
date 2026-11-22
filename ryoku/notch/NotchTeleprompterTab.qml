@@ -218,7 +218,23 @@ Item {
                 anchors.margins: 10
                 contentWidth: width
                 contentHeight: Math.max(height, scriptEditor.implicitHeight)
+                flickableDirection: Flickable.VerticalFlick
+                interactive: false
+                boundsBehavior: Flickable.StopAtBounds
                 clip: true
+
+                WheelHandler {
+                    acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                    onWheel: event => {
+                        var dy = (event.pixelDelta && Math.abs(event.pixelDelta.y) > 0)
+                            ? -event.pixelDelta.y
+                            : (-event.angleDelta.y * 0.35);
+                        var step = Math.max(-48, Math.min(48, dy));
+                        var maxS = Math.max(0, editFlick.contentHeight - editFlick.height);
+                        editFlick.contentY = Math.max(0, Math.min(maxS, editFlick.contentY + step));
+                        event.accepted = true;
+                    }
+                }
 
                 TextEdit {
                     id: scriptEditor
@@ -449,6 +465,8 @@ Item {
                 anchors.rightMargin: 16
                 contentWidth: width
                 contentHeight: prompterCol.implicitHeight
+                flickableDirection: Flickable.VerticalFlick
+                interactive: false
                 boundsBehavior: Flickable.StopAtBounds
                 clip: true
                 onContentYChanged: NotchTeleprompterStore.scrollY = contentY
@@ -456,7 +474,10 @@ Item {
                 WheelHandler {
                     acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
                     onWheel: event => {
-                        var step = Math.max(-36, Math.min(36, -event.angleDelta.y * 0.25));
+                        var dy = (event.pixelDelta && Math.abs(event.pixelDelta.y) > 0)
+                            ? -event.pixelDelta.y
+                            : (-event.angleDelta.y * 0.28);
+                        var step = Math.max(-40, Math.min(40, dy));
                         var maxS = Math.max(0, prompterFlick.contentHeight - prompterFlick.height);
                         prompterFlick.contentY = Math.max(0, Math.min(maxS, prompterFlick.contentY + step));
                         event.accepted = true;
@@ -593,16 +614,30 @@ Item {
                 }
 
                 Rectangle {
+                    id: tpTrack
                     width: parent.width
-                    height: 3
-                    radius: 1.5
+                    height: 4
+                    radius: 2
                     color: Qt.rgba(tpView.theme.ink.r, tpView.theme.ink.g, tpView.theme.ink.b, 0.14)
                     Rectangle {
                         readonly property real maxS: Math.max(1, prompterFlick.contentHeight - prompterFlick.height)
                         width: Math.round(parent.width * Math.min(1, Math.max(0, prompterFlick.contentY / maxS)))
                         height: parent.height
-                        radius: 1.5
+                        radius: 2
                         color: tpView.theme.accent
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        anchors.margins: -6
+                        cursorShape: Qt.PointingHandCursor
+                        function seekTo(mx) {
+                            var ratio = Math.max(0, Math.min(1, mx / Math.max(1, tpTrack.width)));
+                            var maxS = Math.max(0, prompterFlick.contentHeight - prompterFlick.height);
+                            prompterFlick.contentY = Math.round(maxS * ratio);
+                            NotchTeleprompterStore.scrollY = prompterFlick.contentY;
+                        }
+                        onPressed: e => seekTo(e.x)
+                        onPositionChanged: e => { if (pressed) seekTo(e.x); }
                     }
                 }
             }
