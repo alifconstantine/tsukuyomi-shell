@@ -123,6 +123,19 @@ Singleton {
         statRunner.runNext();
     }
 
+    function addUrlsToShelf(urls) {
+        if (!urls || urls.length === 0) return;
+        var out = [];
+        for (var i = 0; i < urls.length; i++) {
+            var s = decodeURIComponent(String(urls[i] || "").trim()).replace(/^file:\/\//, "");
+            if (s.indexOf("/") === 0) out.push(s);
+        }
+        if (out.length > 0) {
+            fs.addPathsToShelf(out);
+            fs.selectedPaths = out.slice();
+        }
+    }
+
     function removeFromShelf(path) {
         fs.shelfFiles = fs.shelfFiles.filter(function(item) { return item && item.path !== path; });
         fs.selectedPaths = fs.selectedPaths.filter(function(p) { return p !== path; });
