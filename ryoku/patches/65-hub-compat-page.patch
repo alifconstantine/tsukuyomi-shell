@@ -1,0 +1,38 @@
+--- a/hub/Hub.qml	2026-11-22 15:47:39.183858140 +0700
++++ b/hub/Hub.qml	2026-11-22 15:47:39.201687990 +0700
+@@ -149,7 +149,8 @@
+         { name: "System", items: [
+             { key: "performance", name: "Performance" }, { key: "session", name: "Session" },
+             { key: "recording", name: "Recording" }, { key: "dictation", name: "Dictation" }, { key: "fastfetch", name: "Fastfetch", adv: true },
+-            { key: "import", name: "Import config", adv: true, wired: true } ] },
++            { key: "import", name: "Import config", adv: true, wired: true },
++            { key: "compat", name: "Compatibility" } ] },
+         { name: "Extensions", items: [ { key: "addons", name: "Add-ons" } ] },
+         { name: "", items: [ { key: "credits", name: "Credits" } ] }
+     ]
+@@ -165,7 +166,7 @@
+         "overlays": "重ね", "launcher": "起動", "fastfetch": "情報", "lockscreen": "施錠", "animations": "動き",
+         "gamebar": "遊戯",
+         "addons": "拡張", "windowrules": "規則", "appoverrides": "上書", "layerrules": "階層",
+-        "session": "起動", "performance": "性能", "rashin": "羅針",
++        "session": "起動", "performance": "性能", "compat": "互換", "rashin": "羅針",
+         "updates": "更新", "credits": "謝辞", "global": "全般", "import": "取込", "windowmanager": "合成"
+     })
+ 
+@@ -205,6 +206,7 @@
+         "rashin": "rashin agent ai assistant hermes vault memory skills chat code llm needle",
+         "updates": "update upgrade version channel commit behind check origin",
+         "import": "import bring migrate dotfiles config existing kitty fish fastfetch drop folder git backup undo restore adopt",
++        "compat": "windows exe msi wine proton umu android apk xapk waydroid gamescope compatibility libndk libhoudini prefix sandbox",
+         "credits": "credits thanks acknowledgement gratitude contributor"
+     })
+ 
+@@ -541,7 +543,7 @@
+             "updates": "UpdatesPage", "rashin": "RashinPage",
+             "recording": "RecordingPage", "performance": "PerformancePage",
+             "launcher": "LauncherPage", "lockscreen": "SessionLockscreenPage", "appearance": "AppearancePage", "dock": "DockPage",
+-            "fastfetch": "FastfetchPage", "addons": "AddonsPage",
++            "fastfetch": "FastfetchPage", "addons": "AddonsPage", "compat": "CompatPage",
+             "credits": "CreditsPage", "gamebar": "GameBarPage"
+         };
+         map.global = "GlobalPage";

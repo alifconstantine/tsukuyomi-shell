@@ -31,7 +31,7 @@ install -d "$draft/.config/quickshell" "$draft/.config/ryoku" "$draft/.local/sha
     "$draft/Pictures/Wallpapers"
 find "$quickshell" -mindepth 1 -maxdepth 1 \
     -exec cp -a -t "$draft/.config/quickshell/" -- {} +
-install -m 644 "$here/SessionLockscreenPage.qml" "$here/clockwork-orbital-preview.webp" \
+install -m 644 "$here/SessionLockscreenPage.qml" "$here/CompatPage.qml" "$here/clockwork-orbital-preview.webp" \
     "$draft/.config/quickshell/hub/pages/"
 # Quickshell isolates each config's relative imports.
 for config in hub ryostore shell; do

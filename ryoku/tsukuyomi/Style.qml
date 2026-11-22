@@ -47,6 +47,7 @@ QtObject {
         case "docks": case "barstyles": return "\ue30c";
         case "lockscreens": return "\ue897";
         case "notifications": return "\ue7f4";
+        case "compat": return "\ue1b1";
         default: return "\ue1bd";
         }
     }
