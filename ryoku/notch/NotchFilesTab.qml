@@ -104,7 +104,10 @@ Item {
 
     readonly property var contextActions: {
         if (NotchFilesStore.selectedCount === 0) return [];
-        var list = [{ id: "compress", label: "Compress", icon: "compress", primary: false, danger: false }];
+        var list = [];
+        if (NotchFilesStore.compatWinSelected || NotchFilesStore.compatAndroidSelected)
+            list.push({ id: "installcompat", label: "Install App", icon: "install_desktop", primary: true, danger: false });
+        list.push({ id: "compress", label: "Compress", icon: "compress", primary: false, danger: false });
         if (NotchFilesStore.selectionCategory !== "archive" && NotchFilesStore.selectionCategory !== "folder")
             list.push({ id: "convert", label: "Convert", icon: "transform", primary: false, danger: false });
         if (NotchFilesStore.archiveSelected)
@@ -446,7 +449,12 @@ Item {
                     label: I18n.tr(modelData.label)
                     primary: modelData.primary
                     danger: modelData.danger
-                    onClicked: NotchFilesStore.openTool(modelData.id)
+                    onClicked: {
+                        if (modelData.id === "installcompat")
+                            NotchFilesStore.installCompatSelected();
+                        else
+                            NotchFilesStore.openTool(modelData.id);
+                    }
                 }
             }
         }

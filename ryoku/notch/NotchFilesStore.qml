@@ -77,6 +77,25 @@ Singleton {
         return false;
     }
 
+    readonly property bool compatWinSelected: {
+        if (fs.selectedPaths.length !== 1) return false;
+        return /\.(exe|msi|lnk)$/.test(String(fs.selectedPaths[0]).toLowerCase());
+    }
+
+    readonly property bool compatAndroidSelected: {
+        if (fs.selectedPaths.length !== 1) return false;
+        return /\.(apk|xapk|apkm)$/.test(String(fs.selectedPaths[0]).toLowerCase());
+    }
+
+    function installCompatSelected() {
+        if (fs.selectedPaths.length !== 1) return;
+        var target = String(fs.selectedPaths[0]);
+        if (/\.(exe|msi|lnk)$/.test(target.toLowerCase()))
+            Quickshell.execDetached(["tsukuyomi-win-installer", target]);
+        else if (/\.(apk|xapk|apkm)$/.test(target.toLowerCase()))
+            Quickshell.execDetached(["tsukuyomi-droid-installer", target]);
+    }
+
     function findMeta(path) {
         for (var i = 0; i < fs.shelfFiles.length; i++)
             if (fs.shelfFiles[i].path === path) return fs.shelfFiles[i];

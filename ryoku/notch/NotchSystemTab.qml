@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import shell.services
 import Ryoku.Ui.Singletons
 
@@ -16,6 +17,29 @@ Item {
     Component.onCompleted: {
         if (sys.root && sys.root.notchSystemActive !== undefined)
             sys.root.notchSystemActive = true;
+        droidStatusProc.running = true;
+    }
+
+    property bool droidActive: false
+
+    Process {
+        id: droidStatusProc
+        command: ["tsukuyomi-droid", "status"]
+        stdout: StdioCollector { id: droidOut }
+        onExited: code => {
+            if (code === 0) {
+                try {
+                    const st = JSON.parse(droidOut.text);
+                    sys.droidActive = !!(st.sessionRunning || st.containerActive);
+                } catch (e) {}
+            }
+        }
+    }
+
+    Process {
+        id: droidSleepProc
+        command: ["tsukuyomi-droid", "sleep"]
+        onExited: droidStatusProc.running = true
     }
     Component.onDestruction: {
         if (sys.root && sys.root.notchSystemActive !== undefined)
@@ -232,6 +256,64 @@ Item {
                         Spawn.runApp(["ryomanager"], { label: "ryomanager" });
                         if (sys.root) sys.root.dashboardVisible = false;
                     }
+                }
+            }
+        }
+
+        // Quick Compat Runtime Bar (Android status/sleep/resize + Install App)
+        Rectangle {
+            width: parent.width
+            height: 36
+            radius: 10
+            color: sys.theme.card
+            border.width: 1
+            border.color: sys.theme.border
+
+            Row {
+                anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 10; rightMargin: 8 }
+                spacing: 6
+
+                NotchIcon {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "phone_android"
+                    font.pixelSize: 15
+                    color: sys.droidActive ? sys.theme.success : sys.theme.muted
+                }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: parent.width - 210
+                    elide: Text.ElideRight
+                    text: sys.droidActive ? I18n.tr("Android: Running") : I18n.tr("Android: Sleeping")
+                    color: sys.theme.ink
+                    font.family: Tokens.ui
+                    font.pixelSize: 10
+                    font.weight: Font.Medium
+                }
+                Rectangle {
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: sys.droidActive
+                    width: sleepTxt.implicitWidth + 14; height: 22; radius: 7
+                    color: sleepMa.containsMouse ? sys.theme.cardHover : "transparent"
+                    border.width: 1; border.color: sys.theme.border
+                    Text { id: sleepTxt; anchors.centerIn: parent; text: I18n.tr("Sleep"); color: sys.theme.ink; font.family: Tokens.ui; font.pixelSize: 9; font.weight: Font.DemiBold }
+                    MouseArea { id: sleepMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: if (!droidSleepProc.running) droidSleepProc.running = true }
+                }
+                Rectangle {
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: sys.droidActive
+                    width: resTxt.implicitWidth + 14; height: 22; radius: 7
+                    color: resMa.containsMouse ? sys.theme.cardHover : "transparent"
+                    border.width: 1; border.color: sys.theme.border
+                    Text { id: resTxt; anchors.centerIn: parent; text: I18n.tr("Resize"); color: sys.theme.ink; font.family: Tokens.ui; font.pixelSize: 9; font.weight: Font.DemiBold }
+                    MouseArea { id: resMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Quickshell.execDetached(["/usr/lib/tsukuyomi/droid-cycle-resize"]) }
+                }
+                Rectangle {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: instTxt.implicitWidth + 14; height: 22; radius: 7
+                    color: instMa.containsMouse ? sys.theme.cardHover : Qt.rgba(sys.theme.accent.r, sys.theme.accent.g, sys.theme.accent.b, 0.14)
+                    border.width: 1; border.color: sys.theme.accent
+                    Text { id: instTxt; anchors.centerIn: parent; text: I18n.tr("Install Win"); color: sys.theme.accent; font.family: Tokens.ui; font.pixelSize: 9; font.weight: Font.DemiBold }
+                    MouseArea { id: instMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { Quickshell.execDetached(["tsukuyomi-win-installer"]); if (sys.root) sys.root.dashboardVisible = false; } }
                 }
             }
         }
