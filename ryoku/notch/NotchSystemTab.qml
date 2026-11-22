@@ -113,9 +113,17 @@ Item {
         }
     }
 
-    Column {
+    Flickable {
         anchors.fill: parent
-        spacing: 8
+        contentWidth: width
+        contentHeight: sysCol.implicitHeight
+        boundsBehavior: Flickable.StopAtBounds
+        clip: true
+
+        Column {
+            id: sysCol
+            width: parent.width
+            spacing: 8
 
         // Top row: CPU · RAM · GPU
         Row {
@@ -226,6 +234,7 @@ Item {
                     }
                 }
             }
+        }
         }
     }
 }

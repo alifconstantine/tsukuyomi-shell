@@ -191,15 +191,18 @@ Item {
 
                         Row {
                             anchors.centerIn: parent
+                            width: Math.min(implicitWidth, parent.width - 10)
                             spacing: 4
                             NotchIcon { anchors.verticalCenter: parent.verticalCenter; text: modelData.icon; font.pixelSize: 13; color: wx.fgInk }
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter
+                                width: Math.min(implicitWidth, parent.width - 18)
                                 text: modelData.label
                                 color: wx.fgInk
                                 font.family: Tokens.mono
                                 font.pixelSize: 10
                                 font.weight: Font.Medium
+                                elide: Text.ElideRight
                             }
                         }
                     }

@@ -216,96 +216,103 @@ Item {
         }
     }
 
-    Column {
+    Flickable {
         anchors.fill: parent
-        spacing: 10
+        contentWidth: width
+        contentHeight: homeCol.implicitHeight
+        boundsBehavior: Flickable.StopAtBounds
+        clip: true
 
-        // Top row: 4 quick toggles
-        Row {
+        Column {
+            id: homeCol
             width: parent.width
-            spacing: 8
-            readonly property real tileW: Math.floor((width - 24) / 4)
+            spacing: 10
 
-            ControlPill {
-                width: parent.tileW
-                icon: Network.wifiRadio ? "wifi" : "wifi_off"
-                label: I18n.tr("Wi-Fi")
-                sublabel: Network.wifiRadio
-                    ? (Network.activeSsid !== "" ? Network.activeSsid : I18n.tr("On"))
-                    : I18n.tr("Off")
-                active: Network.wifiRadio
-                enabledControl: Network.wifiPresent
-                onTriggered: Network.setWifiEnabled(!Network.wifiRadio)
-            }
+            // Top row: 4 quick toggles (icons indicate Off state; show active details cleanly)
+            Row {
+                width: parent.width
+                spacing: 8
+                readonly property real tileW: Math.floor((width - 24) / 4)
 
-            ControlPill {
-                width: parent.tileW
-                icon: BluetoothPower.enabled
-                    ? (home.btConnectedCount > 0 ? "bluetooth_connected" : "bluetooth")
-                    : "bluetooth_disabled"
-                label: I18n.tr("Bluetooth")
-                sublabel: BluetoothPower.enabled
-                    ? (home.btConnectedCount > 0 ? I18n.tr("%1 paired").arg(home.btConnectedCount) : I18n.tr("On"))
-                    : I18n.tr("Off")
-                active: BluetoothPower.enabled
-                enabledControl: BluetoothPower.available
-                onTriggered: BluetoothPower.toggle()
-            }
-
-            ControlPill {
-                width: parent.tileW
-                icon: Flags.dnd ? "dark_mode" : "notifications_active"
-                label: I18n.tr("Focus")
-                sublabel: Flags.dnd ? I18n.tr("Silenced") : I18n.tr("Normal")
-                active: Flags.dnd
-                onTriggered: Flags.dnd = !Flags.dnd
-            }
-
-            ControlPill {
-                width: parent.tileW
-                icon: "local_cafe"
-                label: I18n.tr("Coffee")
-                sublabel: Flags.keepAwake ? I18n.tr("Awake") : I18n.tr("Idle lock")
-                active: Flags.keepAwake
-                activeColor: home.theme.warning
-                onTriggered: Flags.keepAwake = !Flags.keepAwake
-            }
-        }
-
-        // Bottom row: Display & Sound sliders
-        Row {
-            width: parent.width
-            spacing: 8
-            readonly property real sliderW: Math.floor((width - 8) / 2)
-
-            QuickSlider {
-                width: parent.sliderW
-                icon: "light_mode"
-                label: I18n.tr("Display")
-                value: home.displayPct
-                minValue: 1
-                maxValue: 100
-                interactive: home.hasBacklight
-                onValuePicked: v => Devices.setBacklight(v)
-            }
-
-            QuickSlider {
-                width: parent.sliderW
-                icon: home.soundMuted || home.soundPct === 0 ? "volume_off" : "volume_up"
-                label: I18n.tr("Sound")
-                value: Math.min(100, home.soundPct)
-                minValue: 0
-                maxValue: 100
-                muted: home.soundMuted
-                interactive: home.sinkAudio !== null
-                onIconClicked: {
-                    if (home.sinkAudio)
-                        home.sinkAudio.muted = !home.sinkAudio.muted;
+                ControlPill {
+                    width: parent.tileW
+                    icon: Network.wifiRadio ? "wifi" : "wifi_off"
+                    label: I18n.tr("Wi-Fi")
+                    sublabel: Network.wifiRadio && Network.activeSsid !== "" ? Network.activeSsid : ""
+                    active: Network.wifiRadio
+                    enabledControl: Network.wifiPresent
+                    onTriggered: Network.setWifiEnabled(!Network.wifiRadio)
                 }
-                onValuePicked: v => {
-                    if (home.sinkAudio) {
-                        home.sinkAudio.muted = false;
-                        home.sinkAudio.volume = Math.max(0, Math.min(1, v / 100));
+
+                ControlPill {
+                    width: parent.tileW
+                    icon: BluetoothPower.enabled
+                        ? (home.btConnectedCount > 0 ? "bluetooth_connected" : "bluetooth")
+                        : "bluetooth_disabled"
+                    label: I18n.tr("Bluetooth")
+                    sublabel: BluetoothPower.enabled && home.btConnectedCount > 0
+                        ? I18n.tr("%1 paired").arg(home.btConnectedCount)
+                        : ""
+                    active: BluetoothPower.enabled
+                    enabledControl: BluetoothPower.available
+                    onTriggered: BluetoothPower.toggle()
+                }
+
+                ControlPill {
+                    width: parent.tileW
+                    icon: Flags.dnd ? "dark_mode" : "notifications_active"
+                    label: I18n.tr("Focus")
+                    sublabel: Flags.dnd ? I18n.tr("Silenced") : ""
+                    active: Flags.dnd
+                    onTriggered: Flags.dnd = !Flags.dnd
+                }
+
+                ControlPill {
+                    width: parent.tileW
+                    icon: "local_cafe"
+                    label: I18n.tr("Coffee")
+                    sublabel: Flags.keepAwake ? I18n.tr("Awake") : ""
+                    active: Flags.keepAwake
+                    activeColor: home.theme.warning
+                    onTriggered: Flags.keepAwake = !Flags.keepAwake
+                }
+            }
+
+            // Bottom row: Display & Sound sliders
+            Row {
+                width: parent.width
+                spacing: 8
+                readonly property real sliderW: Math.floor((width - 8) / 2)
+
+                QuickSlider {
+                    width: parent.sliderW
+                    icon: "light_mode"
+                    label: I18n.tr("Display")
+                    value: home.displayPct
+                    minValue: 1
+                    maxValue: 100
+                    interactive: home.hasBacklight
+                    onValuePicked: v => Devices.setBacklight(v)
+                }
+
+                QuickSlider {
+                    width: parent.sliderW
+                    icon: home.soundMuted || home.soundPct === 0 ? "volume_off" : "volume_up"
+                    label: I18n.tr("Sound")
+                    value: Math.min(100, home.soundPct)
+                    minValue: 0
+                    maxValue: 100
+                    muted: home.soundMuted
+                    interactive: home.sinkAudio !== null
+                    onIconClicked: {
+                        if (home.sinkAudio)
+                            home.sinkAudio.muted = !home.sinkAudio.muted;
+                    }
+                    onValuePicked: v => {
+                        if (home.sinkAudio) {
+                            home.sinkAudio.muted = false;
+                            home.sinkAudio.volume = Math.max(0, Math.min(1, v / 100));
+                        }
                     }
                 }
             }

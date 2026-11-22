@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import shell.services
 import Ryoku.Ui.Singletons
 
@@ -15,7 +16,6 @@ Item {
     readonly property bool anim: !Perf.reduceMotion
 
     property string query: ""
-    property bool pinnedOnly: false
     property bool selectMode: false
     property var selectedIds: ({})
     property string copiedId: ""
@@ -27,7 +27,6 @@ Item {
         for (var i = 0; i < list.length; i++) {
             var e = list[i];
             if (!e) continue;
-            if (cb.pinnedOnly && e.starred !== true) continue;
             if (q !== "") {
                 var text = String(e.preview || e.mime || "").toLowerCase();
                 if (text.indexOf(q) < 0) continue;
@@ -35,6 +34,33 @@ Item {
             out.push(e);
         }
         return out;
+    }
+
+    readonly property bool allSelected: {
+        if (cb.filteredEntries.length === 0) return false;
+        for (var i = 0; i < cb.filteredEntries.length; i++) {
+            var e = cb.filteredEntries[i];
+            if (e && !cb.selectedIds[e.id]) return false;
+        }
+        return true;
+    }
+
+    function toggleSelectAll() {
+        if (cb.allSelected) {
+            cb.selectedIds = ({});
+            return;
+        }
+        var next = {};
+        for (var i = 0; i < cb.filteredEntries.length; i++) {
+            var e = cb.filteredEntries[i];
+            if (e && e.id) next[e.id] = true;
+        }
+        cb.selectedIds = next;
+    }
+
+    Process {
+        id: pasteSyncProc
+        command: ["sh", "-c", "t=$(wl-paste -n 2>/dev/null || true); [ -n \"$t\" ] && wl-copy -- \"$t\""]
     }
 
     readonly property int selectedCount: {
@@ -86,7 +112,7 @@ Item {
         anchors.fill: parent
         spacing: 8
 
-        // ── Top filter & action bar ──────────────────────────────────────────
+        // ── Top bar: Search · Paste · Select (or Select All · Pin · Delete · Done) ─
         Row {
             width: parent.width
             height: 28
@@ -94,7 +120,7 @@ Item {
 
             // Search box
             Rectangle {
-                width: cb.selectMode ? parent.width - 246 : parent.width - 178
+                width: cb.selectMode ? Math.max(120, parent.width - 236) : Math.max(160, parent.width - 134)
                 height: 28
                 radius: 9
                 color: cb.theme.card
@@ -150,28 +176,26 @@ Item {
                 }
             }
 
-            // Pinned filter pill
+            // Paste pill (default view)
             Rectangle {
-                width: 60; height: 28; radius: 9
-                color: cb.pinnedOnly
-                    ? Qt.rgba(cb.theme.accent.r, cb.theme.accent.g, cb.theme.accent.b, 0.22)
-                    : (pinFiltMa.containsMouse ? cb.theme.cardHover : cb.theme.card)
+                visible: !cb.selectMode
+                width: 64; height: 28; radius: 9
+                color: pasteTopMa.containsMouse ? cb.theme.cardHover : cb.theme.card
                 border.width: 1
-                border.color: cb.pinnedOnly ? cb.theme.accent : cb.theme.border
+                border.color: cb.theme.border
 
                 Row {
                     anchors.centerIn: parent
-                    spacing: 3
+                    spacing: 4
                     NotchIcon {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "push_pin"
-                        font.pixelSize: 12
-                        fill: cb.pinnedOnly ? 1 : 0
-                        color: cb.pinnedOnly ? cb.theme.accent : cb.theme.ink
+                        text: "content_paste"
+                        font.pixelSize: 13
+                        color: cb.theme.ink
                     }
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: I18n.tr("Pin")
+                        text: I18n.tr("Paste")
                         color: cb.theme.ink
                         font.family: Tokens.ui
                         font.pixelSize: 10
@@ -179,17 +203,89 @@ Item {
                     }
                 }
                 MouseArea {
-                    id: pinFiltMa
+                    id: pasteTopMa
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: cb.pinnedOnly = !cb.pinnedOnly
+                    onClicked: pasteSyncProc.running = true
                 }
             }
 
-            // Select toggle
+            // Select All (in Select mode)
             Rectangle {
-                width: 56; height: 28; radius: 9
+                visible: cb.selectMode
+                width: 72; height: 28; radius: 9
+                color: cb.allSelected
+                    ? Qt.rgba(cb.theme.accent.r, cb.theme.accent.g, cb.theme.accent.b, 0.22)
+                    : (selAllMa.containsMouse ? cb.theme.cardHover : cb.theme.card)
+                border.width: 1
+                border.color: cb.allSelected ? cb.theme.accent : cb.theme.border
+                Text {
+                    anchors.centerIn: parent
+                    text: cb.allSelected ? I18n.tr("Unselect") : I18n.tr("Select All")
+                    color: cb.theme.ink
+                    font.family: Tokens.ui
+                    font.pixelSize: 10
+                    font.weight: Font.Medium
+                }
+                MouseArea {
+                    id: selAllMa
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: cb.toggleSelectAll()
+                }
+            }
+
+            // Batch Pin / Delete when in Select mode
+            Rectangle {
+                visible: cb.selectMode
+                width: 44; height: 28; radius: 9
+                opacity: cb.selectedCount > 0 ? 1 : 0.4
+                color: batchPinMa.containsMouse ? cb.theme.cardHover : cb.theme.card
+                border.width: 1
+                border.color: cb.theme.border
+                Row {
+                    anchors.centerIn: parent
+                    spacing: 2
+                    NotchIcon { anchors.verticalCenter: parent.verticalCenter; text: "push_pin"; font.pixelSize: 12; fill: 1; color: cb.theme.ink }
+                    Text { anchors.verticalCenter: parent.verticalCenter; text: I18n.tr("Pin"); color: cb.theme.ink; font.family: Tokens.ui; font.pixelSize: 10 }
+                }
+                MouseArea {
+                    id: batchPinMa
+                    anchors.fill: parent
+                    enabled: cb.selectedCount > 0
+                    hoverEnabled: true
+                    cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                    onClicked: cb.pinSelected()
+                }
+            }
+            Rectangle {
+                visible: cb.selectMode
+                width: 48; height: 28; radius: 9
+                opacity: cb.selectedCount > 0 ? 1 : 0.4
+                color: batchDelMa.containsMouse ? Qt.rgba(cb.theme.danger.r, cb.theme.danger.g, cb.theme.danger.b, 0.2) : cb.theme.card
+                border.width: 1
+                border.color: cb.theme.border
+                Row {
+                    anchors.centerIn: parent
+                    spacing: 2
+                    NotchIcon { anchors.verticalCenter: parent.verticalCenter; text: "delete"; font.pixelSize: 12; color: cb.theme.danger }
+                    Text { anchors.verticalCenter: parent.verticalCenter; text: I18n.tr("Del"); color: cb.theme.danger; font.family: Tokens.ui; font.pixelSize: 10 }
+                }
+                MouseArea {
+                    id: batchDelMa
+                    anchors.fill: parent
+                    enabled: cb.selectedCount > 0
+                    hoverEnabled: true
+                    cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                    onClicked: cb.deleteSelected()
+                }
+            }
+
+            // Select / Done toggle
+            Rectangle {
+                width: 58; height: 28; radius: 9
                 color: cb.selectMode
                     ? Qt.rgba(cb.theme.accent.r, cb.theme.accent.g, cb.theme.accent.b, 0.22)
                     : (selMa.containsMouse ? cb.theme.cardHover : cb.theme.card)
@@ -213,66 +309,6 @@ Item {
                         if (cb.selectMode) cb.clearSelection();
                         else cb.selectMode = true;
                     }
-                }
-            }
-
-            // Batch Pin / Delete when in Select mode
-            Rectangle {
-                visible: cb.selectMode
-                width: 30; height: 28; radius: 9
-                opacity: cb.selectedCount > 0 ? 1 : 0.4
-                color: batchPinMa.containsMouse ? cb.theme.cardHover : cb.theme.card
-                border.width: 1
-                border.color: cb.theme.border
-                NotchIcon { anchors.centerIn: parent; text: "push_pin"; font.pixelSize: 14; fill: 1; color: cb.theme.ink }
-                MouseArea {
-                    id: batchPinMa
-                    anchors.fill: parent
-                    enabled: cb.selectedCount > 0
-                    hoverEnabled: true
-                    cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-                    onClicked: cb.pinSelected()
-                }
-            }
-            Rectangle {
-                visible: cb.selectMode
-                width: 30; height: 28; radius: 9
-                opacity: cb.selectedCount > 0 ? 1 : 0.4
-                color: batchDelMa.containsMouse ? Qt.rgba(cb.theme.danger.r, cb.theme.danger.g, cb.theme.danger.b, 0.2) : cb.theme.card
-                border.width: 1
-                border.color: cb.theme.border
-                NotchIcon { anchors.centerIn: parent; text: "delete"; font.pixelSize: 14; color: cb.theme.danger }
-                MouseArea {
-                    id: batchDelMa
-                    anchors.fill: parent
-                    enabled: cb.selectedCount > 0
-                    hoverEnabled: true
-                    cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-                    onClicked: cb.deleteSelected()
-                }
-            }
-
-            // Clear non-pinned
-            Rectangle {
-                visible: !cb.selectMode
-                width: 48; height: 28; radius: 9
-                color: clrMa.containsMouse ? cb.theme.cardHover : cb.theme.card
-                border.width: 1
-                border.color: cb.theme.border
-                Text {
-                    anchors.centerIn: parent
-                    text: I18n.tr("Clear")
-                    color: cb.theme.muted
-                    font.family: Tokens.ui
-                    font.pixelSize: 10
-                    font.weight: Font.Medium
-                }
-                MouseArea {
-                    id: clrMa
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: Clipboard.clear()
                 }
             }
         }
