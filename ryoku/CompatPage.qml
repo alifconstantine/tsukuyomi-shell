@@ -107,6 +107,11 @@ Item {
         }
     }
 
+    Process {
+        id: termActionProc
+        onExited: page.refreshAll()
+    }
+
     SchemaPage {
         id: settings
 
@@ -184,7 +189,7 @@ Item {
                             }
                             Btn {
                                 text: I18n.tr("Optional Gaming Store Add-ons")
-                                onAct: Quickshell.execDetached(["ryostore", "open"])
+                                onAct: Quickshell.execDetached(["ryostore", "open", "compat-addons"])
                             }
                         }
                     }
@@ -464,15 +469,27 @@ Item {
                             spacing: Tokens.s2
                             Btn {
                                 text: I18n.tr("Install libndk (AMD/Universal ARM)")
-                                onAct: Quickshell.execDetached(["kitty", "-e", "bash", "-lc", "tsukuyomi-droid setup-addon libndk; echo; read -p 'Press Enter to close...'"])
+                                enabled: !termActionProc.running
+                                onAct: {
+                                    termActionProc.command = ["kitty", "-e", "bash", "-lc", "tsukuyomi-droid setup-addon libndk; echo; read -r -p 'Press Enter to close...'"];
+                                    termActionProc.running = true;
+                                }
                             }
                             Btn {
                                 text: I18n.tr("Install libhoudini (Intel)")
-                                onAct: Quickshell.execDetached(["kitty", "-e", "bash", "-lc", "tsukuyomi-droid setup-addon libhoudini; echo; read -p 'Press Enter to close...'"])
+                                enabled: !termActionProc.running
+                                onAct: {
+                                    termActionProc.command = ["kitty", "-e", "bash", "-lc", "tsukuyomi-droid setup-addon libhoudini; echo; read -r -p 'Press Enter to close...'"];
+                                    termActionProc.running = true;
+                                }
                             }
                             Btn {
-                                text: I18n.tr("Re-init with GAPPS")
-                                onAct: Quickshell.execDetached(["kitty", "-e", "bash", "-lc", "tsukuyomi-droid setup-addon gapps; echo; read -p 'Press Enter to close...'"])
+                                text: I18n.tr("Install Google Play (GAPPS)")
+                                enabled: !termActionProc.running
+                                onAct: {
+                                    termActionProc.command = ["kitty", "-e", "bash", "-lc", "tsukuyomi-droid setup-addon gapps; echo; read -r -p 'Press Enter to close...'"];
+                                    termActionProc.running = true;
+                                }
                             }
                         }
                     }

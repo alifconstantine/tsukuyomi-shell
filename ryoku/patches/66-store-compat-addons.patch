@@ -1,5 +1,5 @@
---- a/ryostore/App.qml	2026-11-22 15:52:00.322671367 +0700
-+++ b/ryostore/App.qml	2026-11-22 15:52:00.341464240 +0700
+--- a/ryostore/App.qml	2026-11-22 16:34:06.470483759 +0700
++++ b/ryostore/App.qml	2026-11-22 16:34:06.470974610 +0700
 @@ -86,7 +86,66 @@
          onTriggered: if (app.remoteQuery.length >= 2) Store.searchRemote("flatpak", app.remoteQuery)
      }
@@ -103,6 +103,15 @@
          : (categoryID !== "" ? Store.category(categoryID) : null)
      readonly property string pageTitle: searchOpen ? I18n.tr("Search")
              : (view === "library" ? I18n.tr("Library")
+@@ -324,7 +391,7 @@
+     }
+ 
+     function validRoute(route) {
+-        if (route === "discover" || route === "library" || route === "subshells")
++        if (route === "discover" || route === "library" || route === "subshells" || route === "compat-addons")
+             return true;
+         if (route === "omarchy-plugins" && !app.nomarchyActive)
+             return false;
 @@ -1131,10 +1198,24 @@
          installError: Store.installError
          reducedMotion: app.reducedMotion

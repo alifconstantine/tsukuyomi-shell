@@ -1,7 +1,6 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Controls
 import Quickshell
 import Quickshell.Io
 import Ryoku.Ui
@@ -14,6 +13,7 @@ ShellRoot {
     property string targetFile: Quickshell.env("TSUKUYOMI_COMPAT_FILE") || ""
     property string step: targetFile !== "" ? "configure" : "pick" // pick | configure | running | done | error
     property var inspectData: ({})
+    readonly property bool hasIconPreview: Boolean(inspectData && inspectData.icon_preview && String(inspectData.icon_preview) !== "")
     property string launchMode: "phone" // phone | landscape | game-gamescope
     property string errorText: ""
     property bool installingAddon: false
@@ -36,7 +36,7 @@ ShellRoot {
         if (root.installingAddon)
             return;
         root.installingAddon = true;
-        addonProc.command = ["/usr/lib/tsukuyomi/tsukuyomi-droid", "setup-addon", "libndk"];
+        addonProc.command = ["kitty", "-e", "bash", "-lc", "/usr/lib/tsukuyomi/tsukuyomi-droid setup-addon libndk; echo; read -r -p 'Press Enter to close...'"];
         addonProc.running = true;
     }
 
@@ -74,7 +74,12 @@ ShellRoot {
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
-                    root.inspectData = JSON.parse(text);
+                    const obj = JSON.parse(text);
+                    root.inspectData = obj;
+                    if (obj.error) {
+                        root.errorText = String(obj.error);
+                        root.step = "error";
+                    }
                 } catch (e) {}
             }
         }
@@ -84,7 +89,7 @@ ShellRoot {
         id: addonProc
         onExited: code => {
             root.installingAddon = false;
-            if (code === 0)
+            if (root.targetFile !== "")
                 root.loadInspect(root.targetFile);
         }
     }
@@ -144,12 +149,12 @@ ShellRoot {
                         width: 36
                         height: 36
                         fillMode: Image.PreserveAspectFit
-                        visible: root.inspectData.icon_preview && root.inspectData.icon_preview !== ""
-                        source: visible ? ("file://" + root.inspectData.icon_preview) : ""
+                        visible: root.hasIconPreview
+                        source: root.hasIconPreview ? ("file://" + String(root.inspectData.icon_preview)) : ""
                     }
                     Text {
                         anchors.centerIn: parent
-                        visible: !root.inspectData.icon_preview || root.inspectData.icon_preview === ""
+                        visible: !root.hasIconPreview
                         text: "\ue859"
                         font.family: Tsukuyomi.Style.icons
                         font.pixelSize: 24
@@ -317,9 +322,17 @@ ShellRoot {
                         width: parent.width
                         padding: Tokens.s5
                         spacing: Tokens.s3
-                        ProgressBar {
+                        Rectangle {
                             width: parent.width - Tokens.s5 * 2
-                            indeterminate: true
+                            height: 6
+                            radius: 3
+                            color: Tsukuyomi.Style.line
+                            Rectangle {
+                                width: parent.width * 0.38
+                                height: parent.height
+                                radius: 3
+                                color: Tsukuyomi.Style.accent
+                            }
                         }
                         Text {
                             width: parent.width - Tokens.s5 * 2
@@ -345,7 +358,7 @@ ShellRoot {
                         Text {
                             width: parent.width - Tokens.s4 * 2
                             text: root.step === "done"
-                                ? I18n.tr("%1 is ready in App Launcher (Super+Space). Press Alt+R while focused to cycle Phone/Tablet/Landscape sizes.").arg(root.inspectData.name || root.inspectData.package || "App")
+                                ? I18n.tr("%1 is ready in App Launcher (Super+Space). Press Super+Alt+R while focused to cycle Phone/Tablet/Landscape sizes.").arg(root.inspectData.name || root.inspectData.package || "App")
                                 : root.errorText
                             color: Tsukuyomi.Style.text
                             font.family: Tokens.ui

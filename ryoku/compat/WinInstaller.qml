@@ -1,7 +1,6 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Controls
 import Quickshell
 import Quickshell.Io
 import Ryoku.Ui
@@ -15,6 +14,7 @@ ShellRoot {
     property string initialMode: Quickshell.env("TSUKUYOMI_COMPAT_MODE") || "isolated"
     property string step: targetFile !== "" ? "configure" : "pick" // pick | configure | running | shortcuts | done | error
     property var inspectData: ({})
+    readonly property bool hasIconPreview: Boolean(inspectData && inspectData.icon_preview && String(inspectData.icon_preview) !== "")
     property var prefixes: []
     property var candidates: []
     property var selectedMap: ({})
@@ -30,6 +30,70 @@ ShellRoot {
     property bool pinPortable: false
     property string errorText: ""
     property string activeSlug: ""
+
+    readonly property var availableModes: {
+        const list = [
+            { id: "isolated", title: I18n.tr("Install in Isolated Prefix (Recommended)"), desc: I18n.tr("Creates a clean sandboxed container and adds shortcuts to App Launcher.") },
+            { id: "portable", title: I18n.tr("Run Portable (Sandboxed)"), desc: I18n.tr("Runs directly in Bubblewrap without modifying system state.") }
+        ];
+        if (root.prefixes.length > 0) {
+            list.push({ id: "existing", title: I18n.tr("Install into Existing Prefix"), desc: I18n.tr("Run inside an already installed application prefix.") });
+        }
+        return list;
+    }
+
+    component TogglePill: Rectangle {
+        id: tp
+        property bool checked: false
+        property string label: ""
+        signal toggled(bool nextState)
+
+        width: tpRow.implicitWidth + 20
+        height: 30
+        radius: 8
+        color: tp.checked ? Qt.alpha(Tsukuyomi.Style.accent, 0.16) : Tsukuyomi.Style.surface
+        border.width: 1
+        border.color: tp.checked ? Tsukuyomi.Style.accent : Tsukuyomi.Style.line
+
+        Row {
+            id: tpRow
+            anchors.centerIn: parent
+            spacing: 6
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: tp.checked ? "\ue834" : "\ue835"
+                font.family: Tsukuyomi.Style.icons
+                font.pixelSize: 15
+                color: tp.checked ? Tsukuyomi.Style.accent : Tsukuyomi.Style.muted
+            }
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: tp.label
+                color: Tsukuyomi.Style.text
+                font.family: Tokens.ui
+                font.pixelSize: 11
+                font.weight: tp.checked ? Font.DemiBold : Font.Normal
+            }
+        }
+        MouseArea {
+            anchors.fill: parent
+            cursorShape: Qt.PointingHandCursor
+            onClicked: tp.toggled(!tp.checked)
+        }
+    }
+
+    function computeSlug(rawName) {
+        const base = String(rawName || "win-app").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 56) || "win-app";
+        const used = {};
+        for (let i = 0; i < root.prefixes.length; i++)
+            used[String(root.prefixes[i].slug || "")] = true;
+        if (!used[base])
+            return base;
+        let idx = 2;
+        while (used[base + "-" + idx])
+            idx++;
+        return base + "-" + idx;
+    }
 
     function pickFile() {
         if (!filePicker.running)
@@ -51,18 +115,24 @@ ShellRoot {
             return;
         root.errorText = "";
         root.step = "running";
+        const chosenSlug = root.installMode === "existing"
+            ? (root.existingSlug || "win-app")
+            : (root.installMode === "portable" && !root.pinPortable
+               ? "portable-sandbox"
+               : root.computeSlug(root.appName || root.inspectData.product_name || "win-app"));
+        root.activeSlug = chosenSlug;
+
         const cmd = [
             "/usr/lib/tsukuyomi/tsukuyomi-win", "install",
             "--file", root.targetFile,
             "--name", root.appName,
             "--mode", root.installMode,
+            "--slug", chosenSlug,
             "--runner", root.runner,
             "--wayland", root.useWayland ? "true" : "false",
             "--sandbox", root.useSandbox ? "true" : "false",
             "--dxvk", root.useDxvk ? "true" : "false"
         ];
-        if (root.installMode === "existing" && root.existingSlug !== "")
-            cmd.push("--slug", root.existingSlug);
         if (root.installMode === "portable" && root.pinPortable)
             cmd.push("--pin-portable");
         installProc.command = cmd;
@@ -70,11 +140,17 @@ ShellRoot {
     }
 
     function cancelInstall() {
+        if (installProc.running)
+            installProc.running = false;
         if (root.activeSlug !== "") {
-            cancelProc.command = ["/usr/lib/tsukuyomi/tsukuyomi-win", "cancel", root.activeSlug, "--cleanup"];
+            const args = ["/usr/lib/tsukuyomi/tsukuyomi-win", "cancel", root.activeSlug];
+            if (root.installMode === "isolated")
+                args.push("--cleanup");
+            cancelProc.command = args;
             cancelProc.running = true;
+        } else {
+            Qt.quit();
         }
-        Qt.quit();
     }
 
     function exportSelected() {
@@ -148,9 +224,12 @@ ShellRoot {
         stdout: StdioCollector { id: installOut }
         stderr: StdioCollector { id: installErr }
         onExited: code => {
+            if (cancelProc.running)
+                return;
             try {
                 const res = JSON.parse(installOut.text);
-                root.activeSlug = String(res.slug || "");
+                if (res.slug)
+                    root.activeSlug = String(res.slug);
                 if (res.exported && res.exported.length > 0) {
                     root.exportedApps = res.exported;
                     root.step = "done";
@@ -200,6 +279,7 @@ ShellRoot {
 
     Process {
         id: cancelProc
+        onExited: Qt.quit()
     }
 
     FloatingWindow {
@@ -238,12 +318,12 @@ ShellRoot {
                         width: 34
                         height: 34
                         fillMode: Image.PreserveAspectFit
-                        visible: root.inspectData.icon_preview && root.inspectData.icon_preview !== ""
-                        source: visible ? ("file://" + root.inspectData.icon_preview) : ""
+                        visible: root.hasIconPreview
+                        source: root.hasIconPreview ? ("file://" + String(root.inspectData.icon_preview)) : ""
                     }
                     Text {
                         anchors.centerIn: parent
-                        visible: !root.inspectData.icon_preview || root.inspectData.icon_preview === ""
+                        visible: !root.hasIconPreview
                         text: "\ue875"
                         font.family: Tsukuyomi.Style.icons
                         font.pixelSize: 24
@@ -349,11 +429,7 @@ ShellRoot {
                                 spacing: Tokens.s2
 
                                 Repeater {
-                                    model: [
-                                        { id: "isolated", title: I18n.tr("Install in Isolated Prefix (Recommended)"), desc: I18n.tr("Creates a clean sandboxed container and adds shortcuts to App Launcher.") },
-                                        { id: "portable", title: I18n.tr("Run Portable (Sandboxed)"), desc: I18n.tr("Runs directly in Bubblewrap without modifying system state.") },
-                                        { id: "existing", title: I18n.tr("Install into Existing Prefix"), desc: I18n.tr("Run inside an already installed application prefix.") }
-                                    ]
+                                    model: root.availableModes
                                     delegate: Rectangle {
                                         id: modeBtn
                                         required property var modelData
@@ -377,6 +453,22 @@ ShellRoot {
                                         }
                                     }
                                 }
+
+                                Flow {
+                                    visible: root.installMode === "existing" && root.prefixes.length > 0
+                                    width: parent.width - Tokens.s3 * 2
+                                    spacing: 6
+                                    Repeater {
+                                        model: root.prefixes
+                                        delegate: TogglePill {
+                                            id: pfxPill
+                                            required property var modelData
+                                            checked: root.existingSlug === String(pfxPill.modelData.slug || "")
+                                            label: String(pfxPill.modelData.slug || "")
+                                            onToggled: root.existingSlug = String(pfxPill.modelData.slug || "")
+                                        }
+                                    }
+                                }
                             }
                         }
 
@@ -390,33 +482,34 @@ ShellRoot {
                                 padding: Tokens.s3
                                 spacing: Tokens.s2
 
-                                Row {
+                                Flow {
                                     width: parent.width - Tokens.s3 * 2
-                                    spacing: Tokens.s3
-                                    CheckBox {
+                                    spacing: 8
+                                    TogglePill {
                                         checked: root.useSandbox
-                                        text: I18n.tr("Safe Sandbox (isolate ~/Documents & Z:\\)")
-                                        onToggled: root.useSandbox = checked
+                                        label: I18n.tr("Safe Sandbox (bwrap)")
+                                        onToggled: next => root.useSandbox = next
                                     }
-                                    CheckBox {
+                                    TogglePill {
                                         checked: root.useDxvk
-                                        text: I18n.tr("DXVK / VKD3D")
-                                        onToggled: root.useDxvk = checked
+                                        label: I18n.tr("DXVK / VKD3D")
+                                        onToggled: next => root.useDxvk = next
                                     }
-                                }
-                                Row {
-                                    width: parent.width - Tokens.s3 * 2
-                                    spacing: Tokens.s3
-                                    CheckBox {
+                                    TogglePill {
                                         checked: root.useWayland
-                                        text: I18n.tr("Native Wayland Driver (Experimental)")
-                                        onToggled: root.useWayland = checked
+                                        label: I18n.tr("Native Wayland Driver")
+                                        onToggled: next => root.useWayland = next
                                     }
-                                    CheckBox {
+                                    TogglePill {
+                                        checked: root.runner === "umu"
+                                        label: root.runner === "umu" ? I18n.tr("Runner: UMU Proton") : I18n.tr("Runner: Wine Staging")
+                                        onToggled: next => root.runner = next ? "umu" : "wine"
+                                    }
+                                    TogglePill {
                                         visible: root.installMode === "portable"
                                         checked: root.pinPortable
-                                        text: I18n.tr("Pin to App Launcher")
-                                        onToggled: root.pinPortable = checked
+                                        label: I18n.tr("Pin to App Launcher")
+                                        onToggled: next => root.pinPortable = next
                                     }
                                 }
                             }
@@ -436,9 +529,17 @@ ShellRoot {
                         padding: Tokens.s5
                         spacing: Tokens.s3
 
-                        ProgressBar {
+                        Rectangle {
                             width: parent.width - Tokens.s5 * 2
-                            indeterminate: true
+                            height: 6
+                            radius: 3
+                            color: Tsukuyomi.Style.line
+                            Rectangle {
+                                width: parent.width * 0.38
+                                height: parent.height
+                                radius: 3
+                                color: Tsukuyomi.Style.accent
+                            }
                         }
                         Text {
                             width: parent.width - Tokens.s5 * 2
@@ -472,13 +573,14 @@ ShellRoot {
 
                             Repeater {
                                 model: root.candidates
-                                delegate: CheckBox {
+                                delegate: TogglePill {
+                                    id: candPill
                                     required property var modelData
-                                    checked: root.selectedMap[modelData.exe] !== false
-                                    text: modelData.name + " (" + String(modelData.exe).split("/").pop() + ")"
-                                    onToggled: {
+                                    checked: root.selectedMap[candPill.modelData.exe] !== false
+                                    label: candPill.modelData.name + " (" + String(candPill.modelData.exe).split("/").pop() + ")"
+                                    onToggled: next => {
                                         const m = Object.assign({}, root.selectedMap);
-                                        m[modelData.exe] = checked;
+                                        m[candPill.modelData.exe] = next;
                                         root.selectedMap = m;
                                     }
                                 }

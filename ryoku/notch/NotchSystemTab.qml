@@ -305,7 +305,7 @@ Item {
                     color: resMa.containsMouse ? sys.theme.cardHover : "transparent"
                     border.width: 1; border.color: sys.theme.border
                     Text { id: resTxt; anchors.centerIn: parent; text: I18n.tr("Resize"); color: sys.theme.ink; font.family: Tokens.ui; font.pixelSize: 9; font.weight: Font.DemiBold }
-                    MouseArea { id: resMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Quickshell.execDetached(["/usr/lib/tsukuyomi/droid-cycle-resize"]) }
+                    MouseArea { id: resMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Quickshell.execDetached(["/usr/lib/tsukuyomi/droid-cycle-resize", "--force"]) }
                 }
                 Rectangle {
                     anchors.verticalCenter: parent.verticalCenter

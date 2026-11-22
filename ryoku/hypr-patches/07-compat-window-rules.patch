@@ -7,7 +7,7 @@ diff -ruN hypr/modules/binds.lua hypr_new/modules/binds.lua
  hl.bind(K("XF86TouchpadOff"),    hl.dsp.exec_cmd("ryoku wm act input.touchpad off"),    { locked = true }) -- disable the touchpad
 +
 +-- Cycle Android viewport size preset when a Waydroid window is focused
-+hl.bind(K("ALT + R"), hl.dsp.exec_cmd("/usr/lib/tsukuyomi/droid-cycle-resize"))
++hl.bind(K(mod .. " + ALT + R"), hl.dsp.exec_cmd("/usr/lib/tsukuyomi/droid-cycle-resize"))
 diff -ruN hypr/modules/window_rules.lua hypr_new/modules/window_rules.lua
 --- a/modules/window_rules.lua	2026-11-22 15:42:47.663269320 +0700
 +++ b/modules/window_rules.lua	2026-11-22 15:43:53.810711564 +0700
