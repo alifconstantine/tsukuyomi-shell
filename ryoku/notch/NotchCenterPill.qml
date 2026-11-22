@@ -238,9 +238,14 @@ Item {
     }
 
     opacity: pill.expanded ? 0.0 : 1.0
+    scale: pill.expanded ? 0.86 : 1.0
     Behavior on opacity {
         enabled: pill.anim
-        NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
+        NumberAnimation { duration: pill.expanded ? 120 : 200; easing.type: Easing.OutCubic }
+    }
+    Behavior on scale {
+        enabled: pill.anim
+        NumberAnimation { duration: pill.expanded ? 140 : 240; easing.type: pill.expanded ? Easing.InCubic : Easing.OutBack; easing.overshoot: 0.7 }
     }
 
     function openNotch() {
@@ -337,7 +342,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             text: pill.timeText
             color: pill.root ? pill.root.ink : nt.ink
-            font.family: pill.root ? pill.root.mono : "JetBrainsMono Nerd Font"
+            font.family: nt.monoFont
             font.pixelSize: 12
             font.weight: Font.DemiBold
         }
@@ -364,7 +369,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     text: NotchTimerState.formatted
                     color: nt.ink
-                    font.family: pill.root ? pill.root.mono : "JetBrainsMono Nerd Font"
+                    font.family: nt.monoFont
                     font.pixelSize: 10
                     font.weight: Font.DemiBold
                 }
@@ -464,7 +469,7 @@ Item {
             visible: pill.liveDetail !== ""
             text: pill.liveDetail
             color: nt.muted
-            font.family: pill.root ? pill.root.mono : Tokens.mono
+            font.family: nt.monoFont
             font.pixelSize: 11
         }
     }

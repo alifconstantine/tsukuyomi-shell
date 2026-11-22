@@ -7,38 +7,67 @@ import shell.services
 import Ryoku.Ui.Singletons
 import "NotchRegistry.js" as Registry
 
-// Expanded Tsukuyomi Dynamic Notch (replaces DashboardPopup in VariantRoot).
-// Morphs width and height smoothly per active module, renders only the active
-// tab via Loader, and keeps the expanded header ultra-clean:
-// [Icon + Menu Name]  [Date · Clock]  [Settings]
-// (RAM ring and visualizer are intentionally omitted while expanded.)
-PanelWindow {
-    id: panel
+// Expanded Tsukuyomi Dynamic Notch (replaces DashboardPopup in VariantRoot) +
+// sibling Hub-styled NotchSettingsWindow popup.
+// Morphs seamlessly out of the center island with spring physics, renders only
+// the active tab via Loader, and keeps the expanded header ultra-clean.
+Item {
+    id: notchHost
 
     required property var root
-    screen: panel.root ? panel.root.activePopupScreen : null
+    width: 0
+    height: 0
 
-    readonly property bool anim: !Perf.reduceMotion
-    readonly property bool isOpen: panel.root ? panel.root.dashboardVisible : false
-
-    color: "transparent"
-    anchors { top: true; bottom: true; left: true; right: true }
-    exclusionMode: ExclusionMode.Ignore
-    WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.namespace: "ryoku-dashboard"
-
-    property real reveal: panel.isOpen ? 1.0 : 0.0
-    Behavior on reveal {
-        enabled: panel.anim
-        NumberAnimation {
-            duration: panel.isOpen ? 230 : 160
-            easing.type: panel.isOpen ? Easing.OutCubic : Easing.InCubic
-        }
+    function openSettingsPopup(sec) {
+        if (notchHost.root && notchHost.root.dashboardVisible)
+            notchHost.root.dashboardVisible = false;
+        settingsPopup.openWindow(sec || "appearance");
     }
-    visible: reveal > 0.001
-    WlrLayershell.keyboardFocus: panel.isOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
-    NotchTheme { id: nt; root: panel.root }
+    NotchSettingsWindow {
+        id: settingsPopup
+        root: notchHost.root
+    }
+
+    PanelWindow {
+        id: panel
+
+        readonly property var root: notchHost.root
+        screen: panel.root ? panel.root.activePopupScreen : null
+
+        readonly property bool anim: !Perf.reduceMotion
+        readonly property bool isOpen: panel.root ? panel.root.dashboardVisible : false
+
+        color: "transparent"
+        anchors { top: true; bottom: true; left: true; right: true }
+        exclusionMode: ExclusionMode.Ignore
+        WlrLayershell.layer: WlrLayer.Overlay
+        WlrLayershell.namespace: "ryoku-dashboard"
+
+        property real reveal: panel.isOpen ? 1.0 : 0.0
+        Behavior on reveal {
+            enabled: panel.anim
+            NumberAnimation {
+                duration: panel.isOpen ? 280 : 200
+                easing.type: panel.isOpen ? Easing.OutCubic : Easing.InCubic
+            }
+        }
+        property real contentFade: panel.isOpen ? 1.0 : 0.0
+        Behavior on contentFade {
+            enabled: panel.anim
+            NumberAnimation {
+                duration: panel.isOpen ? 220 : 95
+                easing.type: panel.isOpen ? Easing.OutCubic : Easing.InCubic
+            }
+        }
+        visible: reveal > 0.002
+        WlrLayershell.keyboardFocus: panel.isOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+
+        function openSettingsPopup(sec) {
+            notchHost.openSettingsPopup(sec);
+        }
+
+        NotchTheme { id: nt; root: panel.root }
 
     readonly property var tabs: Registry.visibleTabs(NotchConfig.hiddenTabs)
     property string activeTabId: "home"
@@ -121,13 +150,7 @@ PanelWindow {
             open("files");
         }
         function openSettings(): void {
-            if (!panel.isOpen) {
-                panel._ipcPendingSettings = true;
-                if (panel.root) panel.root.openDashboard();
-            } else {
-                panel.switcherOpen = false;
-                panel.settingsOpen = true;
-            }
+            panel.openSettingsPopup("appearance");
         }
         function close(): void {
             if (panel.root && panel.isOpen) panel.root.closeDashboard();
@@ -160,7 +183,7 @@ PanelWindow {
         onClicked: if (panel.root) panel.root.dashboardVisible = false
     }
 
-    // Main morphing Dynamic Island container
+    // Main morphing Dynamic Island container (choreographed In/Out elastic physics)
     Rectangle {
         id: card
 
@@ -168,19 +191,27 @@ PanelWindow {
         readonly property real idleW: 164
         readonly property real idleH: panel.barH
 
-        property real morphedW: panel.targetW
-        property real morphedH: panel.targetH
-        Behavior on morphedW {
+        property real targetAnimatedW: panel.isOpen ? panel.targetW : idleW
+        property real targetAnimatedH: panel.isOpen ? panel.targetH : idleH
+
+        Behavior on targetAnimatedW {
             enabled: panel.anim
-            NumberAnimation { duration: 240; easing.type: Easing.OutCubic }
+            NumberAnimation {
+                duration: panel.isOpen ? 300 : 210
+                easing.type: panel.isOpen ? Easing.OutBack : Easing.InCubic
+                easing.overshoot: 0.68
+            }
         }
-        Behavior on morphedH {
+        Behavior on targetAnimatedH {
             enabled: panel.anim
-            NumberAnimation { duration: 240; easing.type: Easing.OutCubic }
+            NumberAnimation {
+                duration: panel.isOpen ? 320 : 195
+                easing.type: panel.isOpen ? Easing.OutQuint : Easing.InCubic
+            }
         }
 
-        width: Math.round(idleW + (morphedW - idleW) * panel.reveal)
-        height: Math.round(idleH + (morphedH - idleH) * panel.reveal)
+        width: Math.round(targetAnimatedW)
+        height: Math.round(targetAnimatedH)
         x: Math.round((parent.width - width) / 2)
         y: (panel.root && panel.root.barPosition === "bottom")
             ? (parent.height - panel.barTopY - height)
@@ -190,7 +221,7 @@ PanelWindow {
         color: nt.surface
         border.width: 1
         border.color: nt.border
-        opacity: Math.min(1, panel.reveal * 1.15)
+        opacity: Math.min(1, panel.reveal * 1.25)
         clip: true
         focus: panel.isOpen
 
@@ -228,8 +259,8 @@ PanelWindow {
             id: headerBar
             anchors { top: parent.top; left: parent.left; right: parent.right; topMargin: 10; leftMargin: 14; rightMargin: 14 }
             height: 28
-            opacity: panel.reveal > 0.35 ? 1 : 0
-            Behavior on opacity { enabled: panel.anim; NumberAnimation { duration: 140 } }
+            opacity: panel.contentFade
+            transform: Translate { y: panel.anim ? Math.round((1.0 - panel.contentFade) * 6) : 0 }
 
             // Left: Back (in Settings) or Menu Icon + Menu Name (hidden in Teleprompter distraction-free mode)
             Rectangle {
@@ -291,7 +322,7 @@ PanelWindow {
                 anchors.centerIn: parent
                 text: panel.headerClock
                 color: nt.muted
-                font.family: panel.root ? panel.root.mono : Tokens.mono
+                font.family: nt.monoFont
                 font.pixelSize: 11
                 font.weight: Font.Medium
             }
@@ -324,7 +355,7 @@ PanelWindow {
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
                         panel.switcherOpen = false;
-                        panel.settingsOpen = !panel.settingsOpen;
+                        panel.openSettingsPopup("appearance");
                     }
                 }
             }
@@ -357,6 +388,17 @@ PanelWindow {
                 flickableDirection: Flickable.HorizontalFlick
                 boundsBehavior: Flickable.StopAtBounds
                 clip: true
+
+                WheelHandler {
+                    acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                    onWheel: event => {
+                        var delta = Math.abs(event.angleDelta.x) > Math.abs(event.angleDelta.y)
+                            ? event.angleDelta.x : event.angleDelta.y;
+                        var maxX = Math.max(0, qpFlick.contentWidth - qpFlick.width);
+                        qpFlick.contentX = Math.max(0, Math.min(maxX, qpFlick.contentX - delta * 0.6));
+                        event.accepted = true;
+                    }
+                }
 
                 Row {
                     id: qpRowWrap
@@ -419,8 +461,9 @@ PanelWindow {
                 left: parent.left
                 right: parent.right
             }
-            opacity: panel.reveal > 0.4 ? 1 : 0
-            Behavior on opacity { enabled: panel.anim; NumberAnimation { duration: 150 } }
+            opacity: panel.contentFade
+            scale: panel.anim ? (0.95 + 0.05 * panel.contentFade) : 1.0
+            transform: Translate { y: panel.anim ? Math.round((1.0 - panel.contentFade) * 10) : 0 }
 
             // Left < arrow
             Rectangle {
@@ -517,8 +560,7 @@ PanelWindow {
                     target: contentLoader.item
                     ignoreUnknownSignals: true
                     function onOpenSettingsRequested() {
-                        panel.switcherOpen = false;
-                        panel.settingsOpen = true;
+                        panel.openSettingsPopup("media");
                     }
                 }
             }
@@ -557,5 +599,6 @@ PanelWindow {
                 }
             }
         }
+    }
     }
 }
