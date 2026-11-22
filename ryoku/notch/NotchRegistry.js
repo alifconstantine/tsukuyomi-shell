@@ -5,27 +5,27 @@
 // smoothly to fit the active module's content rather than forcing a single box.
 
 var TABS = [
-    { id: "home",          label: "Home",          icon: "tune",              w: 440, h: 192, file: "NotchHomeTab.qml" },
-    { id: "music",         label: "Music",         icon: "music_note",        w: 544, h: 184, file: "NotchMusicTab.qml" },
-    { id: "calendar",      label: "Calendar",      icon: "calendar_month",    w: 584, h: 256, file: "NotchCalendarTab.qml" },
-    { id: "todo",          label: "ToDo",          icon: "checklist",         w: 576, h: 252, file: "NotchTodoTab.qml" },
-    { id: "timer",         label: "Timer",         icon: "timer",             w: 536, h: 214, file: "NotchTimerTab.qml" },
-    { id: "notifications", label: "Notifications", icon: "notifications",     w: 596, h: 268, file: "NotchNotifTab.qml" },
-    { id: "clipboard",     label: "Clipboard",     icon: "content_paste",     w: 560, h: 242, file: "NotchClipboardTab.qml" },
-    { id: "files",         label: "Files",         icon: "folder_open",       w: 604, h: 282, file: "NotchFilesTab.qml" },
-    { id: "translate",     label: "Translate",     icon: "translate",         w: 572, h: 236, file: "NotchTranslateTab.qml" },
-    { id: "teleprompter",  label: "Teleprompter",  icon: "subtitles",         w: 568, h: 248, file: "NotchTeleprompterTab.qml" },
-    { id: "weather",       label: "Weather",       icon: "partly_cloudy_day", w: 608, h: 246, file: "NotchWeatherTab.qml" },
-    { id: "health",        label: "Health",        icon: "favorite",          w: 588, h: 242, file: "NotchHealthTab.qml" },
-    { id: "system",        label: "System",        icon: "monitoring",        w: 568, h: 212, file: "NotchSystemTab.qml" }
+    { id: "home",          label: "Home",          icon: "home",              w: 468, h: 214, file: "NotchHomeTab.qml" },
+    { id: "music",         label: "Music",         icon: "music_note",        w: 556, h: 204, file: "NotchMusicTab.qml" },
+    { id: "calendar",      label: "Calendar",      icon: "calendar_month",    w: 604, h: 282, file: "NotchCalendarTab.qml" },
+    { id: "todo",          label: "ToDo",          icon: "checklist",         w: 590, h: 278, file: "NotchTodoTab.qml" },
+    { id: "timer",         label: "Timer",         icon: "timer",             w: 552, h: 234, file: "NotchTimerTab.qml" },
+    { id: "notifications", label: "Notifications", icon: "notifications",     w: 608, h: 290, file: "NotchNotifTab.qml" },
+    { id: "clipboard",     label: "Clipboard",     icon: "content_paste",     w: 584, h: 274, file: "NotchClipboardTab.qml" },
+    { id: "files",         label: "Files",         icon: "folder_open",       w: 628, h: 316, file: "NotchFilesTab.qml" },
+    { id: "translate",     label: "Translate",     icon: "translate",         w: 588, h: 266, file: "NotchTranslateTab.qml" },
+    { id: "teleprompter",  label: "Teleprompter",  icon: "subtitles",         w: 588, h: 286, file: "NotchTeleprompterTab.qml" },
+    { id: "weather",       label: "Weather",       icon: "partly_cloudy_day", w: 624, h: 278, file: "NotchWeatherTab.qml" },
+    { id: "health",        label: "Health",        icon: "favorite",          w: 604, h: 268, file: "NotchHealthTab.qml" },
+    { id: "system",        label: "System",        icon: "monitoring",        w: 580, h: 246, file: "NotchSystemTab.qml" }
 ];
 
 var SETTINGS_META = {
     id: "settings",
     label: "Notch Settings",
     icon: "settings",
-    w: 580,
-    h: 274,
+    w: 596,
+    h: 316,
     file: "NotchSettingsView.qml"
 };
 

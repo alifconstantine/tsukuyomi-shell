@@ -237,10 +237,10 @@ Item {
         NumberAnimation { duration: 240; easing.type: Easing.OutCubic }
     }
 
-    opacity: pill.expanded ? 0.12 : 1.0
+    opacity: pill.expanded ? 0.0 : 1.0
     Behavior on opacity {
         enabled: pill.anim
-        NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
+        NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
     }
 
     function openNotch() {

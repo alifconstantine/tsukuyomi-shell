@@ -52,12 +52,19 @@ PanelWindow {
         ? Registry.SETTINGS_META
         : Registry.findTab(panel.activeTabId)
 
-    readonly property int barOffset: (panel.root ? panel.root.v2BarHeight : 34) + 6
+    readonly property int barTopY: panel.root && panel.root.barGapLead !== undefined ? panel.root.barGapLead : 8
+    readonly property int barH: panel.root && panel.root.v2BarHeight ? panel.root.v2BarHeight : 33
+    readonly property real barR: panel.root && panel.root.barCornerRadius !== undefined ? panel.root.barCornerRadius : 17
     readonly property int maxW: Math.max(320, panel.width - 32)
-    readonly property int maxH: Math.max(160, panel.height - panel.barOffset - 32)
+    readonly property int maxH: Math.max(180, panel.height - panel.barTopY - 24)
 
-    readonly property real targetW: Math.min(panel.maxW, Number(panel.activeMeta.w || 432))
-    readonly property real targetH: Math.min(panel.maxH, Number(panel.activeMeta.h || 192))
+    readonly property bool tpActive: !panel.settingsOpen && panel.activeTabId === "teleprompter"
+    readonly property bool tpDistractionFree: panel.tpActive && NotchTeleprompterStore.focusMode
+    readonly property real scaleFactor: panel.tpActive ? (NotchTeleprompterStore.scalePct / 100.0) : 1.0
+    readonly property int quickBarExtra: (panel.switcherOpen && !panel.settingsOpen && !panel.tpDistractionFree) ? 42 : 0
+
+    readonly property real targetW: Math.min(panel.maxW, Math.round(Number(panel.activeMeta.w || 468) * panel.scaleFactor))
+    readonly property real targetH: Math.min(panel.maxH, Math.round(Number(panel.activeMeta.h || 214) * panel.scaleFactor) + panel.quickBarExtra)
 
     function stepTab(delta) {
         if (panel.settingsOpen) return;
@@ -157,9 +164,9 @@ PanelWindow {
     Rectangle {
         id: card
 
-        // Morph from compact idle dimensions to active tab's adaptive size
-        readonly property real idleW: 176
-        readonly property real idleH: 34
+        // Morph seamlessly from center island pill dimensions to active tab's adaptive size
+        readonly property real idleW: 164
+        readonly property real idleH: panel.barH
 
         property real morphedW: panel.targetW
         property real morphedH: panel.targetH
@@ -176,10 +183,10 @@ PanelWindow {
         height: Math.round(idleH + (morphedH - idleH) * panel.reveal)
         x: Math.round((parent.width - width) / 2)
         y: (panel.root && panel.root.barPosition === "bottom")
-            ? (parent.height - panel.barOffset - height) + 10 * (1 - panel.reveal)
-            : (panel.barOffset) - 10 * (1 - panel.reveal)
+            ? (parent.height - panel.barTopY - height)
+            : panel.barTopY
 
-        radius: Math.max(14, Math.min(26, NotchConfig.cornerRadius))
+        radius: Math.round(panel.barR + (Math.max(14, Math.min(26, NotchConfig.cornerRadius)) - panel.barR) * panel.reveal)
         color: nt.surface
         border.width: 1
         border.color: nt.border
@@ -224,9 +231,10 @@ PanelWindow {
             opacity: panel.reveal > 0.35 ? 1 : 0
             Behavior on opacity { enabled: panel.anim; NumberAnimation { duration: 140 } }
 
-            // Left: Back (in Settings) or Menu Icon + Menu Name (click for quick switcher)
+            // Left: Back (in Settings) or Menu Icon + Menu Name (hidden in Teleprompter distraction-free mode)
             Rectangle {
                 id: titleBtn
+                visible: !panel.tpDistractionFree
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
                 width: titleRow.implicitWidth + 14
@@ -242,7 +250,7 @@ PanelWindow {
 
                     NotchIcon {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: panel.settingsOpen ? "arrow_back" : String(panel.activeMeta.icon || "tune")
+                        text: panel.settingsOpen ? "arrow_back" : String(panel.activeMeta.icon || "home")
                         font.pixelSize: 15
                         fill: 1
                         color: nt.ink
@@ -322,22 +330,22 @@ PanelWindow {
             }
         }
 
-        // Quick-Jump Tab Popover Bar (toggled by clicking Menu Name)
+        // Quick-Jump Tab Accordion Bar (opaque elevated tray pushing content smoothly down)
         Rectangle {
             id: quickBar
-            anchors { top: headerBar.bottom; left: parent.left; right: parent.right; topMargin: 4; leftMargin: 14; rightMargin: 14 }
-            height: panel.switcherOpen && !panel.settingsOpen ? 32 : 0
-            opacity: panel.switcherOpen && !panel.settingsOpen ? 1 : 0
+            anchors { top: headerBar.bottom; left: parent.left; right: parent.right; topMargin: 6; leftMargin: 14; rightMargin: 14 }
+            height: panel.switcherOpen && !panel.settingsOpen && !panel.tpDistractionFree ? 34 : 0
+            opacity: panel.switcherOpen && !panel.settingsOpen && !panel.tpDistractionFree ? 1 : 0
             visible: height > 1
             radius: 10
-            color: nt.card
+            color: nt.solidSurface
             border.width: 1
             border.color: nt.border
             clip: true
             z: 20
 
-            Behavior on height { enabled: panel.anim; NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
-            Behavior on opacity { enabled: panel.anim; NumberAnimation { duration: 130 } }
+            Behavior on height { enabled: panel.anim; NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+            Behavior on opacity { enabled: panel.anim; NumberAnimation { duration: 140 } }
 
             Flickable {
                 id: qpFlick
@@ -354,17 +362,19 @@ PanelWindow {
                     id: qpRowWrap
                     x: Math.max(0, (qpFlick.width - implicitWidth) / 2)
                     anchors.verticalCenter: parent.verticalCenter
-                    spacing: 5
+                    spacing: 4
                     Repeater {
                         model: panel.tabs
                         delegate: Rectangle {
                             required property var modelData
                             readonly property bool on: modelData.id === panel.activeTabId
                             width: qpRow.implicitWidth + 14
-                            height: 24
-                            radius: 7
-                            color: on ? Qt.rgba(nt.accent.r, nt.accent.g, nt.accent.b, 0.24)
-                                : (qpMa.containsMouse ? nt.cardHover : "transparent")
+                            height: 26
+                            radius: 8
+                            color: on ? Qt.rgba(nt.accent.r, nt.accent.g, nt.accent.b, 0.28)
+                                : (qpMa.containsMouse ? nt.cardHover : Qt.rgba(nt.ink.r, nt.ink.g, nt.ink.b, 0.04))
+                            border.width: on ? 1 : 0
+                            border.color: Qt.rgba(nt.accent.r, nt.accent.g, nt.accent.b, 0.55)
                             Row {
                                 id: qpRow
                                 anchors.centerIn: parent
@@ -402,7 +412,7 @@ PanelWindow {
         Item {
             id: bodyHost
             anchors {
-                top: headerBar.bottom
+                top: quickBar.visible ? quickBar.bottom : headerBar.bottom
                 topMargin: 8
                 bottom: dotsRow.top
                 bottomMargin: 6
@@ -415,7 +425,7 @@ PanelWindow {
             // Left < arrow
             Rectangle {
                 id: prevBtn
-                visible: !panel.settingsOpen && panel.tabs.length > 1
+                visible: !panel.settingsOpen && !panel.tpDistractionFree && panel.tabs.length > 1
                 anchors.left: parent.left
                 anchors.leftMargin: 8
                 anchors.verticalCenter: parent.verticalCenter
@@ -437,7 +447,7 @@ PanelWindow {
             // Right > arrow
             Rectangle {
                 id: nextBtn
-                visible: !panel.settingsOpen && panel.tabs.length > 1
+                visible: !panel.settingsOpen && !panel.tpDistractionFree && panel.tabs.length > 1
                 anchors.right: parent.right
                 anchors.rightMargin: 8
                 anchors.verticalCenter: parent.verticalCenter
@@ -520,7 +530,7 @@ PanelWindow {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 8
-            height: !panel.settingsOpen && panel.tabs.length > 1 ? 8 : 0
+            height: !panel.settingsOpen && !panel.tpDistractionFree && panel.tabs.length > 1 ? 8 : 0
             visible: height > 0
             spacing: 6
             opacity: panel.reveal > 0.4 ? 1 : 0

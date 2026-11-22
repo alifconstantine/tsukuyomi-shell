@@ -28,6 +28,7 @@ QtObject {
     readonly property color surface: NotchConfig.frosted
         ? Qt.rgba(baseSurface.r, baseSurface.g, baseSurface.b, nt.lightSurface ? 0.88 : 0.90)
         : Qt.rgba(baseSurface.r, baseSurface.g, baseSurface.b, 0.97)
+    readonly property color solidSurface: Qt.rgba(baseSurface.r, baseSurface.g, baseSurface.b, 0.97)
 
     readonly property color accent: nt.customMode
         ? nt.parseColor(NotchConfig.customAccentHex, nt.sysAccent)

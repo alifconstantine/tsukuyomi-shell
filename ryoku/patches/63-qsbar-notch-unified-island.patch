@@ -1,0 +1,23 @@
+--- a/shell/modules/bar/barstyles/qsbar/BarSlot.qml
++++ b/shell/modules/bar/barstyles/qsbar/BarSlot.qml
+@@ -2084,9 +2084,9 @@
+                     if (!it.hasContent || !it.autoShown) continue
+                     if (start < 0) start = row.x + it.x + it.visualLeftEdge
+                     end = row.x + it.x + it.visualRightEdge
+-                    if (it.sepOn) { runs.push({ a: start, b: end }); start = -1 }
++                    if (it.sepOn) { runs.push({ a: start, b: end, isCenter: r === 1 }); start = -1 }
+                 }
+-                if (start >= 0) runs.push({ a: start, b: end })
++                if (start >= 0) runs.push({ a: start, b: end, isCenter: r === 1 })
+             }
+             // Plugins now ride the gid rows above, so their pills are already in
+             // runs; no separate plugin run is needed.
+@@ -2121,6 +2121,8 @@
+                 readonly property real rawLeft: modelData ? modelData.a - islandsPad : 0
+                 readonly property real rawRight: modelData ? modelData.b + islandsPad : 0
+                 visible: modelData && (modelData.b - modelData.a) > 0.5
++                opacity: (modelData && modelData.isCenter && barSlot.root.dashboardVisible) ? 0.0 : 1.0
++                Behavior on opacity { enabled: !Perf.reduceMotion; NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+                 x: Math.max(barSlot.shellOuterMargin, rawLeft)
+                 y: 0
+                 width: Math.max(0,
