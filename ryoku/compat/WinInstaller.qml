@@ -344,7 +344,8 @@ ShellRoot {
                     Text {
                         width: parent.width
                         text: root.targetFile !== ""
-                            ? ((root.inspectData.arch || "PE") + (root.inspectData.version ? (" · v" + root.inspectData.version) : "") + " · " + String(root.inspectData.filename || ""))
+                            ? ((root.inspectData.version ? ("v" + root.inspectData.version + " · ") : "")
+                               + String(root.inspectData.filename || root.targetFile.split("/").pop()))
                             : I18n.tr("Select or drop an .exe, .msi, or .lnk file")
                         color: Tsukuyomi.Style.muted
                         font.family: Tokens.mono

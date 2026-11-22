@@ -291,7 +291,7 @@ ShellRoot {
 
                         Tsukuyomi.SectionCard {
                             width: parent.width
-                            title: I18n.tr("Window & Orientation Profile")
+                            title: I18n.tr("Window Mode")
                             collapsible: false
 
                             Column {
@@ -301,9 +301,9 @@ ShellRoot {
 
                                 Repeater {
                                     model: [
-                                        { id: "phone", title: I18n.tr("Phone Window (9:16 Multi-Window)"), desc: I18n.tr("Best for messaging, social, and daily Android apps alongside Linux windows.") },
-                                        { id: "landscape", title: I18n.tr("Landscape Tablet (16:9 Multi-Window)"), desc: I18n.tr("Wide layout with mouse-as-touch enabled.") },
-                                        { id: "game-gamescope", title: I18n.tr("Game Mode (Gamescope 16:9 Resizable / Fullscreen)"), desc: I18n.tr("Hardware-scaled landscape viewport; drag resize or press Super+F cleanly.") }
+                                        { id: "phone", title: I18n.tr("Phone"), desc: I18n.tr("Open the app in a window alongside your Linux apps.") },
+                                        { id: "landscape", title: I18n.tr("Landscape"), desc: I18n.tr("Use a wide window and click where you would tap.") },
+                                        { id: "game-gamescope", title: I18n.tr("Game"), desc: I18n.tr("Open the app in a wide window with fullscreen support.") }
                                     ]
                                     delegate: Rectangle {
                                         id: modeBtn
