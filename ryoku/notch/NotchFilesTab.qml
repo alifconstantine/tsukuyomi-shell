@@ -15,10 +15,17 @@ Item {
     NotchTheme { id: _fallbackTheme; root: null }
     readonly property bool anim: !Perf.reduceMotion
 
-    property bool showBrowserInShelf: false
     property int imgQuality: 75
     property bool deletePermanent: false
     property string customDest: (Quickshell.env("HOME") || "") + "/Downloads"
+
+    Connections {
+        target: NotchFilesStore
+        function onPickedDestDirChanged() {
+            if (NotchFilesStore.pickedDestDir !== "")
+                fl.customDest = NotchFilesStore.pickedDestDir;
+        }
+    }
 
     readonly property var tools: [
         { id: "shelf",    label: "Shelf",    icon: "inventory_2",  hint: "Pin & stage files" },
@@ -177,7 +184,7 @@ Item {
                                             anchors.centerIn: parent
                                             text: countBadge
                                             color: fl.theme.onAccent
-                                            font.family: Tokens.mono
+                                            font.family: theme.monoFont
                                             font.pixelSize: 8
                                             font.weight: Font.Bold
                                         }
@@ -287,10 +294,7 @@ Item {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        fl.showBrowserInShelf = false;
-                        NotchFilesStore.openTool("");
-                    }
+                    onClicked: NotchFilesStore.openTool("")
                 }
             }
 
@@ -329,7 +333,7 @@ Item {
                             : NotchFilesStore.selectedCount + " selected")
                         : I18n.tr("0 selected")
                     color: NotchFilesStore.selectedCount > 0 ? fl.theme.ink : fl.theme.muted
-                    font.family: Tokens.mono
+                    font.family: theme.monoFont
                     font.pixelSize: 9
                     elide: Text.ElideMiddle
                 }
@@ -341,10 +345,10 @@ Item {
             }
         }
 
-        // ── 1. SHELF (Drag & Drop Zone + Cards Grid + Local Browser) ─────────
+        // ── 1. SHELF (Clean Drag-and-Drop + Click Center for File Manager Popup) ──
         Item {
             width: parent.width
-            height: parent.height - 56
+            height: parent.height - 46
             visible: NotchFilesStore.activeTool === "shelf"
 
             DropArea {
@@ -353,239 +357,208 @@ Item {
                 onDropped: drop => {
                     if (drop.hasUrls) {
                         NotchFilesStore.addUrlsToShelf(drop.urls);
-                        fl.showBrowserInShelf = false;
                         drop.acceptProposedAction();
                     }
                 }
             }
 
+            // Empty State: pure centered dropzone matching f_03.png reference
+            Rectangle {
+                visible: NotchFilesStore.shelfFiles.length === 0
+                anchors.fill: parent
+                radius: 14
+                color: shelfDrop.containsDrag
+                    ? Qt.rgba(fl.theme.accent.r, fl.theme.accent.g, fl.theme.accent.b, 0.14)
+                    : (emptyDropMa.containsMouse ? fl.theme.cardHover : fl.theme.card)
+                border.width: shelfDrop.containsDrag ? 1.5 : 0
+                border.color: fl.theme.accent
+
+                Canvas {
+                    anchors.fill: parent
+                    visible: !shelfDrop.containsDrag
+                    onPaint: {
+                        var ctx = getContext("2d");
+                        ctx.clearRect(0, 0, width, height);
+                        ctx.strokeStyle = Qt.rgba(fl.theme.ink.r, fl.theme.ink.g, fl.theme.ink.b, 0.22);
+                        ctx.lineWidth = 1.2;
+                        ctx.setLineDash([6, 5]);
+                        var r = 13, x = 2, y = 2, w = width - 4, h = height - 4;
+                        ctx.beginPath();
+                        ctx.moveTo(x + r, y);
+                        ctx.lineTo(x + w - r, y);
+                        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+                        ctx.lineTo(x + w, y + h - r);
+                        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+                        ctx.lineTo(x + r, y + h);
+                        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+                        ctx.lineTo(x, y + r);
+                        ctx.quadraticCurveTo(x, y, x + r, y);
+                        ctx.stroke();
+                    }
+                }
+
+                Column {
+                    anchors.centerIn: parent
+                    spacing: 5
+                    NotchIcon {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: "inbox"
+                        font.pixelSize: 28
+                        fill: 1
+                        color: shelfDrop.containsDrag ? fl.theme.accent : fl.theme.ink
+                    }
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: I18n.tr("Drop files here")
+                        color: fl.theme.ink
+                        font.family: fl.theme.uiFont
+                        font.pixelSize: 13
+                        font.weight: Font.DemiBold
+                    }
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: I18n.tr("Drag out anytime · click to open file picker")
+                        color: fl.theme.muted
+                        font.family: fl.theme.uiFont
+                        font.pixelSize: 10
+                    }
+                }
+
+                MouseArea {
+                    id: emptyDropMa
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: NotchFilesStore.pickNativeFile(false)
+                }
+            }
+
+            // Populated Shelf Grid + minimal add/clear strip
             Column {
+                visible: NotchFilesStore.shelfFiles.length > 0
                 anchors.fill: parent
                 spacing: 6
+
+                Flickable {
+                    width: parent.width
+                    height: parent.height - 32
+                    contentWidth: width
+                    contentHeight: shelfGrid.implicitHeight
+                    boundsBehavior: Flickable.StopAtBounds
+                    clip: true
+
+                    Grid {
+                        id: shelfGrid
+                        width: parent.width
+                        columns: 3
+                        columnSpacing: 8
+                        rowSpacing: 8
+
+                        Repeater {
+                            model: NotchFilesStore.shelfFiles
+                            delegate: Rectangle {
+                                required property var modelData
+                                readonly property bool picked: NotchFilesStore.isSelected(modelData.path)
+                                width: Math.floor((shelfGrid.width - 16) / 3)
+                                height: 58
+                                radius: 11
+                                color: picked
+                                    ? Qt.rgba(fl.theme.accent.r, fl.theme.accent.g, fl.theme.accent.b, 0.18)
+                                    : (shMa.containsMouse ? fl.theme.cardHover : fl.theme.card)
+                                border.width: 1
+                                border.color: picked ? fl.theme.accent : fl.theme.border
+
+                                Column {
+                                    anchors.fill: parent
+                                    anchors.margins: 8
+                                    spacing: 3
+
+                                    Row {
+                                        width: parent.width
+                                        spacing: 6
+                                        Rectangle {
+                                            width: 24; height: 24; radius: 7
+                                            color: Qt.rgba(fl.theme.accent.r, fl.theme.accent.g, fl.theme.accent.b, 0.16)
+                                            NotchIcon {
+                                                anchors.centerIn: parent
+                                                text: NotchFilesStore.iconForCategory(modelData.category)
+                                                font.pixelSize: 14
+                                                color: fl.theme.accent
+                                            }
+                                        }
+                                        Column {
+                                            width: parent.width - 48
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            Text {
+                                                width: parent.width
+                                                text: modelData.name
+                                                color: fl.theme.ink
+                                                font.family: fl.theme.uiFont
+                                                font.pixelSize: 10
+                                                font.weight: Font.DemiBold
+                                                elide: Text.ElideMiddle
+                                            }
+                                            Text {
+                                                text: (modelData.ext ? modelData.ext.toUpperCase() + " · " : "") + modelData.sizeText
+                                                color: fl.theme.muted
+                                                font.family: fl.theme.monoFont
+                                                font.pixelSize: 9
+                                            }
+                                        }
+                                        NotchIcon {
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            text: "close"
+                                            font.pixelSize: 13
+                                            color: fl.theme.muted
+                                            MouseArea {
+                                                anchors.fill: parent
+                                                anchors.margins: -3
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: NotchFilesStore.removeFromShelf(modelData.path)
+                                            }
+                                        }
+                                    }
+
+                                    Text {
+                                        text: picked ? I18n.tr("Selected ✓") : I18n.tr("Click to select")
+                                        color: picked ? fl.theme.accent : fl.theme.muted
+                                        font.family: fl.theme.uiFont
+                                        font.pixelSize: 9
+                                    }
+                                }
+
+                                MouseArea {
+                                    id: shMa
+                                    anchors.fill: parent
+                                    z: -1
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: NotchFilesStore.toggleSelectPath(modelData.path)
+                                }
+                            }
+                        }
+                    }
+                }
 
                 Row {
                     width: parent.width
                     height: 26
                     spacing: 6
 
-                    ActionPill {
-                        icon: fl.showBrowserInShelf ? "inventory_2" : "folder_open"
-                        label: fl.showBrowserInShelf ? I18n.tr("Back to Shelf") : I18n.tr("Browse Local")
-                        onClicked: fl.showBrowserInShelf = !fl.showBrowserInShelf
-                    }
-                    ActionPill {
-                        icon: "add"
-                        label: I18n.tr("Pick File")
-                        onClicked: NotchFilesStore.pickNativeFile(false)
-                    }
-                    ActionPill {
-                        icon: "content_paste"
-                        label: I18n.tr("Paste Path")
-                        onClicked: clipPathPaste.running = true
-                    }
-                    Item { width: Math.max(2, parent.width - 332); height: 1 }
-                    ActionPill {
-                        visible: NotchFilesStore.shelfFiles.length > 0 && !fl.showBrowserInShelf
-                        icon: "delete_sweep"
-                        label: I18n.tr("Clear")
-                        onClicked: NotchFilesStore.clearShelf()
-                    }
-                }
-
-                // Empty Drop Zone matching clean reference (drag-and-drop OR click center to browse)
-                Rectangle {
-                    visible: !fl.showBrowserInShelf && NotchFilesStore.shelfFiles.length === 0
-                    width: parent.width
-                    height: parent.height - 34
-                    radius: 14
-                    color: shelfDrop.containsDrag
-                        ? Qt.rgba(fl.theme.accent.r, fl.theme.accent.g, fl.theme.accent.b, 0.14)
-                        : (emptyDropMa.containsMouse ? fl.theme.cardHover : fl.theme.card)
-                    border.width: shelfDrop.containsDrag ? 1.5 : 1
-                    border.color: shelfDrop.containsDrag ? fl.theme.accent : fl.theme.border
-
-                    Canvas {
-                        anchors.fill: parent
-                        visible: !shelfDrop.containsDrag
-                        onPaint: {
-                            var ctx = getContext("2d");
-                            ctx.clearRect(0, 0, width, height);
-                            ctx.strokeStyle = Qt.rgba(fl.theme.ink.r, fl.theme.ink.g, fl.theme.ink.b, 0.20);
-                            ctx.lineWidth = 1.2;
-                            ctx.setLineDash([6, 5]);
-                            var r = 13, x = 2, y = 2, w = width - 4, h = height - 4;
-                            ctx.beginPath();
-                            ctx.moveTo(x + r, y);
-                            ctx.lineTo(x + w - r, y);
-                            ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-                            ctx.lineTo(x + w, y + h - r);
-                            ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-                            ctx.lineTo(x + r, y + h);
-                            ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-                            ctx.lineTo(x, y + r);
-                            ctx.quadraticCurveTo(x, y, x + r, y);
-                            ctx.stroke();
-                        }
-                    }
-
-                    Column {
-                        anchors.centerIn: parent
-                        spacing: 5
-                        NotchIcon {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            text: "inbox"
-                            font.pixelSize: 28
-                            fill: 1
-                            color: shelfDrop.containsDrag ? fl.theme.accent : fl.theme.ink
-                        }
-                        Text {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            text: I18n.tr("Drop files here")
-                            color: fl.theme.ink
-                            font.family: Tokens.ui
-                            font.pixelSize: 13
-                            font.weight: Font.DemiBold
-                        }
-                        Text {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            text: I18n.tr("Drag & drop · or click center to browse")
-                            color: fl.theme.muted
-                            font.family: Tokens.ui
-                            font.pixelSize: 10
-                        }
-                    }
-
-                    MouseArea {
-                        id: emptyDropMa
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: fl.showBrowserInShelf = true
-                    }
-                }
-
-                // Populated Shelf Grid + compact drop/add strip
-                Item {
-                    visible: !fl.showBrowserInShelf && NotchFilesStore.shelfFiles.length > 0
-                    width: parent.width
-                    height: parent.height - 34
-
-                    Flickable {
-                        width: parent.width
-                        height: parent.height - 30
-                        contentWidth: width
-                        contentHeight: shelfGrid.implicitHeight
-                        boundsBehavior: Flickable.StopAtBounds
-                        clip: true
-
-                        Grid {
-                            id: shelfGrid
-                            width: parent.width
-                            columns: 3
-                            columnSpacing: 8
-                            rowSpacing: 8
-
-                            Repeater {
-                                model: NotchFilesStore.shelfFiles
-                                delegate: Rectangle {
-                                    required property var modelData
-                                    readonly property bool picked: NotchFilesStore.isSelected(modelData.path)
-                                    width: Math.floor((shelfGrid.width - 16) / 3)
-                                    height: 60
-                                    radius: 11
-                                    color: picked
-                                        ? Qt.rgba(fl.theme.accent.r, fl.theme.accent.g, fl.theme.accent.b, 0.18)
-                                        : (shMa.containsMouse ? fl.theme.cardHover : fl.theme.card)
-                                    border.width: 1
-                                    border.color: picked ? fl.theme.accent : fl.theme.border
-
-                                    Column {
-                                        anchors.fill: parent
-                                        anchors.margins: 8
-                                        spacing: 3
-
-                                        Row {
-                                            width: parent.width
-                                            spacing: 6
-                                            Rectangle {
-                                                width: 24; height: 24; radius: 7
-                                                color: Qt.rgba(fl.theme.accent.r, fl.theme.accent.g, fl.theme.accent.b, 0.16)
-                                                NotchIcon {
-                                                    anchors.centerIn: parent
-                                                    text: NotchFilesStore.iconForCategory(modelData.category)
-                                                    font.pixelSize: 14
-                                                    color: fl.theme.accent
-                                                }
-                                            }
-                                            Column {
-                                                width: parent.width - 48
-                                                anchors.verticalCenter: parent.verticalCenter
-                                                Text {
-                                                    width: parent.width
-                                                    text: modelData.name
-                                                    color: fl.theme.ink
-                                                    font.family: Tokens.ui
-                                                    font.pixelSize: 10
-                                                    font.weight: Font.DemiBold
-                                                    elide: Text.ElideMiddle
-                                                }
-                                                Text {
-                                                    text: (modelData.ext ? modelData.ext.toUpperCase() + " · " : "") + modelData.sizeText
-                                                    color: fl.theme.muted
-                                                    font.family: Tokens.mono
-                                                    font.pixelSize: 8
-                                                }
-                                            }
-                                            NotchIcon {
-                                                anchors.verticalCenter: parent.verticalCenter
-                                                text: "close"
-                                                font.pixelSize: 13
-                                                color: fl.theme.muted
-                                                MouseArea {
-                                                    anchors.fill: parent
-                                                    anchors.margins: -3
-                                                    cursorShape: Qt.PointingHandCursor
-                                                    onClicked: NotchFilesStore.removeFromShelf(modelData.path)
-                                                }
-                                            }
-                                        }
-
-                                        Text {
-                                            text: picked ? I18n.tr("Selected ✓") : I18n.tr("Click to select")
-                                            color: picked ? fl.theme.accent : fl.theme.muted
-                                            font.family: Tokens.ui
-                                            font.pixelSize: 8
-                                        }
-                                    }
-
-                                    MouseArea {
-                                        id: shMa
-                                        anchors.fill: parent
-                                        z: -1
-                                        hoverEnabled: true
-                                        cursorShape: Qt.PointingHandCursor
-                                        onClicked: NotchFilesStore.toggleSelectPath(modelData.path)
-                                    }
-                                }
-                            }
-                        }
-                    }
-
                     Rectangle {
-                        anchors.bottom: parent.bottom
-                        width: parent.width
-                        height: 24
+                        width: parent.width - 74
+                        height: 26
                         radius: 8
                         color: addStripMa.containsMouse ? fl.theme.cardHover : fl.theme.card
                         border.width: 1; border.color: fl.theme.border
                         Row {
                             anchors.centerIn: parent
                             spacing: 5
-                            NotchIcon { anchors.verticalCenter: parent.verticalCenter; text: "add_circle_outline"; font.pixelSize: 13; color: fl.theme.accent }
+                            NotchIcon { anchors.verticalCenter: parent.verticalCenter; text: "add"; font.pixelSize: 13; color: fl.theme.accent }
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: I18n.tr("Drop more files here or click to browse")
-                                color: fl.theme.muted; font.family: Tokens.ui; font.pixelSize: 10
+                                text: I18n.tr("Drop files or click to add more")
+                                color: fl.theme.muted; font.family: fl.theme.uiFont; font.pixelSize: 10
                             }
                         }
                         MouseArea {
@@ -593,90 +566,14 @@ Item {
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: fl.showBrowserInShelf = true
-                        }
-                    }
-                }
-
-                // Inline Local File Browser inside Shelf (with Up .. navigation)
-                Column {
-                    visible: fl.showBrowserInShelf
-                    width: parent.width
-                    height: parent.height - 34
-                    spacing: 4
-
-                    Row {
-                        width: parent.width
-                        height: 22
-                        spacing: 4
-                        Rectangle {
-                            height: 22; width: 38; radius: 7
-                            color: upMa.containsMouse ? fl.theme.cardHover : fl.theme.card
-                            border.width: 1; border.color: fl.theme.border
-                            Text { anchors.centerIn: parent; text: ".. Up"; color: fl.theme.ink; font.family: Tokens.mono; font.pixelSize: 9 }
-                            MouseArea {
-                                id: upMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    var parentDir = NotchFilesStore.currentDir.replace(/\/+$/, "").replace(/\/[^/]+$/, "");
-                                    NotchFilesStore.browse(parentDir !== "" ? parentDir : "/");
-                                }
-                            }
-                        }
-                        Repeater {
-                            model: [
-                                { label: "Home", dir: NotchFilesStore.homeDir },
-                                { label: "Downloads", dir: NotchFilesStore.homeDir + "/Downloads" },
-                                { label: "Documents", dir: NotchFilesStore.homeDir + "/Documents" },
-                                { label: "Pictures", dir: NotchFilesStore.homeDir + "/Pictures" }
-                            ]
-                            delegate: Rectangle {
-                                required property var modelData
-                                height: 22; width: dChipTxt.implicitWidth + 12; radius: 7
-                                color: NotchFilesStore.currentDir === modelData.dir ? Qt.rgba(fl.theme.accent.r, fl.theme.accent.g, fl.theme.accent.b, 0.20) : fl.theme.card
-                                border.width: 1; border.color: fl.theme.border
-                                Text { id: dChipTxt; anchors.centerIn: parent; text: modelData.label; color: fl.theme.ink; font.family: Tokens.ui; font.pixelSize: 9 }
-                                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: NotchFilesStore.browse(modelData.dir) }
-                            }
+                            onClicked: NotchFilesStore.pickNativeFile(false)
                         }
                     }
 
-                    ListView {
-                        width: parent.width
-                        height: parent.height - 26
-                        clip: true
-                        spacing: 3
-                        model: NotchFilesStore.dirEntries
-                        delegate: Rectangle {
-                            required property var modelData
-                            width: ListView.view.width
-                            height: 24
-                            radius: 7
-                            color: rowMa.containsMouse ? fl.theme.cardHover : fl.theme.card
-                            Row {
-                                anchors.fill: parent
-                                anchors.leftMargin: 8
-                                anchors.rightMargin: 8
-                                spacing: 6
-                                NotchIcon { anchors.verticalCenter: parent.verticalCenter; text: NotchFilesStore.iconForCategory(modelData.category); font.pixelSize: 13; color: modelData.isDir ? fl.theme.warning : fl.theme.accent }
-                                Text { anchors.verticalCenter: parent.verticalCenter; width: parent.width - 110; text: modelData.name; color: fl.theme.ink; font.family: Tokens.ui; font.pixelSize: 10; elide: Text.ElideRight }
-                                Text { anchors.verticalCenter: parent.verticalCenter; width: 52; horizontalAlignment: Text.AlignRight; text: modelData.sizeText; color: fl.theme.muted; font.family: Tokens.mono; font.pixelSize: 9 }
-                                Text { anchors.verticalCenter: parent.verticalCenter; text: modelData.isDir ? "Open" : "+Shelf"; color: fl.theme.accent; font.family: Tokens.ui; font.pixelSize: 9; font.weight: Font.DemiBold }
-                            }
-                            MouseArea {
-                                id: rowMa
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    if (modelData.isDir) {
-                                        NotchFilesStore.browse(modelData.path);
-                                    } else {
-                                        NotchFilesStore.addPathsToShelf([modelData.path]);
-                                        NotchFilesStore.toggleSelectPath(modelData.path);
-                                    }
-                                }
-                            }
-                        }
+                    ActionPill {
+                        icon: "delete_sweep"
+                        label: I18n.tr("Clear")
+                        onClicked: NotchFilesStore.clearShelf()
                     }
                 }
             }
@@ -905,7 +802,7 @@ Item {
                 height: 30
                 spacing: 6
                 Rectangle {
-                    width: parent.width - 116
+                    width: parent.width - 196
                     height: 30
                     radius: 9
                     color: fl.theme.card
@@ -918,10 +815,15 @@ Item {
                         verticalAlignment: TextInput.AlignVCenter
                         text: fl.customDest
                         color: fl.theme.ink
-                        font.family: Tokens.mono
+                        font.family: fl.theme.monoFont
                         font.pixelSize: 10
                         onTextChanged: fl.customDest = text
                     }
+                }
+                ActionPill {
+                    icon: "folder_open"
+                    label: I18n.tr("Browse")
+                    onClicked: NotchFilesStore.pickNativeFile(true)
                 }
                 ActionPill {
                     icon: NotchFilesStore.activeTool === "move" ? "drive_file_move" : "file_copy"
@@ -1008,7 +910,7 @@ Item {
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         text: NotchFilesStore.gdriveRemote + (NotchFilesStore.gdriveSubdir || "/")
-                        color: fl.theme.ink; font.family: Tokens.mono; font.pixelSize: 10
+                        color: fl.theme.ink; font.family: theme.monoFont; font.pixelSize: 10
                         width: parent.width - 178
                         elide: Text.ElideRight
                     }
@@ -1044,7 +946,7 @@ Item {
                             spacing: 6
                             NotchIcon { anchors.verticalCenter: parent.verticalCenter; text: modelData.isDir ? "folder" : "cloud_done"; font.pixelSize: 13; color: modelData.isDir ? fl.theme.warning : fl.theme.accent }
                             Text { anchors.verticalCenter: parent.verticalCenter; width: parent.width - 120; text: modelData.name; color: fl.theme.ink; font.family: Tokens.ui; font.pixelSize: 10; elide: Text.ElideRight }
-                            Text { anchors.verticalCenter: parent.verticalCenter; width: 54; horizontalAlignment: Text.AlignRight; text: modelData.sizeText; color: fl.theme.muted; font.family: Tokens.mono; font.pixelSize: 9 }
+                            Text { anchors.verticalCenter: parent.verticalCenter; width: 54; horizontalAlignment: Text.AlignRight; text: modelData.sizeText; color: fl.theme.muted; font.family: theme.monoFont; font.pixelSize: 9 }
                             Text { anchors.verticalCenter: parent.verticalCenter; text: modelData.isDir ? "Open" : "Download"; color: fl.theme.accent; font.family: Tokens.ui; font.pixelSize: 9; font.weight: Font.DemiBold }
                         }
                         MouseArea {
@@ -1136,18 +1038,15 @@ Item {
             }
         }
 
-        // Sub-view Bottom Status Feedback Toast
+        // Sub-view Status Feedback Toast (only shown when active)
         Text {
+            visible: NotchFilesStore.statusMsg !== ""
             width: parent.width
-            height: 14
-            text: NotchFilesStore.statusMsg !== ""
-                ? NotchFilesStore.statusMsg
-                : (NotchFilesStore.activeTool === "shelf"
-                    ? I18n.tr("Click items to mark them active across Compress, Convert, Copy, GDrive & Delete")
-                    : I18n.tr("Tip: manage active files anytime inside Shelf"))
-            color: NotchFilesStore.statusError ? fl.theme.danger : fl.theme.muted
-            font.family: Tokens.mono
-            font.pixelSize: 9
+            height: visible ? 14 : 0
+            text: NotchFilesStore.statusMsg
+            color: NotchFilesStore.statusError ? fl.theme.danger : fl.theme.ink
+            font.family: fl.theme.uiFont
+            font.pixelSize: 10
             elide: Text.ElideRight
         }
     }

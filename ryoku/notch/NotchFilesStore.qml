@@ -156,47 +156,20 @@ Singleton {
             fs.checkRclone();
     }
 
-    function browse(dirPath) {
-        var target = (dirPath && dirPath !== "") ? dirPath : fs.homeDir;
-        if (target.indexOf("~") === 0) target = fs.homeDir + target.slice(1);
-        fs.currentDir = target;
-        dirRunner.command = [
-            "python3", "-c",
-            "import os, json, sys\n" +
-            "root = sys.argv[1]\n" +
-            "def fmt(sz):\n" +
-            "  for u in ('B','KB','MB','GB'):\n" +
-            "    if sz < 1024 or u == 'GB': return f'{sz:.0f} {u}' if u=='B' else f'{sz:.1f} {u}'\n" +
-            "    sz /= 1024.0\n" +
-            "items = []\n" +
-            "try:\n" +
-            "  with os.scandir(root) as it:\n" +
-            "    for e in it:\n" +
-            "      if e.name.startswith('.'): continue\n" +
-            "      is_d = e.is_dir(follow_symlinks=True)\n" +
-            "      sz = 0 if is_d else e.stat(follow_symlinks=True).st_size\n" +
-            "      items.append((0 if is_d else 1, e.name.lower(), e.name, e.path, is_d, fmt(sz)))\n" +
-            "except Exception as ex:\n" +
-            "  print(json.dumps({'error': str(ex), 'entries': []})); sys.exit(0)\n" +
-            "items.sort(key=lambda x: (x[0], x[1]))\n" +
-            "print(json.dumps({'entries': [{'name': x[2], 'path': x[3], 'isDir': x[4], 'sizeText': 'Folder' if x[4] else x[5]} for x in items[:80]]}))",
-            target
-        ];
-        dirRunner.running = true;
-    }
-
     function pickNativeFile(dirOnly) {
         if (pickerRunner.running) return;
         pickerRunner.command = [
             "sh", "-c",
             dirOnly
-                ? "if command -v kdialog >/dev/null 2>&1; then kdialog --getexistingdirectory \"$1\"; elif command -v zenity >/dev/null 2>&1; then zenity --file-selection --directory --filename=\"$1/\"; fi"
-                : "if command -v kdialog >/dev/null 2>&1; then kdialog --getopenfilename \"$1\"; elif command -v zenity >/dev/null 2>&1; then zenity --file-selection --multiple --separator='\n' --filename=\"$1/\"; fi",
+                ? "if command -v zenity >/dev/null 2>&1; then zenity --file-selection --directory --title='Select Folder' --filename=\"$1/\"; elif command -v kdialog >/dev/null 2>&1; then kdialog --getexistingdirectory \"$1\"; fi"
+                : "if command -v zenity >/dev/null 2>&1; then zenity --file-selection --multiple --separator='\n' --title='Choose Files' --filename=\"$1/\"; elif command -v kdialog >/dev/null 2>&1; then kdialog --getopenfilename \"$1\"; fi",
             "sh", fs.currentDir
         ];
         pickerRunner.isDirPicker = !!dirOnly;
         pickerRunner.running = true;
     }
+
+    property string pickedDestDir: ""
 
     function pastePathFromClipboard(rawText) {
         var lines = String(rawText || "").split(/\r?\n/);
@@ -517,10 +490,13 @@ Singleton {
                 var lines = out.split(/\r?\n/).map(function(s) { return s.trim(); }).filter(function(s) { return s !== ""; });
                 if (lines.length === 0) return;
                 if (pickerRunner.isDirPicker) {
-                    fs.browse(lines[0]);
+                    fs.pickedDestDir = lines[0];
                 } else {
+                    var parentDir = lines[0].replace(/\/[^/]+$/, "");
+                    if (parentDir !== "") fs.currentDir = parentDir;
                     fs.addPathsToShelf(lines);
                     fs.selectedPaths = lines.slice();
+                    fs.persist();
                 }
             }
         }
@@ -604,7 +580,6 @@ Singleton {
                     fs.selectedPaths = [];
                     fs.persist();
                 }
-                if (opRunner.refreshAfter) fs.browse(fs.currentDir);
                 if (opRunner.refreshGdriveAfter) fs.listGdrive();
             } else {
                 fs.setMessage(opRunner.lastOut || opRunner.lastErr || ("Failed (" + code + ")"), true);
@@ -696,6 +671,5 @@ Singleton {
                 if (parsed.currentDir) fs.currentDir = String(parsed.currentDir);
             } catch (e) {}
         }
-        fs.browse(fs.currentDir);
     }
 }
