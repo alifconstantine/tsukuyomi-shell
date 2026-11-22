@@ -14,14 +14,43 @@ Item {
     NotchTheme { id: _fallbackTheme; root: null }
     readonly property bool anim: !Perf.reduceMotion
 
+    function parseManualDuration(raw) {
+        var s = String(raw || "").trim().toLowerCase();
+        if (s === "") return -1;
+        if (s.indexOf(":") >= 0) {
+            var parts = s.split(":");
+            if (parts.length !== 2) return -1;
+            var mm = parseInt(parts[0], 10);
+            var ss = parseInt(parts[1], 10);
+            if (isNaN(mm) || isNaN(ss) || mm < 0 || ss < 0 || ss >= 60) return -1;
+            return mm * 60 + ss;
+        }
+        if (s.endsWith("s")) {
+            var secs = parseInt(s.slice(0, -1), 10);
+            return isNaN(secs) || secs <= 0 ? -1 : secs;
+        }
+        var mins = parseInt(s.replace(/m$/, ""), 10);
+        return isNaN(mins) || mins <= 0 ? -1 : mins * 60;
+    }
+
+    function applyManualDuration() {
+        var secs = tm.parseManualDuration(manualInput.text);
+        if (secs > 0) {
+            NotchTimerState.setTimerSeconds(secs);
+            manualInput.text = "";
+            manualInput.focus = false;
+        }
+    }
+
     component ModePill: Rectangle {
         id: mp
         property string label: ""
         property bool active: false
+        property real fixedW: 0
         signal chose()
 
-        width: mpText.implicitWidth + 18
-        height: 26
+        width: fixedW > 0 ? fixedW : (mpText.implicitWidth + 16)
+        height: 24
         radius: 8
         color: active ? Qt.rgba(tm.theme.ink.r, tm.theme.ink.g, tm.theme.ink.b, 0.14)
             : (mpMa.containsMouse ? tm.theme.cardHover : "transparent")
@@ -44,18 +73,18 @@ Item {
 
     Row {
         anchors.fill: parent
-        spacing: 16
+        spacing: 14
 
         // ── Left: Circular Progress Ring ─────────────────────────────────────
         Item {
-            width: 134
+            width: 126
             height: parent.height
 
             Canvas {
                 id: ringCanvas
                 anchors.centerIn: parent
-                width: 122
-                height: 122
+                width: 118
+                height: 118
 
                 property real prog: NotchTimerState.progress
                 Behavior on prog {
@@ -126,14 +155,14 @@ Item {
 
         // ── Right: Modes, Sub-presets & Transport ────────────────────────────
         Column {
-            width: parent.width - 150
+            width: parent.width - 140
             anchors.verticalCenter: parent.verticalCenter
-            spacing: 10
+            spacing: 8
 
-            // Primary mode bar
+            // Primary mode bar (stretches full width to avoid dead space)
             Rectangle {
-                width: modeRow.implicitWidth + 6
-                height: 32
+                width: parent.width
+                height: 30
                 radius: 10
                 color: tm.theme.card
                 border.width: 1
@@ -141,18 +170,20 @@ Item {
 
                 Row {
                     id: modeRow
-                    anchors.centerIn: parent
+                    anchors.fill: parent
+                    anchors.margins: 3
                     spacing: 2
-                    ModePill { label: I18n.tr("Pomodoro"); active: NotchTimerState.mode === "pomodoro"; onChose: NotchTimerState.setMode("pomodoro") }
-                    ModePill { label: I18n.tr("Timer");    active: NotchTimerState.mode === "timer";    onChose: NotchTimerState.setMode("timer") }
-                    ModePill { label: I18n.tr("Stopwatch");active: NotchTimerState.mode === "stopwatch";onChose: NotchTimerState.setMode("stopwatch") }
+                    readonly property real cellW: Math.floor((width - 4) / 3)
+                    ModePill { fixedW: modeRow.cellW; label: I18n.tr("Pomodoro"); active: NotchTimerState.mode === "pomodoro"; onChose: NotchTimerState.setMode("pomodoro") }
+                    ModePill { fixedW: modeRow.cellW; label: I18n.tr("Timer");    active: NotchTimerState.mode === "timer";    onChose: NotchTimerState.setMode("timer") }
+                    ModePill { fixedW: modeRow.cellW; label: I18n.tr("Stopwatch");active: NotchTimerState.mode === "stopwatch";onChose: NotchTimerState.setMode("stopwatch") }
                 }
             }
 
-            // Sub-mode selector: Pomodoro phases / Timer presets / Stopwatch laps
+            // Sub-mode selector: Pomodoro phases / Timer presets & +/-1
             Rectangle {
                 visible: NotchTimerState.mode !== "stopwatch"
-                width: subRow.implicitWidth + 6
+                width: parent.width
                 height: 30
                 radius: 9
                 color: tm.theme.card
@@ -160,21 +191,27 @@ Item {
                 border.color: tm.theme.border
 
                 Row {
-                    id: subRow
-                    anchors.centerIn: parent
+                    visible: NotchTimerState.mode === "pomodoro"
+                    anchors.fill: parent
+                    anchors.margins: 3
                     spacing: 2
+                    readonly property real cellW: Math.floor((width - 4) / 3)
+                    ModePill { fixedW: parent.cellW; label: I18n.tr("Focus");       active: NotchTimerState.pomoPhase === "focus"; onChose: NotchTimerState.setPomoPhase("focus") }
+                    ModePill { fixedW: parent.cellW; label: I18n.tr("Short break"); active: NotchTimerState.pomoPhase === "short"; onChose: NotchTimerState.setPomoPhase("short") }
+                    ModePill { fixedW: parent.cellW; label: I18n.tr("Long break");  active: NotchTimerState.pomoPhase === "long";  onChose: NotchTimerState.setPomoPhase("long") }
+                }
 
-                    // Pomodoro phases
-                    ModePill { visible: NotchTimerState.mode === "pomodoro"; label: I18n.tr("Focus");       active: NotchTimerState.pomoPhase === "focus"; onChose: NotchTimerState.setPomoPhase("focus") }
-                    ModePill { visible: NotchTimerState.mode === "pomodoro"; label: I18n.tr("Short break"); active: NotchTimerState.pomoPhase === "short"; onChose: NotchTimerState.setPomoPhase("short") }
-                    ModePill { visible: NotchTimerState.mode === "pomodoro"; label: I18n.tr("Long break");  active: NotchTimerState.pomoPhase === "long";  onChose: NotchTimerState.setPomoPhase("long") }
-
-                    // Timer presets & +/- 1m
-                    ModePill { visible: NotchTimerState.mode === "timer"; label: "5m";  active: NotchTimerState.timerTotalSec === 300;  onChose: NotchTimerState.setTimerMinutes(5) }
-                    ModePill { visible: NotchTimerState.mode === "timer"; label: "15m"; active: NotchTimerState.timerTotalSec === 900;  onChose: NotchTimerState.setTimerMinutes(15) }
-                    ModePill { visible: NotchTimerState.mode === "timer"; label: "25m"; active: NotchTimerState.timerTotalSec === 1500; onChose: NotchTimerState.setTimerMinutes(25) }
-                    ModePill { visible: NotchTimerState.mode === "timer"; label: "-1";  active: false; onChose: NotchTimerState.adjustTimerMinutes(-1) }
-                    ModePill { visible: NotchTimerState.mode === "timer"; label: "+1";  active: false; onChose: NotchTimerState.adjustTimerMinutes(1) }
+                Row {
+                    visible: NotchTimerState.mode === "timer"
+                    anchors.fill: parent
+                    anchors.margins: 3
+                    spacing: 2
+                    readonly property real cellW: Math.floor((width - 8) / 5)
+                    ModePill { fixedW: parent.cellW; label: "5m";  active: NotchTimerState.timerTotalSec === 300;  onChose: NotchTimerState.setTimerMinutes(5) }
+                    ModePill { fixedW: parent.cellW; label: "15m"; active: NotchTimerState.timerTotalSec === 900;  onChose: NotchTimerState.setTimerMinutes(15) }
+                    ModePill { fixedW: parent.cellW; label: "25m"; active: NotchTimerState.timerTotalSec === 1500; onChose: NotchTimerState.setTimerMinutes(25) }
+                    ModePill { fixedW: parent.cellW; label: "-1";  active: false; onChose: NotchTimerState.adjustTimerMinutes(-1) }
+                    ModePill { fixedW: parent.cellW; label: "+1";  active: false; onChose: NotchTimerState.adjustTimerMinutes(1) }
                 }
             }
 
@@ -182,10 +219,11 @@ Item {
             Row {
                 visible: NotchTimerState.mode === "stopwatch"
                 width: parent.width
-                height: 28
+                height: 30
                 spacing: 6
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
+                    width: parent.width
                     text: NotchTimerState.laps.length > 0
                         ? (I18n.tr("Laps: ") + NotchTimerState.laps.slice(0, 3).join("  ·  "))
                         : I18n.tr("Press flag to record a lap")
@@ -196,72 +234,80 @@ Item {
                 }
             }
 
-            // Controls row + Pomodoro cycle dots
-            Row {
-                spacing: 12
+            // Controls row + Pomodoro dots OR Manual Timer Input
+            Item {
+                width: parent.width
+                height: 38
 
-                // Reset
-                Rectangle {
-                    width: 34; height: 34; radius: 17
+                Row {
+                    anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
-                    color: rstMa.containsMouse ? tm.theme.cardHover : tm.theme.card
-                    border.width: 1; border.color: tm.theme.border
-                    scale: rstMa.pressed ? 0.9 : 1.0
-                    Behavior on scale { enabled: tm.anim; NumberAnimation { duration: 100 } }
-                    NotchIcon { anchors.centerIn: parent; text: "replay"; font.pixelSize: 17; color: tm.theme.ink }
-                    MouseArea {
-                        id: rstMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                        onClicked: NotchTimerState.reset()
-                    }
-                }
+                    spacing: 10
 
-                // Prominent Play/Pause circle
-                Rectangle {
-                    width: 42; height: 42; radius: 21
-                    anchors.verticalCenter: parent.verticalCenter
-                    color: tm.theme.ink
-                    scale: ppMa.pressed ? 0.92 : (ppMa.containsMouse ? 1.05 : 1.0)
-                    Behavior on scale { enabled: tm.anim; NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
-                    NotchIcon {
-                        anchors.centerIn: parent
-                        text: NotchTimerState.running ? "pause" : "play_arrow"
-                        font.pixelSize: 22
-                        fill: 1
-                        color: tm.theme.baseSurface
+                    // Reset
+                    Rectangle {
+                        width: 32; height: 32; radius: 16
+                        anchors.verticalCenter: parent.verticalCenter
+                        color: rstMa.containsMouse ? tm.theme.cardHover : tm.theme.card
+                        border.width: 1; border.color: tm.theme.border
+                        scale: rstMa.pressed ? 0.9 : 1.0
+                        Behavior on scale { enabled: tm.anim; NumberAnimation { duration: 100 } }
+                        NotchIcon { anchors.centerIn: parent; text: "replay"; font.pixelSize: 16; color: tm.theme.ink }
+                        MouseArea {
+                            id: rstMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                            onClicked: NotchTimerState.reset()
+                        }
                     }
-                    MouseArea {
-                        id: ppMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                        onClicked: NotchTimerState.toggle()
-                    }
-                }
 
-                // Skip / Lap
-                Rectangle {
-                    width: 34; height: 34; radius: 17
-                    anchors.verticalCenter: parent.verticalCenter
-                    color: skMa.containsMouse ? tm.theme.cardHover : tm.theme.card
-                    border.width: 1; border.color: tm.theme.border
-                    scale: skMa.pressed ? 0.9 : 1.0
-                    Behavior on scale { enabled: tm.anim; NumberAnimation { duration: 100 } }
-                    NotchIcon {
-                        anchors.centerIn: parent
-                        text: NotchTimerState.mode === "stopwatch" ? "flag" : "skip_next"
-                        font.pixelSize: 17
-                        fill: 1
+                    // Prominent Play/Pause circle
+                    Rectangle {
+                        width: 38; height: 38; radius: 19
+                        anchors.verticalCenter: parent.verticalCenter
                         color: tm.theme.ink
+                        scale: ppMa.pressed ? 0.92 : (ppMa.containsMouse ? 1.05 : 1.0)
+                        Behavior on scale { enabled: tm.anim; NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+                        NotchIcon {
+                            anchors.centerIn: parent
+                            text: NotchTimerState.running ? "pause" : "play_arrow"
+                            font.pixelSize: 20
+                            fill: 1
+                            color: tm.theme.baseSurface
+                        }
+                        MouseArea {
+                            id: ppMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                            onClicked: NotchTimerState.toggle()
+                        }
                     }
-                    MouseArea {
-                        id: skMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            if (NotchTimerState.mode === "stopwatch") NotchTimerState.addLap();
-                            else NotchTimerState.skip();
+
+                    // Skip / Lap
+                    Rectangle {
+                        width: 32; height: 32; radius: 16
+                        anchors.verticalCenter: parent.verticalCenter
+                        color: skMa.containsMouse ? tm.theme.cardHover : tm.theme.card
+                        border.width: 1; border.color: tm.theme.border
+                        scale: skMa.pressed ? 0.9 : 1.0
+                        Behavior on scale { enabled: tm.anim; NumberAnimation { duration: 100 } }
+                        NotchIcon {
+                            anchors.centerIn: parent
+                            text: NotchTimerState.mode === "stopwatch" ? "flag" : "skip_next"
+                            font.pixelSize: 16
+                            fill: 1
+                            color: tm.theme.ink
+                        }
+                        MouseArea {
+                            id: skMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                if (NotchTimerState.mode === "stopwatch") NotchTimerState.addLap();
+                                else NotchTimerState.skip();
+                            }
                         }
                     }
                 }
 
-                // Pomodoro cycle dots
+                // Pomodoro cycle indicator
                 Row {
                     visible: NotchTimerState.mode === "pomodoro"
+                    anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 6
                     Repeater {
@@ -272,6 +318,76 @@ Item {
                             color: index < NotchTimerState.pomoCycle
                                 ? tm.theme.accent
                                 : Qt.rgba(tm.theme.ink.r, tm.theme.ink.g, tm.theme.ink.b, 0.18)
+                        }
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: NotchTimerState.pomoCycle + "/4"
+                        color: tm.theme.muted
+                        font.family: theme.monoFont
+                        font.pixelSize: 10
+                    }
+                }
+
+                // Manual duration input for Timer mode (e.g. "12" min or "01:30" or "45s")
+                Row {
+                    visible: NotchTimerState.mode === "timer"
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 6
+
+                    Rectangle {
+                        width: 82
+                        height: 28
+                        radius: 8
+                        color: tm.theme.card
+                        border.width: 1
+                        border.color: manualInput.activeFocus ? tm.theme.accent : tm.theme.border
+
+                        TextInput {
+                            id: manualInput
+                            anchors.fill: parent
+                            anchors.leftMargin: 8
+                            anchors.rightMargin: 8
+                            verticalAlignment: TextInput.AlignVCenter
+                            horizontalAlignment: TextInput.AlignHCenter
+                            color: tm.theme.ink
+                            font.family: theme.monoFont
+                            font.pixelSize: 11
+                            selectByMouse: true
+                            clip: true
+                            onAccepted: tm.applyManualDuration()
+
+                            Text {
+                                anchors.centerIn: parent
+                                visible: manualInput.text === ""
+                                text: "MM:SS"
+                                color: tm.theme.muted
+                                font.family: theme.monoFont
+                                font.pixelSize: 10
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        width: 42
+                        height: 28
+                        radius: 8
+                        color: setMa.containsMouse ? tm.theme.accentHover : tm.theme.accent
+                        Text {
+                            anchors.centerIn: parent
+                            text: I18n.tr("Set")
+                            color: tm.theme.onAccent
+                            font.family: Tokens.ui
+                            font.pixelSize: 10
+                            font.weight: Font.DemiBold
+                        }
+                        MouseArea {
+                            id: setMa
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: tm.applyManualDuration()
                         }
                     }
                 }

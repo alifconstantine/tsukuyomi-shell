@@ -206,7 +206,7 @@ Item {
 
         Rectangle {
             width: parent.width
-            height: parent.height - 36
+            height: Math.max(100, parent.height - 36)
             radius: 12
             color: tpView.theme.card
             border.width: 1
@@ -418,7 +418,7 @@ Item {
         // Prompter Viewport
         Rectangle {
             width: parent.width
-            height: parent.height - 68
+            height: Math.max(100, parent.height - 76)
             radius: 12
             color: tpView.theme.card
             border.width: 1

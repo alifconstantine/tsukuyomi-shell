@@ -28,7 +28,7 @@ Singleton {
             if (ts.pomoPhase === "long") return ts.longBreakMinutes * 60;
             return ts.focusMinutes * 60;
         }
-        if (ts.mode === "timer") return Math.max(60, ts.timerTotalSec);
+        if (ts.mode === "timer") return Math.max(5, ts.timerTotalSec);
         return 60;
     }
 
@@ -83,11 +83,16 @@ Singleton {
 
     function setTimerMinutes(mins) {
         var clamped = Math.max(1, Math.min(180, Math.round(mins)));
+        ts.setTimerSeconds(clamped * 60);
+    }
+
+    function setTimerSeconds(totalSec) {
+        var clamped = Math.max(5, Math.min(35999, Math.round(totalSec)));
         ts.running = false;
         ts.finishedPulse = false;
         ts.mode = "timer";
-        ts.timerTotalSec = clamped * 60;
-        ts.remainingSec = ts.timerTotalSec;
+        ts.timerTotalSec = clamped;
+        ts.remainingSec = clamped;
     }
 
     function adjustTimerMinutes(delta) {
@@ -140,15 +145,24 @@ Singleton {
 
     function completeCountdown() {
         ts.running = false;
-        ts.finishedPulse = true;
+        NotchConfig.playSound(NotchConfig.timerRingtone);
         var msg = ts.mode === "pomodoro"
             ? (ts.pomoPhase === "focus" ? I18n.tr("Focus session complete — take a break!") : I18n.tr("Break finished — back to focus!"))
             : I18n.tr("Timer finished");
         Quickshell.execDetached(["sh", "-c",
             "command -v notify-send >/dev/null 2>&1 && notify-send -a 'Tsukuyomi Notch' \"$1\" \"$2\" || true",
             "_", ts.phaseLabel, msg]);
-        if (ts.mode === "pomodoro")
-            ts.skip();
+        if (ts.mode === "pomodoro") {
+            if (ts.pomoPhase === "focus") {
+                var nextCycle = (ts.pomoCycle + 1) % 4;
+                ts.pomoCycle = nextCycle;
+                ts.pomoPhase = nextCycle === 0 ? "long" : "short";
+            } else {
+                ts.pomoPhase = "focus";
+            }
+            ts.remainingSec = ts.totalDurationSec;
+        }
+        ts.finishedPulse = true;
         pulseClear.restart();
     }
 
