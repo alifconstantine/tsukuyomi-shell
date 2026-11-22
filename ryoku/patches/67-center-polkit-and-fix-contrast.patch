@@ -1,0 +1,51 @@
+--- a/shell/modules/bar/FrameSurface.qml
++++ b/shell/modules/bar/FrameSurface.qml
+@@ -35,6 +35,7 @@
+          : (anchor.indexOf("-right") >= 0) ? "end"
+          : "center"
+     fullSpan: record && record.fullSpan === true
++    centered: root.kind === "polkit"
+     hoverOpen: false
+     pinned: root.menuOpen
+     // A keybind open centres the surface on the screen midpoint (triggerAlong).
+--- a/shell/modules/bar/PolkitSurface.qml
++++ b/shell/modules/bar/PolkitSurface.qml
+@@ -166,6 +166,7 @@
+                 placeholderTextColor: Theme.onSurfaceVariant
+                 selectByMouse: true
+                 selectionColor: Theme.primary
++                selectedTextColor: Theme.inkOn(selectionColor, Theme.onPrimary)
+                 enabled: !Polkit.busy
+                 onAccepted: root.trySubmit()
+             }
+@@ -189,17 +190,27 @@
+             layoutDirection: Qt.RightToLeft
+ 
+             Rectangle {
++                id: confirmButton
+                 width: (parent.width - parent.spacing) / 2
+                 height: 34 * root.s
+                 radius: Theme.radiusWidget
+-                color: okArea.containsMouse ? Theme.vermLit : Theme.primary
+-                opacity: Polkit.busy ? 0.6 : 1
++                color: Polkit.busy ? Theme.surfaceContainerHigh
++                    : okArea.containsMouse ? Theme.vermLit : Theme.primary
++                Accessible.role: Accessible.Button
++                Accessible.name: confirmLabel.text
++                Accessible.onPressAction: root.trySubmit()
++                activeFocusOnTab: !Polkit.busy
++                border.width: activeFocus ? 2 : 0
++                border.color: confirmLabel.color
++                Keys.onReturnPressed: root.trySubmit()
++                Keys.onSpacePressed: root.trySubmit()
+                 Behavior on color { ColorAnimation { duration: Motion.fast } }
+ 
+                 Text {
++                    id: confirmLabel
+                     anchors.centerIn: parent
+                     text: Polkit.busy ? I18n.tr("Checking…") : I18n.tr("Authenticate")
+-                    color: "#fdeee6"
++                    color: Theme.inkOn(confirmButton.color, Theme.onPrimary)
+                     font.family: Theme.fontPrimary
+                     font.pixelSize: 12 * root.s
+                     font.weight: Font.DemiBold
