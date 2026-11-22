@@ -102,20 +102,36 @@ Item {
         }
     }
 
+    readonly property var contextActions: {
+        if (NotchFilesStore.selectedCount === 0) return [];
+        var list = [{ id: "compress", label: "Compress", icon: "compress", primary: false, danger: false }];
+        if (NotchFilesStore.selectionCategory !== "archive" && NotchFilesStore.selectionCategory !== "folder")
+            list.push({ id: "convert", label: "Convert", icon: "transform", primary: false, danger: false });
+        if (NotchFilesStore.archiveSelected)
+            list.push({ id: "extract", label: "Extract", icon: "unarchive", primary: true, danger: false });
+        list.push({ id: "copy",     label: "Copy",   icon: "file_copy",       primary: false, danger: false });
+        list.push({ id: "move",     label: "Move",   icon: "drive_file_move", primary: false, danger: false });
+        list.push({ id: "gdrive",   label: "GDrive", icon: "cloud_upload",    primary: false, danger: false });
+        list.push({ id: "openwith", label: "Open",   icon: "open_in_new",     primary: false, danger: false });
+        list.push({ id: "delete",   label: "Delete", icon: "delete",          primary: false, danger: true });
+        return list;
+    }
+
     // ── VIEW A: SHELF-FIRST WORKSPACE (Drag-Drop / Pick / Select -> Actions) ──
     Column {
         anchors.fill: parent
         visible: NotchFilesStore.activeTool === ""
         spacing: 8
 
-        // Top Shelf bar: count + select/clear + Pick / Path / GDrive
-        Row {
+        // Top Shelf bar anchored Left/Right so GDrive & pills never clip
+        Item {
             width: parent.width
             height: 28
-            spacing: 6
 
             Rectangle {
-                width: Math.max(120, parent.width - (NotchFilesStore.shelfFiles.length > 0 ? 314 : 206))
+                anchors.left: parent.left
+                anchors.right: rightTopBtns.left
+                anchors.rightMargin: 8
                 height: 28
                 radius: 9
                 color: fl.theme.card
@@ -144,8 +160,8 @@ Item {
                                 ? NotchFilesStore.nameOf(NotchFilesStore.selectedPaths[0]) + " (" + NotchFilesStore.selectionCategory + ")"
                                 : NotchFilesStore.selectedCount + I18n.tr(" selected (") + NotchFilesStore.selectionCategory + ")")
                             : (NotchFilesStore.shelfFiles.length > 0
-                                ? NotchFilesStore.shelfFiles.length + I18n.tr(" on shelf · click to select")
-                                : I18n.tr("Shelf empty · drop or pick files"))
+                                ? NotchFilesStore.shelfFiles.length + I18n.tr(" on shelf · select to act")
+                                : I18n.tr("Shelf"))
                         color: NotchFilesStore.selectedCount > 0 ? fl.theme.ink : fl.theme.muted
                         font.family: Tokens.ui
                         font.pixelSize: 10
@@ -154,50 +170,57 @@ Item {
                 }
             }
 
-            ActionPill {
-                visible: NotchFilesStore.shelfFiles.length > 0
-                width: 48
-                icon: ""
-                label: NotchFilesStore.selectedCount === NotchFilesStore.shelfFiles.length ? I18n.tr("None") : I18n.tr("All")
-                onClicked: {
-                    if (NotchFilesStore.selectedCount === NotchFilesStore.shelfFiles.length) {
-                        NotchFilesStore.selectedPaths = [];
-                    } else {
-                        var all = [];
-                        for (var i = 0; i < NotchFilesStore.shelfFiles.length; i++)
-                            all.push(NotchFilesStore.shelfFiles[i].path);
-                        NotchFilesStore.selectedPaths = all;
+            Row {
+                id: rightTopBtns
+                anchors.right: parent.right
+                height: 28
+                spacing: 5
+
+                ActionPill {
+                    visible: NotchFilesStore.shelfFiles.length > 0
+                    width: 44
+                    icon: ""
+                    label: NotchFilesStore.selectedCount === NotchFilesStore.shelfFiles.length ? I18n.tr("None") : I18n.tr("All")
+                    onClicked: {
+                        if (NotchFilesStore.selectedCount === NotchFilesStore.shelfFiles.length) {
+                            NotchFilesStore.selectedPaths = [];
+                        } else {
+                            var all = [];
+                            for (var i = 0; i < NotchFilesStore.shelfFiles.length; i++)
+                                all.push(NotchFilesStore.shelfFiles[i].path);
+                            NotchFilesStore.selectedPaths = all;
+                        }
                     }
                 }
-            }
 
-            ActionPill {
-                visible: NotchFilesStore.shelfFiles.length > 0
-                width: 52
-                icon: ""
-                label: I18n.tr("Clear")
-                onClicked: NotchFilesStore.clearShelf()
-            }
+                ActionPill {
+                    visible: NotchFilesStore.shelfFiles.length > 0
+                    width: 48
+                    icon: ""
+                    label: I18n.tr("Clear")
+                    onClicked: NotchFilesStore.clearShelf()
+                }
 
-            ActionPill {
-                width: 62
-                icon: "add"
-                label: I18n.tr("Pick")
-                onClicked: NotchFilesStore.pickNativeFile(false)
-            }
+                ActionPill {
+                    width: 72
+                    icon: "add"
+                    label: I18n.tr("Browse")
+                    onClicked: NotchFilesStore.pickNativeFile(false)
+                }
 
-            ActionPill {
-                width: 64
-                icon: "content_paste"
-                label: I18n.tr("Path")
-                onClicked: clipPathPaste.running = true
-            }
+                ActionPill {
+                    width: 58
+                    icon: "content_paste"
+                    label: I18n.tr("Path")
+                    onClicked: clipPathPaste.running = true
+                }
 
-            ActionPill {
-                width: 72
-                icon: "cloud"
-                label: I18n.tr("GDrive")
-                onClicked: NotchFilesStore.openTool("gdrive")
+                ActionPill {
+                    width: 70
+                    icon: NotchFilesStore.gdriveRemote !== "" ? "cloud_done" : "cloud"
+                    label: I18n.tr("GDrive")
+                    onClicked: NotchFilesStore.openTool("gdrive")
+                }
             }
         }
 
@@ -290,12 +313,28 @@ Item {
 
             // Populated Shelf Grid
             Flickable {
+                id: shelfFlick
                 visible: NotchFilesStore.shelfFiles.length > 0
                 anchors.fill: parent
                 contentWidth: width
                 contentHeight: shelfGrid.implicitHeight
+                flickableDirection: Flickable.VerticalFlick
+                interactive: false
                 boundsBehavior: Flickable.StopAtBounds
                 clip: true
+
+                WheelHandler {
+                    acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                    onWheel: event => {
+                        var dy = (event.pixelDelta && Math.abs(event.pixelDelta.y) > 0)
+                            ? -event.pixelDelta.y
+                            : (-event.angleDelta.y * 0.4);
+                        var step = Math.max(-54, Math.min(54, dy));
+                        var maxY = Math.max(0, shelfFlick.contentHeight - shelfFlick.height);
+                        shelfFlick.contentY = Math.max(0, Math.min(maxY, shelfFlick.contentY + step));
+                        event.accepted = true;
+                    }
+                }
 
                 Grid {
                     id: shelfGrid
@@ -391,54 +430,23 @@ Item {
             }
         }
 
-        // Bottom Contextual Action Bar (revealed when >= 1 file selected)
-        Flickable {
+        // Bottom Contextual Action Dock (equal-width responsive pills, zero clipping)
+        Row {
             visible: NotchFilesStore.selectedCount > 0
             width: parent.width
             height: 28
-            contentWidth: actionBarRow.implicitWidth
-            contentHeight: 28
-            flickableDirection: Flickable.HorizontalFlick
-            boundsBehavior: Flickable.StopAtBounds
-            clip: true
+            spacing: 5
 
-            Row {
-                id: actionBarRow
-                height: 28
-                spacing: 6
-
-                ActionPill {
-                    width: 82; icon: "compress"; label: I18n.tr("Compress")
-                    onClicked: NotchFilesStore.openTool("compress")
-                }
-                ActionPill {
-                    width: 78; icon: "transform"; label: I18n.tr("Convert")
-                    onClicked: NotchFilesStore.openTool("convert")
-                }
-                ActionPill {
-                    visible: NotchFilesStore.archiveSelected
-                    width: 76; icon: "unarchive"; label: I18n.tr("Extract"); primary: true
-                    onClicked: NotchFilesStore.openTool("extract")
-                }
-                ActionPill {
-                    width: 68; icon: "file_copy"; label: I18n.tr("Copy")
-                    onClicked: NotchFilesStore.openTool("copy")
-                }
-                ActionPill {
-                    width: 68; icon: "drive_file_move"; label: I18n.tr("Move")
-                    onClicked: NotchFilesStore.openTool("move")
-                }
-                ActionPill {
-                    width: 74; icon: "cloud_upload"; label: I18n.tr("GDrive")
-                    onClicked: NotchFilesStore.openTool("gdrive")
-                }
-                ActionPill {
-                    width: 68; icon: "open_in_new"; label: I18n.tr("Open")
-                    onClicked: NotchFilesStore.openTool("openwith")
-                }
-                ActionPill {
-                    width: 66; icon: "delete"; label: I18n.tr("Delete"); danger: true
-                    onClicked: NotchFilesStore.openTool("delete")
+            Repeater {
+                model: fl.contextActions
+                delegate: ActionPill {
+                    required property var modelData
+                    width: Math.floor((parent.width - Math.max(0, fl.contextActions.length - 1) * 5) / Math.max(1, fl.contextActions.length))
+                    icon: modelData.icon
+                    label: I18n.tr(modelData.label)
+                    primary: modelData.primary
+                    danger: modelData.danger
+                    onClicked: NotchFilesStore.openTool(modelData.id)
                 }
             }
         }
