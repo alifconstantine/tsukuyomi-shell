@@ -250,99 +250,166 @@ Item {
         visible: !tpView.isEditing
         spacing: 8
 
-        // Top HUD Strip: Font Family · Size · WPM · Mirror · Edit
-        Row {
+        // Top HUD Strip: Font · Size · WPM · Mirror · Resize% · Focus · Edit
+        Item {
             width: parent.width
             height: 26
-            spacing: 5
 
-            // Font family pill
-            Rectangle {
-                height: 26
-                width: fontRow.implicitWidth + 14
-                radius: 8
-                color: fontMa.containsMouse ? tpView.theme.cardHover : tpView.theme.card
-                border.width: 1; border.color: tpView.theme.border
-                Row {
-                    id: fontRow
-                    anchors.centerIn: parent
-                    spacing: 4
-                    NotchIcon { anchors.verticalCenter: parent.verticalCenter; text: "font_download"; font.pixelSize: 13; color: tpView.theme.accent }
+            Row {
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 5
+
+                // Font family pill
+                Rectangle {
+                    height: 26
+                    width: fontRow.implicitWidth + 12
+                    radius: 8
+                    color: fontMa.containsMouse ? tpView.theme.cardHover : tpView.theme.card
+                    border.width: 1; border.color: tpView.theme.border
+                    Row {
+                        id: fontRow
+                        anchors.centerIn: parent
+                        spacing: 4
+                        NotchIcon { anchors.verticalCenter: parent.verticalCenter; text: "font_download"; font.pixelSize: 13; color: tpView.theme.accent }
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: NotchTeleprompterStore.fontDisplayLabel
+                            color: tpView.theme.ink
+                            font.family: Tokens.ui
+                            font.pixelSize: 10
+                            font.weight: Font.DemiBold
+                        }
+                    }
+                    MouseArea {
+                        id: fontMa
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: NotchTeleprompterStore.cycleFont()
+                    }
+                }
+
+                HudStepper {
+                    valueText: NotchTeleprompterStore.fontSize + "px"
+                    onDecrement: NotchTeleprompterStore.adjustFontSize(-2)
+                    onIncrement: NotchTeleprompterStore.adjustFontSize(2)
+                }
+
+                HudStepper {
+                    valueText: NotchTeleprompterStore.wpm + " WPM"
+                    onDecrement: NotchTeleprompterStore.adjustWpm(-10)
+                    onIncrement: NotchTeleprompterStore.adjustWpm(10)
+                }
+
+                // Mirror toggle
+                Rectangle {
+                    height: 26; width: 26; radius: 8
+                    color: NotchTeleprompterStore.mirrorX
+                        ? Qt.rgba(tpView.theme.accent.r, tpView.theme.accent.g, tpView.theme.accent.b, 0.22)
+                        : tpView.theme.card
+                    border.width: 1
+                    border.color: NotchTeleprompterStore.mirrorX ? tpView.theme.accent : tpView.theme.border
+                    NotchIcon {
+                        anchors.centerIn: parent
+                        text: "flip"
+                        font.pixelSize: 14
+                        color: NotchTeleprompterStore.mirrorX ? tpView.theme.accent : tpView.theme.muted
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            NotchTeleprompterStore.mirrorX = !NotchTeleprompterStore.mirrorX;
+                            NotchTeleprompterStore.persist();
+                        }
+                    }
+                }
+            }
+
+            // Right: Size %, Distraction-Free Focus, Edit
+            Row {
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 5
+
+                // Size % preset pill (100% -> 130% -> 160%)
+                Rectangle {
+                    height: 26; width: 46; radius: 8
+                    color: sizeMa.containsMouse ? tpView.theme.cardHover : tpView.theme.card
+                    border.width: 1; border.color: tpView.theme.border
                     Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: NotchTeleprompterStore.fontDisplayLabel
-                        color: tpView.theme.ink
-                        font.family: Tokens.ui
+                        anchors.centerIn: parent
+                        text: NotchTeleprompterStore.scalePct + "%"
+                        color: NotchTeleprompterStore.scalePct > 100 ? tpView.theme.accent : tpView.theme.ink
+                        font.family: Tokens.mono
                         font.pixelSize: 10
                         font.weight: Font.DemiBold
                     }
-                }
-                MouseArea {
-                    id: fontMa
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: NotchTeleprompterStore.cycleFont()
-                }
-            }
-
-            HudStepper {
-                valueText: NotchTeleprompterStore.fontSize + "px"
-                onDecrement: NotchTeleprompterStore.adjustFontSize(-2)
-                onIncrement: NotchTeleprompterStore.adjustFontSize(2)
-            }
-
-            HudStepper {
-                valueText: NotchTeleprompterStore.wpm + " WPM"
-                onDecrement: NotchTeleprompterStore.adjustWpm(-10)
-                onIncrement: NotchTeleprompterStore.adjustWpm(10)
-            }
-
-            // Mirror toggle
-            Rectangle {
-                height: 26; width: 28; radius: 8
-                color: NotchTeleprompterStore.mirrorX
-                    ? Qt.rgba(tpView.theme.accent.r, tpView.theme.accent.g, tpView.theme.accent.b, 0.22)
-                    : tpView.theme.card
-                border.width: 1
-                border.color: NotchTeleprompterStore.mirrorX ? tpView.theme.accent : tpView.theme.border
-                NotchIcon {
-                    anchors.centerIn: parent
-                    text: "flip"
-                    font.pixelSize: 14
-                    color: NotchTeleprompterStore.mirrorX ? tpView.theme.accent : tpView.theme.muted
-                }
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        NotchTeleprompterStore.mirrorX = !NotchTeleprompterStore.mirrorX;
-                        NotchTeleprompterStore.persist();
+                    MouseArea {
+                        id: sizeMa
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: NotchTeleprompterStore.cycleScale()
                     }
                 }
-            }
 
-            Item { width: Math.max(2, parent.width - 420); height: 1 }
-
-            // Edit Script button
-            Rectangle {
-                height: 26; width: 58; radius: 8
-                color: editHudMa.containsMouse ? tpView.theme.cardHover : tpView.theme.card
-                border.width: 1; border.color: tpView.theme.border
-                Row {
-                    anchors.centerIn: parent
-                    spacing: 3
-                    NotchIcon { anchors.verticalCenter: parent.verticalCenter; text: "edit_note"; font.pixelSize: 14; color: tpView.theme.ink }
-                    Text { anchors.verticalCenter: parent.verticalCenter; text: I18n.tr("Edit"); color: tpView.theme.ink; font.family: Tokens.ui; font.pixelSize: 10 }
+                // Focus (hide tab chrome & expand) toggle
+                Rectangle {
+                    height: 26; width: focusRow.implicitWidth + 12; radius: 8
+                    color: NotchTeleprompterStore.focusMode
+                        ? Qt.rgba(tpView.theme.accent.r, tpView.theme.accent.g, tpView.theme.accent.b, 0.22)
+                        : (focusHudMa.containsMouse ? tpView.theme.cardHover : tpView.theme.card)
+                    border.width: 1
+                    border.color: NotchTeleprompterStore.focusMode ? tpView.theme.accent : tpView.theme.border
+                    Row {
+                        id: focusRow
+                        anchors.centerIn: parent
+                        spacing: 3
+                        NotchIcon {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: NotchTeleprompterStore.focusMode ? "close_fullscreen" : "open_in_full"
+                            font.pixelSize: 13
+                            color: NotchTeleprompterStore.focusMode ? tpView.theme.accent : tpView.theme.ink
+                        }
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: I18n.tr("Focus")
+                            color: NotchTeleprompterStore.focusMode ? tpView.theme.accent : tpView.theme.ink
+                            font.family: Tokens.ui
+                            font.pixelSize: 10
+                        }
+                    }
+                    MouseArea {
+                        id: focusHudMa
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: NotchTeleprompterStore.toggleFocusMode()
+                    }
                 }
-                MouseArea {
-                    id: editHudMa
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        NotchTeleprompterStore.playing = false;
-                        NotchTeleprompterStore.editMode = true;
+
+                // Edit Script button
+                Rectangle {
+                    height: 26; width: 54; radius: 8
+                    color: editHudMa.containsMouse ? tpView.theme.cardHover : tpView.theme.card
+                    border.width: 1; border.color: tpView.theme.border
+                    Row {
+                        anchors.centerIn: parent
+                        spacing: 3
+                        NotchIcon { anchors.verticalCenter: parent.verticalCenter; text: "edit_note"; font.pixelSize: 14; color: tpView.theme.ink }
+                        Text { anchors.verticalCenter: parent.verticalCenter; text: I18n.tr("Edit"); color: tpView.theme.ink; font.family: Tokens.ui; font.pixelSize: 10 }
+                    }
+                    MouseArea {
+                        id: editHudMa
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            NotchTeleprompterStore.playing = false;
+                            NotchTeleprompterStore.editMode = true;
+                        }
                     }
                 }
             }

@@ -16,6 +16,8 @@ Singleton {
     property string fontPreset: "sans"    // "sans" | "mono" | "serif"
     property int wpm: 140
     property bool mirrorX: false
+    property int scalePct: 100            // 100 | 130 | 160
+    property bool focusMode: false
     property bool playing: false
     property bool editMode: false
     property real scrollY: 0
@@ -64,6 +66,20 @@ Singleton {
         tp.persist();
     }
 
+    function cycleScale() {
+        if (tp.scalePct === 100) tp.scalePct = 130;
+        else if (tp.scalePct === 130) tp.scalePct = 160;
+        else tp.scalePct = 100;
+        tp.persist();
+    }
+
+    function toggleFocusMode() {
+        tp.focusMode = !tp.focusMode;
+        if (tp.focusMode && tp.scalePct === 100)
+            tp.scalePct = 130;
+        tp.persist();
+    }
+
     function setScript(txt) {
         tp.scriptText = String(txt || "");
         tp.scrollY = 0;
@@ -76,7 +92,9 @@ Singleton {
             fontSize: tp.fontSize,
             fontPreset: tp.fontPreset,
             wpm: tp.wpm,
-            mirrorX: tp.mirrorX
+            mirrorX: tp.mirrorX,
+            scalePct: tp.scalePct,
+            focusMode: tp.focusMode
         }));
     }
 
@@ -99,6 +117,8 @@ Singleton {
                 if (parsed.fontPreset) tp.fontPreset = String(parsed.fontPreset);
                 if (parsed.wpm) tp.wpm = Math.max(60, Math.min(280, Number(parsed.wpm)));
                 if (parsed.mirrorX !== undefined) tp.mirrorX = !!parsed.mirrorX;
+                if (parsed.scalePct === 100 || parsed.scalePct === 130 || parsed.scalePct === 160) tp.scalePct = parsed.scalePct;
+                if (parsed.focusMode !== undefined) tp.focusMode = !!parsed.focusMode;
             } catch (e) {}
         }
     }
