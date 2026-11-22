@@ -15,7 +15,6 @@ ShellRoot {
     property string step: targetFile !== "" ? "inspecting" : "pick"
     property var inspectData: ({})
     readonly property bool hasIconPreview: Boolean(inspectData && inspectData.icon_preview && String(inspectData.icon_preview) !== "")
-    property string launchMode: "phone" // phone | landscape | game-gamescope
     property string errorText: ""
     property bool installingAddon: false
     property bool launcherReady: false
@@ -51,7 +50,7 @@ ShellRoot {
         root.step = "running";
         installProc.command = [
             "/usr/lib/tsukuyomi/tsukuyomi-droid", "install",
-            root.targetFile, "--mode", root.launchMode
+            root.targetFile
         ];
         installProc.running = true;
     }
@@ -289,46 +288,14 @@ ShellRoot {
                             }
                         }
 
-                        Tsukuyomi.SectionCard {
+                        Text {
                             width: parent.width
-                            title: I18n.tr("Window Mode")
-                            collapsible: false
-
-                            Column {
-                                width: parent.width
-                                padding: Tokens.s3
-                                spacing: Tokens.s2
-
-                                Repeater {
-                                    model: [
-                                        { id: "phone", title: I18n.tr("Phone"), desc: I18n.tr("Open the app in a window alongside your Linux apps.") },
-                                        { id: "landscape", title: I18n.tr("Landscape"), desc: I18n.tr("Use a wide window and click where you would tap.") },
-                                        { id: "game-gamescope", title: I18n.tr("Game"), desc: I18n.tr("Open the app in a wide window with fullscreen support.") }
-                                    ]
-                                    delegate: Rectangle {
-                                        id: modeBtn
-                                        required property var modelData
-                                        width: parent.width - Tokens.s3 * 2
-                                        height: 52
-                                        radius: 8
-                                        color: root.launchMode === modeBtn.modelData.id ? Qt.alpha(Tsukuyomi.Style.accent, 0.14) : Tsukuyomi.Style.surface
-                                        border.width: 1
-                                        border.color: root.launchMode === modeBtn.modelData.id ? Tsukuyomi.Style.accent : Tsukuyomi.Style.line
-
-                                        Column {
-                                            anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; margins: 10 }
-                                            spacing: 1
-                                            Text { text: modeBtn.modelData.title; color: Tsukuyomi.Style.text; font.family: Tokens.ui; font.pixelSize: 12; font.weight: Font.Medium }
-                                            Text { text: modeBtn.modelData.desc; color: Tsukuyomi.Style.muted; font.family: Tokens.ui; font.pixelSize: 10; elide: Text.ElideRight; width: parent.width }
-                                        }
-                                        MouseArea {
-                                            anchors.fill: parent
-                                            cursorShape: Qt.PointingHandCursor
-                                            onClicked: root.launchMode = modeBtn.modelData.id
-                                        }
-                                    }
-                                }
-                            }
+                            visible: !root.needsArm
+                            text: I18n.tr("Install this app to open it from App Launcher.")
+                            color: Tsukuyomi.Style.secondary
+                            font.family: Tokens.ui
+                            font.pixelSize: Tokens.fBody
+                            wrapMode: Text.WordWrap
                         }
                     }
                 }

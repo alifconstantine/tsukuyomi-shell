@@ -22,6 +22,9 @@ Item {
     readonly property var droidGpu: droidStatus.gpu || ({})
     readonly property var droidArm: droidStatus.armTranslation || ({})
     readonly property var droidConfig: droidStatus.config || ({})
+    readonly property var androidModes: ["phone", "landscape", "game-gamescope"]
+    readonly property var androidModeLabels: [I18n.tr("Phone"), I18n.tr("Landscape"), I18n.tr("Game")]
+    property string androidWindowSettingsFor: ""
     property var droidApps: []
     property string statusNotice: ""
     property bool busy: winStatusProc.running || droidStatusProc.running || actionProc.running
@@ -36,7 +39,8 @@ Item {
     function runAction(cmd, notice) {
         if (actionProc.running)
             return;
-        page.statusNotice = notice || "";
+        page.statusNotice = "";
+        actionProc.successNotice = notice || "";
         actionProc.command = cmd;
         actionProc.running = true;
     }
@@ -99,6 +103,7 @@ Item {
 
     Process {
         id: actionProc
+        property string successNotice: ""
         stdout: StdioCollector { id: actionOut }
         stderr: StdioCollector { id: actionErr }
         onExited: code => {
@@ -106,6 +111,8 @@ Item {
                 let detail = actionErr.text.trim();
                 try { detail = JSON.parse(actionOut.text).error || detail; } catch (e) {}
                 page.statusNotice = detail || I18n.tr("The action could not finish. Check runtime status and try again.");
+            } else {
+                page.statusNotice = actionProc.successNotice;
             }
             page.refreshAll();
         }
@@ -527,6 +534,7 @@ Item {
                             delegate: Rectangle {
                                 id: droidRow
                                 required property var modelData
+                                readonly property int modeIndex: Math.max(0, page.androidModes.indexOf(modelData.mode || "phone"))
                                 width: parent.width
                                 height: droidCol.implicitHeight + Tokens.s3 * 2
                                 radius: 10
@@ -541,7 +549,7 @@ Item {
 
                                     Text {
                                         width: parent.width
-                                        text: (droidRow.modelData.name || droidRow.modelData.package) + "  [" + String(droidRow.modelData.mode || "phone") + "]"
+                                        text: droidRow.modelData.name || droidRow.modelData.package
                                         color: Tsukuyomi.Style.text
                                         font.family: Tokens.ui
                                         font.pixelSize: Tokens.fBody
@@ -564,11 +572,9 @@ Item {
                                             onAct: Quickshell.execDetached(["tsukuyomi-droid", "launch", droidRow.modelData.package])
                                         }
                                         Btn {
-                                            readonly property string curMode: String(droidRow.modelData.mode || "phone")
-                                            readonly property string nextMode: curMode === "phone" ? "landscape" : (curMode === "landscape" ? "game-gamescope" : "phone")
-                                            text: I18n.tr("Mode: ") + curMode
-                                            enabled: !page.busy
-                                            onAct: page.runAction(["tsukuyomi-droid", "set-profile", droidRow.modelData.package, "--mode", nextMode], I18n.tr("Updated Android launch mode."))
+                                            text: I18n.tr("Window Settings")
+                                            onAct: page.androidWindowSettingsFor = page.androidWindowSettingsFor === droidRow.modelData.package
+                                                ? "" : droidRow.modelData.package
                                         }
                                         Btn {
                                             text: I18n.tr("Force Stop")
@@ -579,6 +585,19 @@ Item {
                                             text: I18n.tr("Uninstall")
                                             enabled: !page.busy
                                             onAct: page.runAction(["tsukuyomi-droid", "uninstall", droidRow.modelData.package], I18n.tr("Uninstalled ") + (droidRow.modelData.name || droidRow.modelData.package))
+                                        }
+                                    }
+                                    Tsukuyomi.Tabs {
+                                        visible: page.androidWindowSettingsFor === droidRow.modelData.package
+                                        width: parent.width
+                                        enabled: !page.busy
+                                        options: page.androidModeLabels
+                                        current: page.androidModeLabels[droidRow.modeIndex]
+                                        onChose: opt => {
+                                            const mode = page.androidModes[page.androidModeLabels.indexOf(opt)];
+                                            if (mode && mode !== page.androidModes[droidRow.modeIndex])
+                                                page.runAction(["tsukuyomi-droid", "set-profile", droidRow.modelData.package, "--mode", mode],
+                                                    I18n.tr("Window mode saved. Reopen the app to apply it."));
                                         }
                                     }
                                 }
