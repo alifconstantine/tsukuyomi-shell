@@ -19,8 +19,11 @@ PanelWindow {
 
     readonly property bool anim: !Perf.reduceMotion
     readonly property string monoFont: (win.root && win.root.mono) ? win.root.mono : "JetBrainsMono Nerd Font"
+    readonly property real accentLum: (Tsukuyomi.Style.accent.r * 0.299) + (Tsukuyomi.Style.accent.g * 0.587) + (Tsukuyomi.Style.accent.b * 0.114)
+    readonly property color onAccent: win.accentLum > 0.54 ? "#141416" : "#FFFFFF"
 
     property string section: "appearance"
+    onSectionChanged: bodyFlick.contentY = 0
     property string weatherInput: Config.weatherLocation || ""
     property string surfaceHexInput: NotchConfig.customSurfaceHex
     property string accentHexInput: NotchConfig.customAccentHex
@@ -135,7 +138,9 @@ PanelWindow {
         opacity: interactive ? 1.0 : 0.45
         color: checked ? Tsukuyomi.Style.accent : Tsukuyomi.Style.input
         border.width: 1
-        border.color: checked ? Tsukuyomi.Style.accent : Tsukuyomi.Style.line
+        border.color: checked
+            ? (win.accentLum > 0.72 ? Tsukuyomi.Style.lineStrong : Tsukuyomi.Style.accent)
+            : Tsukuyomi.Style.line
         Behavior on color { enabled: win.anim; ColorAnimation { duration: 140 } }
 
         Rectangle {
@@ -144,7 +149,7 @@ PanelWindow {
             radius: 8
             anchors.verticalCenter: parent.verticalCenter
             x: hsw.checked ? parent.width - width - 3 : 3
-            color: hsw.checked ? "#FFFFFF" : Tsukuyomi.Style.secondary
+            color: hsw.checked ? win.onAccent : Tsukuyomi.Style.secondary
             Behavior on x { enabled: win.anim; NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
         }
 
@@ -490,8 +495,23 @@ PanelWindow {
                     anchors { top: headDivider.bottom; bottom: parent.bottom; left: parent.left; right: parent.right; margins: 18; topMargin: 14 }
                     contentWidth: width
                     contentHeight: secBody.implicitHeight + 14
+                    flickableDirection: Flickable.VerticalFlick
+                    interactive: false
                     boundsBehavior: Flickable.StopAtBounds
                     clip: true
+
+                    WheelHandler {
+                        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                        onWheel: event => {
+                            var dy = (event.pixelDelta && Math.abs(event.pixelDelta.y) > 0)
+                                ? -event.pixelDelta.y
+                                : (-event.angleDelta.y * 0.45);
+                            var step = Math.max(-72, Math.min(72, dy));
+                            var maxY = Math.max(0, bodyFlick.contentHeight - bodyFlick.height);
+                            bodyFlick.contentY = Math.max(0, Math.min(maxY, bodyFlick.contentY + step));
+                            event.accepted = true;
+                        }
+                    }
 
                     Column {
                         id: secBody
@@ -660,7 +680,7 @@ PanelWindow {
                                                 width: 94; height: 32; radius: 8
                                                 anchors.verticalCenter: parent.verticalCenter
                                                 color: Tsukuyomi.Style.accent
-                                                Text { anchors.centerIn: parent; text: I18n.tr("Apply Hex"); color: "#FFFFFF"; font.family: Tokens.ui; font.pixelSize: 11; font.weight: Font.DemiBold }
+                                                Text { anchors.centerIn: parent; text: I18n.tr("Apply Hex"); color: win.onAccent; font.family: Tokens.ui; font.pixelSize: 11; font.weight: Font.DemiBold }
                                                 MouseArea {
                                                     anchors.fill: parent; cursorShape: Qt.PointingHandCursor
                                                     onClicked: {
@@ -783,8 +803,12 @@ PanelWindow {
                                         }
                                     }
 
-                                    Repeater {
-                                        model: Registry.orderedTabs(NotchConfig.tabOrder)
+                                    Column {
+                                        width: parent.width
+                                        height: win.allTabIds.length * 44
+
+                                        Repeater {
+                                            model: Registry.orderedTabs(NotchConfig.tabOrder)
                                         delegate: Item {
                                             required property var modelData
                                             required property int index
@@ -864,6 +888,7 @@ PanelWindow {
                                                 height: 1; color: Tsukuyomi.Style.line; opacity: 0.45
                                             }
                                         }
+                                    }
                                     }
                                 }
                             }
@@ -1094,7 +1119,7 @@ PanelWindow {
                                         }
                                         Rectangle {
                                             width: 74; height: 32; radius: 8; color: Tsukuyomi.Style.accent
-                                            Text { anchors.centerIn: parent; text: I18n.tr("Apply"); color: "#FFFFFF"; font.family: Tokens.ui; font.pixelSize: 11; font.weight: Font.DemiBold }
+                                            Text { anchors.centerIn: parent; text: I18n.tr("Apply"); color: win.onAccent; font.family: Tokens.ui; font.pixelSize: 11; font.weight: Font.DemiBold }
                                             MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: win.saveWeatherLoc() }
                                         }
                                         Rectangle {

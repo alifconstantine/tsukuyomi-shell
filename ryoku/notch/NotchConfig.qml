@@ -112,6 +112,13 @@ Singleton {
         return fallback;
     }
 
+    property bool _suppressReload: false
+    Timer {
+        id: reloadGuard
+        interval: 350
+        onTriggered: cfg._suppressReload = false
+    }
+
     FileView {
         id: file
         path: (Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")) + "/ryoku/notch.json"
@@ -119,8 +126,12 @@ Singleton {
         watchChanges: true
         printErrors: false
         atomicWrites: true
-        onFileChanged: reload()
-        onAdapterUpdated: writeAdapter()
+        onFileChanged: if (!cfg._suppressReload) reload()
+        onAdapterUpdated: {
+            cfg._suppressReload = true;
+            reloadGuard.restart();
+            writeAdapter();
+        }
 
         JsonAdapter {
             id: adapter
