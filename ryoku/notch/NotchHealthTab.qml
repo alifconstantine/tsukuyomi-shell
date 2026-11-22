@@ -173,9 +173,9 @@ Item {
                 Row {
                     anchors.horizontalCenter: parent.horizontalCenter
                     spacing: 10
-                    Text { text: "● " + NotchHealthStore.movementDone + "/" + NotchHealthStore.movementGoal; color: hl.cMove; font.family: Tokens.mono; font.pixelSize: 10 }
-                    Text { text: "● " + NotchHealthStore.waterGlasses + "/" + NotchHealthStore.waterGoal; color: hl.cWater; font.family: Tokens.mono; font.pixelSize: 10 }
-                    Text { text: "● " + NotchHealthStore.breathingDone + "/" + NotchHealthStore.breathingGoal; color: hl.cBreath; font.family: Tokens.mono; font.pixelSize: 10 }
+                    Text { text: "● " + NotchHealthStore.movementDone + "/" + NotchHealthStore.movementGoal; color: hl.cMove; font.family: theme.monoFont; font.pixelSize: 10 }
+                    Text { text: "● " + NotchHealthStore.waterGlasses + "/" + NotchHealthStore.waterGoal; color: hl.cWater; font.family: theme.monoFont; font.pixelSize: 10 }
+                    Text { text: "● " + NotchHealthStore.breathingDone + "/" + NotchHealthStore.breathingGoal; color: hl.cBreath; font.family: theme.monoFont; font.pixelSize: 10 }
                 }
             }
 
@@ -211,7 +211,7 @@ Item {
                             Text {
                                 anchors.centerIn: parent
                                 text: NotchHealthStore.waterGlasses + " / " + NotchHealthStore.waterGoal
-                                color: hl.theme.ink; font.family: Tokens.mono; font.pixelSize: 14; font.weight: Font.Bold
+                                color: hl.theme.ink; font.family: theme.monoFont; font.pixelSize: 14; font.weight: Font.Bold
                             }
                             Rectangle {
                                 anchors.right: parent.right; width: 26; height: 26; radius: 13
@@ -345,7 +345,7 @@ Item {
                     Text {
                         anchors.baseline: parent.children[0].baseline
                         text: "/ " + NotchHealthStore.waterGoalLiters.toFixed(1) + " L"
-                        color: hl.theme.muted; font.family: Tokens.mono; font.pixelSize: 13
+                        color: hl.theme.muted; font.family: theme.monoFont; font.pixelSize: 13
                     }
                 }
 
@@ -431,7 +431,7 @@ Item {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: (hour % 3 === 0) ? (hour < 10 ? "0" + hour : String(hour)) : ""
                                 color: hl.theme.muted
-                                font.family: Tokens.mono
+                                font.family: theme.monoFont
                                 font.pixelSize: 9
                             }
                         }

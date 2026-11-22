@@ -87,7 +87,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 text: "−"
                 color: tpView.theme.ink
-                font.family: Tokens.mono
+                font.family: theme.monoFont
                 font.pixelSize: 12
                 font.weight: Font.Bold
                 MouseArea {
@@ -101,7 +101,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 text: hs.valueText
                 color: tpView.theme.ink
-                font.family: Tokens.mono
+                font.family: theme.monoFont
                 font.pixelSize: 10
                 font.weight: Font.DemiBold
             }
@@ -109,7 +109,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 text: "+"
                 color: tpView.theme.ink
-                font.family: Tokens.mono
+                font.family: theme.monoFont
                 font.pixelSize: 12
                 font.weight: Font.Bold
                 MouseArea {
@@ -139,7 +139,7 @@ Item {
                     + NotchTeleprompterStore.wordCount + " words · ~"
                     + NotchTeleprompterStore.etaText + " @ " + NotchTeleprompterStore.wpm + " WPM"
                 color: tpView.theme.muted
-                font.family: Tokens.mono
+                font.family: theme.monoFont
                 font.pixelSize: 10
                 width: parent.width - 234
                 elide: Text.ElideRight
@@ -342,7 +342,7 @@ Item {
                         anchors.centerIn: parent
                         text: NotchTeleprompterStore.scalePct + "%"
                         color: NotchTeleprompterStore.scalePct > 100 ? tpView.theme.accent : tpView.theme.ink
-                        font.family: Tokens.mono
+                        font.family: theme.monoFont
                         font.pixelSize: 10
                         font.weight: Font.DemiBold
                     }
@@ -453,11 +453,21 @@ Item {
                 clip: true
                 onContentYChanged: NotchTeleprompterStore.scrollY = contentY
 
+                WheelHandler {
+                    acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                    onWheel: event => {
+                        var step = Math.max(-36, Math.min(36, -event.angleDelta.y * 0.25));
+                        var maxS = Math.max(0, prompterFlick.contentHeight - prompterFlick.height);
+                        prompterFlick.contentY = Math.max(0, Math.min(maxS, prompterFlick.contentY + step));
+                        event.accepted = true;
+                    }
+                }
+
                 Column {
                     id: prompterCol
                     width: prompterFlick.width
 
-                    Item { width: 1; height: Math.round(prompterFlick.height * 0.42) }
+                    Item { width: 1; height: Math.round(prompterFlick.height * 0.38) }
 
                     Text {
                         width: parent.width
@@ -475,8 +485,20 @@ Item {
                         }
                     }
 
-                    Item { width: 1; height: Math.round(prompterFlick.height * 0.48) }
+                    Item { width: 1; height: Math.round(prompterFlick.height * 0.44) }
                 }
+            }
+
+            // Slim subtle scroll indicator
+            Rectangle {
+                visible: prompterFlick.contentHeight > prompterFlick.height + 2
+                anchors.right: parent.right
+                anchors.rightMargin: 5
+                y: 6 + (parent.height - 12 - height) * (prompterFlick.contentY / Math.max(1, prompterFlick.contentHeight - prompterFlick.height))
+                width: 3
+                height: Math.max(18, Math.round((prompterFlick.height / Math.max(1, prompterFlick.contentHeight)) * (parent.height - 12)))
+                radius: 1.5
+                color: Qt.rgba(tpView.theme.ink.r, tpView.theme.ink.g, tpView.theme.ink.b, 0.26)
             }
         }
 
@@ -553,7 +575,7 @@ Item {
                         text: NotchTeleprompterStore.wordCount + " " + I18n.tr("words")
                             + " · ~" + NotchTeleprompterStore.etaText
                         color: tpView.theme.muted
-                        font.family: Tokens.mono
+                        font.family: theme.monoFont
                         font.pixelSize: 9
                         width: parent.width - 42
                     }
@@ -565,7 +587,7 @@ Item {
                             return Math.round(Math.min(1, Math.max(0, prompterFlick.contentY / maxS)) * 100) + "%";
                         }
                         color: tpView.theme.ink
-                        font.family: Tokens.mono
+                        font.family: theme.monoFont
                         font.pixelSize: 9
                     }
                 }

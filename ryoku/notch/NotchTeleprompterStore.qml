@@ -23,8 +23,8 @@ Singleton {
     property real scrollY: 0
 
     readonly property string fontFamilyName: {
-        if (tp.fontPreset === "mono") return Tokens.mono;
-        if (tp.fontPreset === "serif") return "Georgia";
+        if (tp.fontPreset === "mono") return "JetBrainsMono Nerd Font";
+        if (tp.fontPreset === "serif") return "Fraunces";
         return Tokens.ui;
     }
 

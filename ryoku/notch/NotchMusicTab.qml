@@ -187,7 +187,7 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         text: Music.stamp(Music.elapsed)
                         color: mus.theme.muted
-                        font.family: Tokens.mono
+                        font.family: theme.monoFont
                         font.pixelSize: 10
                     }
 
@@ -231,7 +231,7 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         text: Music.duration > 0 ? ("-" + Music.stamp(Math.max(0, Music.duration - Music.elapsed))) : "0:00"
                         color: mus.theme.muted
-                        font.family: Tokens.mono
+                        font.family: theme.monoFont
                         font.pixelSize: 10
                     }
                 }

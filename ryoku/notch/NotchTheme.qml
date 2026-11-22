@@ -30,6 +30,10 @@ QtObject {
         : Qt.rgba(baseSurface.r, baseSurface.g, baseSurface.b, 0.97)
     readonly property color solidSurface: Qt.rgba(baseSurface.r, baseSurface.g, baseSurface.b, 0.97)
 
+    readonly property string uiFont: Tokens.ui
+    readonly property string displayFont: Tokens.display
+    readonly property string monoFont: (nt.root && nt.root.mono) ? nt.root.mono : "JetBrainsMono Nerd Font"
+
     readonly property color accent: nt.customMode
         ? nt.parseColor(NotchConfig.customAccentHex, nt.sysAccent)
         : nt.sysAccent

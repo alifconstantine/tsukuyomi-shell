@@ -173,7 +173,7 @@ Item {
                             horizontalAlignment: Text.AlignHCenter
                             text: modelData
                             color: index >= 5 ? cal.theme.accent : cal.theme.muted
-                            font.family: Tokens.mono
+                            font.family: theme.monoFont
                             font.pixelSize: 9
                             font.weight: Font.DemiBold
                         }
@@ -208,7 +208,7 @@ Item {
                                     text: String(modelData.day)
                                     color: selected ? cal.theme.onAccent
                                         : (modelData.inMonth ? cal.theme.ink : Qt.rgba(cal.theme.muted.r, cal.theme.muted.g, cal.theme.muted.b, 0.4))
-                                    font.family: Tokens.mono
+                                    font.family: theme.monoFont
                                     font.pixelSize: 10
                                     font.weight: (selected || modelData.isToday) ? Font.Bold : Font.Normal
                                 }
@@ -323,7 +323,7 @@ Item {
                                 anchors.margins: 5
                                 verticalAlignment: TextInput.AlignVCenter
                                 color: cal.theme.ink
-                                font.family: Tokens.mono
+                                font.family: theme.monoFont
                                 font.pixelSize: 10
                                 selectByMouse: true
                                 Text {
@@ -331,7 +331,7 @@ Item {
                                     visible: timeField.text === ""
                                     text: "09:00"
                                     color: cal.theme.muted
-                                    font.family: Tokens.mono
+                                    font.family: theme.monoFont
                                     font.pixelSize: 10
                                 }
                             }
@@ -445,7 +445,7 @@ Item {
                                     width: 46
                                     text: modelData.time
                                     color: cal.theme.muted
-                                    font.family: Tokens.mono
+                                    font.family: theme.monoFont
                                     font.pixelSize: 10
                                     elide: Text.ElideRight
                                 }

@@ -155,7 +155,7 @@ Item {
                                + " · Feels " + wx.cur.feels + "°")
                             : ""
                         color: wx.fgMuted
-                        font.family: Tokens.mono
+                        font.family: theme.monoFont
                         font.pixelSize: 10
                         elide: Text.ElideRight
                     }
@@ -199,7 +199,7 @@ Item {
                                 width: Math.min(implicitWidth, parent.width - 18)
                                 text: modelData.label
                                 color: wx.fgInk
-                                font.family: Tokens.mono
+                                font.family: theme.monoFont
                                 font.pixelSize: 10
                                 font.weight: Font.Medium
                                 elide: Text.ElideRight
@@ -244,7 +244,7 @@ Item {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: index === 0 ? I18n.tr("Now") : String(h.time || h.hour || "")
                                 color: wx.fgMuted
-                                font.family: Tokens.mono
+                                font.family: theme.monoFont
                                 font.pixelSize: 9
                             }
                             NotchIcon {
@@ -258,7 +258,7 @@ Item {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: h.temp + "°"
                                 color: wx.fgInk
-                                font.family: Tokens.mono
+                                font.family: theme.monoFont
                                 font.pixelSize: 11
                                 font.weight: Font.DemiBold
                             }
@@ -267,7 +267,7 @@ Item {
                                 visible: Number(h.precip || 0) > 0
                                 text: h.precip + "%"
                                 color: wx.fgMuted
-                                font.family: Tokens.mono
+                                font.family: theme.monoFont
                                 font.pixelSize: 9
                             }
                         }
@@ -318,7 +318,7 @@ Item {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: (d.hi !== undefined ? d.hi + "°" : String(d.high || ""))
                                 color: wx.fgInk
-                                font.family: Tokens.mono
+                                font.family: theme.monoFont
                                 font.pixelSize: 11
                                 font.weight: Font.DemiBold
                             }
@@ -326,7 +326,7 @@ Item {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: (d.lo !== undefined ? d.lo + "°" : String(d.low || ""))
                                 color: wx.fgMuted
-                                font.family: Tokens.mono
+                                font.family: theme.monoFont
                                 font.pixelSize: 10
                             }
                         }

@@ -79,7 +79,7 @@ Item {
                 Text {
                     text: mc.valueText
                     color: sys.theme.ink
-                    font.family: Tokens.mono
+                    font.family: theme.monoFont
                     font.pixelSize: 14
                     font.weight: Font.DemiBold
                 }
@@ -87,7 +87,7 @@ Item {
                     anchors.baseline: parent.children[0].baseline
                     text: mc.subText
                     color: sys.theme.muted
-                    font.family: Tokens.mono
+                    font.family: theme.monoFont
                     font.pixelSize: 9
                     elide: Text.ElideRight
                 }

@@ -90,7 +90,7 @@ Item {
                 Text {
                     text: I18n.tr("APPEARANCE & COLOR")
                     color: cfgView.theme.muted
-                    font.family: Tokens.mono
+                    font.family: theme.monoFont
                     font.pixelSize: 9
                     font.letterSpacing: 1.2
                 }
@@ -144,7 +144,7 @@ Item {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: cfgView.surfaceHexInput
                                 color: cfgView.theme.ink
-                                font.family: Tokens.mono
+                                font.family: theme.monoFont
                                 font.pixelSize: 11
                                 selectByMouse: true
                                 onEditingFinished: {
@@ -179,7 +179,7 @@ Item {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: cfgView.accentHexInput
                                 color: cfgView.theme.ink
-                                font.family: Tokens.mono
+                                font.family: theme.monoFont
                                 font.pixelSize: 11
                                 selectByMouse: true
                                 onEditingFinished: {
@@ -228,7 +228,7 @@ Item {
                 Text {
                     text: I18n.tr("BEHAVIOR & NOTIFICATIONS")
                     color: cfgView.theme.muted
-                    font.family: Tokens.mono
+                    font.family: theme.monoFont
                     font.pixelSize: 9
                     font.letterSpacing: 1.2
                 }
@@ -273,7 +273,7 @@ Item {
                 Text {
                     text: I18n.tr("MUSIC & WEATHER")
                     color: cfgView.theme.muted
-                    font.family: Tokens.mono
+                    font.family: theme.monoFont
                     font.pixelSize: 9
                     font.letterSpacing: 1.2
                 }
@@ -386,7 +386,7 @@ Item {
                 Text {
                     text: I18n.tr("HEALTH & TIMER")
                     color: cfgView.theme.muted
-                    font.family: Tokens.mono
+                    font.family: theme.monoFont
                     font.pixelSize: 9
                     font.letterSpacing: 1.2
                 }
@@ -417,7 +417,7 @@ Item {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: "−"
                                 color: cfgView.theme.ink
-                                font.family: Tokens.mono
+                                font.family: theme.monoFont
                                 font.pixelSize: 12
                                 font.weight: Font.Bold
                                 MouseArea {
@@ -434,7 +434,7 @@ Item {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: NotchHealthStore.waterGoal + " (" + (NotchHealthStore.waterGoal * 0.25).toFixed(1) + "L)"
                                 color: cfgView.theme.ink
-                                font.family: Tokens.mono
+                                font.family: theme.monoFont
                                 font.pixelSize: 10
                                 font.weight: Font.DemiBold
                             }
@@ -442,7 +442,7 @@ Item {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: "+"
                                 color: cfgView.theme.ink
-                                font.family: Tokens.mono
+                                font.family: theme.monoFont
                                 font.pixelSize: 12
                                 font.weight: Font.Bold
                                 MouseArea {
@@ -478,7 +478,7 @@ Item {
                 Text {
                     text: I18n.tr("VISIBLE TABS")
                     color: cfgView.theme.muted
-                    font.family: Tokens.mono
+                    font.family: theme.monoFont
                     font.pixelSize: 9
                     font.letterSpacing: 1.2
                 }

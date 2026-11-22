@@ -446,7 +446,7 @@ Item {
                                 visible: rowCard.justCopied || rowCard.isStarred
                                 text: rowCard.justCopied ? I18n.tr("Copied to clipboard") : I18n.tr("Pinned")
                                 color: rowCard.justCopied ? cb.theme.success : cb.theme.accent
-                                font.family: Tokens.mono
+                                font.family: theme.monoFont
                                 font.pixelSize: 9
                             }
                         }

@@ -55,7 +55,7 @@ Item {
                             verticalAlignment: TextInput.AlignVCenter
                             horizontalAlignment: TextInput.AlignHCenter
                             color: td.theme.ink
-                            font.family: Tokens.mono
+                            font.family: theme.monoFont
                             font.pixelSize: 10
                             selectByMouse: true
                             Text {
@@ -63,7 +63,7 @@ Item {
                                 visible: timeInput.text === ""
                                 text: "HH:MM"
                                 color: td.theme.muted
-                                font.family: Tokens.mono
+                                font.family: theme.monoFont
                                 font.pixelSize: 9
                             }
                         }
@@ -186,7 +186,7 @@ Item {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: String(modelData.time || "")
                                 color: td.theme.accent
-                                font.family: Tokens.mono
+                                font.family: theme.monoFont
                                 font.pixelSize: 9
                             }
 
@@ -274,7 +274,7 @@ Item {
                             anchors.verticalCenter: parent.verticalCenter
                             text: modelData.time ? modelData.time : "—"
                             color: modelData.time ? td.theme.accent : td.theme.muted
-                            font.family: Tokens.mono
+                            font.family: theme.monoFont
                             font.pixelSize: 9
                         }
 

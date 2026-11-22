@@ -92,7 +92,7 @@ Item {
                 visible: pill.sublabel !== ""
                 text: pill.sublabel
                 color: pill.active ? pill.activeColor : home.theme.muted
-                font.family: Tokens.mono
+                font.family: theme.monoFont
                 font.pixelSize: 9
                 elide: Text.ElideRight
             }
@@ -192,7 +192,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             text: qs.muted ? I18n.tr("Muted") : (qs.value + "%")
             color: qs.muted ? home.theme.muted : home.theme.ink
-            font.family: Tokens.mono
+            font.family: theme.monoFont
             font.pixelSize: 11
             font.weight: Font.DemiBold
         }

@@ -365,7 +365,7 @@ Item {
                     Text {
                         text: srcEdit.text.length + " chars"
                         color: tr.theme.muted
-                        font.family: Tokens.mono
+                        font.family: theme.monoFont
                         font.pixelSize: 9
                     }
                     Item { width: parent.width - 78; height: 1 }
@@ -430,7 +430,7 @@ Item {
                     Text {
                         text: "Online · Google Translate"
                         color: tr.theme.muted
-                        font.family: Tokens.mono
+                        font.family: theme.monoFont
                         font.pixelSize: 9
                     }
                     Item { width: parent.width - 180; height: 1 }

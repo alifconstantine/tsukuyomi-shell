@@ -109,7 +109,7 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: NotchTimerState.formatted
                     color: tm.theme.ink
-                    font.family: Tokens.mono
+                    font.family: theme.monoFont
                     font.pixelSize: 20
                     font.weight: Font.Bold
                 }
@@ -117,7 +117,7 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: NotchTimerState.phaseLabel
                     color: tm.theme.muted
-                    font.family: Tokens.mono
+                    font.family: theme.monoFont
                     font.pixelSize: 9
                     font.letterSpacing: 1.0
                 }
@@ -190,7 +190,7 @@ Item {
                         ? (I18n.tr("Laps: ") + NotchTimerState.laps.slice(0, 3).join("  ·  "))
                         : I18n.tr("Press flag to record a lap")
                     color: tm.theme.muted
-                    font.family: Tokens.mono
+                    font.family: theme.monoFont
                     font.pixelSize: 10
                     elide: Text.ElideRight
                 }

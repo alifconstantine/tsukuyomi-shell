@@ -100,7 +100,7 @@ Item {
                     ? (Notifs.dnd ? I18n.tr("Focus active · Notifications silenced") : I18n.tr("TODAY"))
                     : I18n.tr("Notch notification alerts disabled in Settings")
                 color: nf.theme.muted
-                font.family: Tokens.mono
+                font.family: theme.monoFont
                 font.pixelSize: 10
                 font.letterSpacing: 0.8
                 elide: Text.ElideRight
@@ -224,7 +224,7 @@ Item {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: String(fr.count)
                                 color: nf.theme.muted
-                                font.family: Tokens.mono
+                                font.family: theme.monoFont
                                 font.pixelSize: 10
                             }
                         }
@@ -363,7 +363,7 @@ Item {
                                     anchors.right: parent.right
                                     text: Notifs.timeLabel(modelData)
                                     color: nf.theme.muted
-                                    font.family: Tokens.mono
+                                    font.family: theme.monoFont
                                     font.pixelSize: 9
                                 }
                                 Row {
