@@ -8,8 +8,9 @@ import Ryoku.Ui.Singletons
 Item {
     id: sys
 
-    required property var root
-    required property var theme
+    property var root: null
+    property var theme: _fallbackTheme
+    NotchTheme { id: _fallbackTheme; root: null }
     readonly property bool anim: !Perf.reduceMotion
 
     Component.onCompleted: {

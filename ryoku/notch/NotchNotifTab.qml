@@ -11,8 +11,9 @@ import Ryoku.Ui.Singletons
 Item {
     id: nf
 
-    required property var root
-    required property var theme
+    property var root: null
+    property var theme: _fallbackTheme
+    NotchTheme { id: _fallbackTheme; root: null }
     readonly property bool anim: !Perf.reduceMotion
 
     signal openSettingsRequested()
@@ -100,7 +101,7 @@ Item {
                     : I18n.tr("Notch notification alerts disabled in Settings")
                 color: nf.theme.muted
                 font.family: Tokens.mono
-                font.pixelSize: 9.5
+                font.pixelSize: 10
                 font.letterSpacing: 0.8
                 elide: Text.ElideRight
             }
@@ -214,7 +215,7 @@ Item {
                                 text: fr.label
                                 color: fr.active ? nf.theme.ink : nf.theme.muted
                                 font.family: Tokens.ui
-                                font.pixelSize: 10.5
+                                font.pixelSize: 11
                                 font.weight: fr.active ? Font.DemiBold : Font.Normal
                                 elide: Text.ElideRight
                             }
@@ -224,7 +225,7 @@ Item {
                                 text: String(fr.count)
                                 color: nf.theme.muted
                                 font.family: Tokens.mono
-                                font.pixelSize: 9.5
+                                font.pixelSize: 10
                             }
                         }
 
@@ -328,7 +329,7 @@ Item {
                                     text: nCard.appName
                                     color: nf.theme.muted
                                     font.family: Tokens.ui
-                                    font.pixelSize: 9.5
+                                    font.pixelSize: 10
                                     elide: Text.ElideRight
                                 }
                                 Text {
@@ -347,7 +348,7 @@ Item {
                                     text: String(modelData.body || "").replace(/\s+/g, " ")
                                     color: nf.theme.muted
                                     font.family: Tokens.ui
-                                    font.pixelSize: 10.5
+                                    font.pixelSize: 11
                                     maximumLineCount: 2
                                     wrapMode: Text.WordWrap
                                     elide: Text.ElideRight
@@ -403,14 +404,14 @@ Item {
                 text: I18n.tr("Kept for %1 days, up to %2").arg(NotchConfig.notifRetentionDays).arg(NotchConfig.notifMaxCount)
                 color: nf.theme.muted
                 font.family: Tokens.ui
-                font.pixelSize: 9.5
+                font.pixelSize: 10
             }
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: I18n.tr("Change")
                 color: nf.theme.accent
                 font.family: Tokens.ui
-                font.pixelSize: 9.5
+                font.pixelSize: 10
                 font.weight: Font.Medium
                 MouseArea {
                     anchors.fill: parent; cursorShape: Qt.PointingHandCursor

@@ -11,8 +11,9 @@ import "../../services/lib/weather.js" as Wx
 Item {
     id: wx
 
-    required property var root
-    required property var theme
+    property var root: null
+    property var theme: _fallbackTheme
+    NotchTheme { id: _fallbackTheme; root: null }
     readonly property bool anim: !Perf.reduceMotion
 
     signal openSettingsRequested()
@@ -75,7 +76,7 @@ Item {
             width: 78; height: 26; radius: 8
             color: wx.theme.card
             border.width: 1; border.color: wx.theme.border
-            Text { anchors.centerIn: parent; text: I18n.tr("Retry"); color: wx.theme.ink; font.family: Tokens.ui; font.pixelSize: 10.5 }
+            Text { anchors.centerIn: parent; text: I18n.tr("Retry"); color: wx.theme.ink; font.family: Tokens.ui; font.pixelSize: 11 }
             MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: Weather.retry() }
         }
     }
@@ -124,7 +125,7 @@ Item {
                         text: wx.ready ? (wx.cur.condition || Wx.labelFor(wx.code)) : ""
                         color: wx.fgInk
                         font.family: Tokens.ui
-                        font.pixelSize: 12.5
+                        font.pixelSize: 13
                         font.weight: Font.DemiBold
                         elide: Text.ElideRight
                     }
@@ -155,7 +156,7 @@ Item {
                             : ""
                         color: wx.fgMuted
                         font.family: Tokens.mono
-                        font.pixelSize: 9.5
+                        font.pixelSize: 10
                         elide: Text.ElideRight
                     }
                 }
@@ -264,7 +265,7 @@ Item {
                                 text: h.precip + "%"
                                 color: wx.fgMuted
                                 font.family: Tokens.mono
-                                font.pixelSize: 8.5
+                                font.pixelSize: 9
                             }
                         }
                     }
@@ -300,7 +301,7 @@ Item {
                                 text: index === 0 ? I18n.tr("Today") : String(d.weekday || d.day || "").slice(0, 3)
                                 color: wx.fgMuted
                                 font.family: Tokens.ui
-                                font.pixelSize: 9.5
+                                font.pixelSize: 10
                                 font.weight: index === 0 ? Font.DemiBold : Font.Normal
                             }
                             NotchIcon {
@@ -323,7 +324,7 @@ Item {
                                 text: (d.lo !== undefined ? d.lo + "°" : String(d.low || ""))
                                 color: wx.fgMuted
                                 font.family: Tokens.mono
-                                font.pixelSize: 9.5
+                                font.pixelSize: 10
                             }
                         }
                     }

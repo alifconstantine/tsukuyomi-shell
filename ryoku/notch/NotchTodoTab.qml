@@ -8,8 +8,9 @@ import Ryoku.Ui.Singletons
 Item {
     id: td
 
-    required property var root
-    required property var theme
+    property var root: null
+    property var theme: _fallbackTheme
+    NotchTheme { id: _fallbackTheme; root: null }
     readonly property bool anim: !Perf.reduceMotion
 
     function addNew() {
@@ -282,7 +283,7 @@ Item {
                             height: parent.height
                             Rectangle {
                                 anchors.horizontalCenter: parent.horizontalCenter
-                                topMargin: -4
+                                y: -4
                                 width: 1.5
                                 height: parent.height + 8
                                 color: td.theme.hairline

@@ -6,7 +6,7 @@ import QtQuick
 QtObject {
     id: nt
 
-    required property var root
+    property var root: null
 
     readonly property bool customMode: NotchConfig.themeMode === "custom"
     readonly property color sysSurface: nt.root ? nt.root.paper : "#161616"

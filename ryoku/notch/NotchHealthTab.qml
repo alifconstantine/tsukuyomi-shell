@@ -10,8 +10,9 @@ import Ryoku.Ui.Singletons
 Item {
     id: hl
 
-    required property var root
-    required property var theme
+    property var root: null
+    property var theme: _fallbackTheme
+    NotchTheme { id: _fallbackTheme; root: null }
     readonly property bool anim: !Perf.reduceMotion
 
     property bool waterChartView: false
@@ -50,7 +51,7 @@ Item {
                 text: hl.lastBreakLabel
                 color: hl.theme.muted
                 font.family: Tokens.ui
-                font.pixelSize: 10.5
+                font.pixelSize: 11
                 elide: Text.ElideRight
             }
 
@@ -65,7 +66,7 @@ Item {
                     text: hl.waterChartView ? I18n.tr("Activity View") : I18n.tr("Water Chart")
                     color: hl.theme.ink
                     font.family: Tokens.ui
-                    font.pixelSize: 9.5
+                    font.pixelSize: 10
                     font.weight: Font.Medium
                 }
                 MouseArea {
@@ -172,9 +173,9 @@ Item {
                 Row {
                     anchors.horizontalCenter: parent.horizontalCenter
                     spacing: 10
-                    Text { text: "● " + NotchHealthStore.movementDone + "/" + NotchHealthStore.movementGoal; color: hl.cMove; font.family: Tokens.mono; font.pixelSize: 9.5 }
-                    Text { text: "● " + NotchHealthStore.waterGlasses + "/" + NotchHealthStore.waterGoal; color: hl.cWater; font.family: Tokens.mono; font.pixelSize: 9.5 }
-                    Text { text: "● " + NotchHealthStore.breathingDone + "/" + NotchHealthStore.breathingGoal; color: hl.cBreath; font.family: Tokens.mono; font.pixelSize: 9.5 }
+                    Text { text: "● " + NotchHealthStore.movementDone + "/" + NotchHealthStore.movementGoal; color: hl.cMove; font.family: Tokens.mono; font.pixelSize: 10 }
+                    Text { text: "● " + NotchHealthStore.waterGlasses + "/" + NotchHealthStore.waterGoal; color: hl.cWater; font.family: Tokens.mono; font.pixelSize: 10 }
+                    Text { text: "● " + NotchHealthStore.breathingDone + "/" + NotchHealthStore.breathingGoal; color: hl.cBreath; font.family: Tokens.mono; font.pixelSize: 10 }
                 }
             }
 
@@ -234,7 +235,7 @@ Item {
                             NotchIcon { text: "directions_walk"; font.pixelSize: 15; color: hl.cMove }
                             Text { text: I18n.tr("Movement break"); color: hl.theme.ink; font.family: Tokens.ui; font.pixelSize: 11; font.weight: Font.DemiBold }
                         }
-                        Text { text: I18n.tr("Desk stretches · 2 min"); color: hl.theme.muted; font.family: Tokens.ui; font.pixelSize: 9.5 }
+                        Text { text: I18n.tr("Desk stretches · 2 min"); color: hl.theme.muted; font.family: Tokens.ui; font.pixelSize: 10 }
                         Rectangle {
                             width: parent.width; height: 24; radius: 8
                             color: NotchHealthStore.activeSession === "movement"
@@ -267,7 +268,7 @@ Item {
                             NotchIcon { text: "self_improvement"; font.pixelSize: 15; color: hl.cBreath }
                             Text { text: I18n.tr("Breathing"); color: hl.theme.ink; font.family: Tokens.ui; font.pixelSize: 11; font.weight: Font.DemiBold }
                         }
-                        Text { text: I18n.tr("Calm 4-4-6 breathing · 1 min"); color: hl.theme.muted; font.family: Tokens.ui; font.pixelSize: 9.5 }
+                        Text { text: I18n.tr("Calm 4-4-6 breathing · 1 min"); color: hl.theme.muted; font.family: Tokens.ui; font.pixelSize: 10 }
                         Rectangle {
                             width: parent.width; height: 24; radius: 8
                             color: NotchHealthStore.activeSession === "breathing"
@@ -300,7 +301,7 @@ Item {
                             NotchIcon { text: "visibility"; font.pixelSize: 15; fill: 1; color: hl.cEye }
                             Text { text: I18n.tr("Eye break"); color: hl.theme.ink; font.family: Tokens.ui; font.pixelSize: 11; font.weight: Font.DemiBold }
                         }
-                        Text { text: I18n.tr("20-20-20: look 20 ft away for 20 s"); color: hl.theme.muted; font.family: Tokens.ui; font.pixelSize: 9.5; elide: Text.ElideRight; width: parent.width }
+                        Text { text: I18n.tr("20-20-20: look 20 ft away for 20 s"); color: hl.theme.muted; font.family: Tokens.ui; font.pixelSize: 10; elide: Text.ElideRight; width: parent.width }
                         Rectangle {
                             width: parent.width; height: 24; radius: 8
                             color: NotchHealthStore.activeSession === "eye"
@@ -380,7 +381,7 @@ Item {
                     Rectangle {
                         width: 80; height: 32; radius: 11
                         color: hl.theme.card; border.width: 1; border.color: hl.theme.border
-                        Text { anchors.centerIn: parent; text: I18n.tr("- 1 glass"); color: hl.theme.muted; font.family: Tokens.ui; font.pixelSize: 10.5 }
+                        Text { anchors.centerIn: parent; text: I18n.tr("- 1 glass"); color: hl.theme.muted; font.family: Tokens.ui; font.pixelSize: 11 }
                         MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: NotchHealthStore.addWater(-1) }
                     }
                 }
@@ -431,7 +432,7 @@ Item {
                                 text: (hour % 3 === 0) ? (hour < 10 ? "0" + hour : String(hour)) : ""
                                 color: hl.theme.muted
                                 font.family: Tokens.mono
-                                font.pixelSize: 8.5
+                                font.pixelSize: 9
                             }
                         }
                     }

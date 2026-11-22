@@ -12,8 +12,9 @@ import "../../utils/artcolor.js" as ArtColor
 Item {
     id: mus
 
-    required property var root
-    required property var theme
+    property var root: null
+    property var theme: _fallbackTheme
+    NotchTheme { id: _fallbackTheme; root: null }
     readonly property bool anim: !Perf.reduceMotion
 
     property bool showLyrics: true

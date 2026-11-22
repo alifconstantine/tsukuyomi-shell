@@ -10,8 +10,9 @@ import "NotchRegistry.js" as Registry
 Item {
     id: cfgView
 
-    required property var root
-    required property var theme
+    property var root: null
+    property var theme: _fallbackTheme
+    NotchTheme { id: _fallbackTheme; root: null }
     readonly property bool anim: !Perf.reduceMotion
 
     property string weatherInput: Config.weatherLocation || ""

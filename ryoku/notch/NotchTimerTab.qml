@@ -9,8 +9,9 @@ import Ryoku.Ui.Singletons
 Item {
     id: tm
 
-    required property var root
-    required property var theme
+    property var root: null
+    property var theme: _fallbackTheme
+    NotchTheme { id: _fallbackTheme; root: null }
     readonly property bool anim: !Perf.reduceMotion
 
     component ModePill: Rectangle {
@@ -117,7 +118,7 @@ Item {
                     text: NotchTimerState.phaseLabel
                     color: tm.theme.muted
                     font.family: Tokens.mono
-                    font.pixelSize: 8.5
+                    font.pixelSize: 9
                     font.letterSpacing: 1.0
                 }
             }
