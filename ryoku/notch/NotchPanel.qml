@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Effects
 import Quickshell
+import Quickshell.Io
 import Quickshell.Wayland
 import shell.services
 import Ryoku.Ui.Singletons
@@ -44,6 +45,8 @@ PanelWindow {
     property bool settingsOpen: false
     property bool switcherOpen: false
     property int navDirection: 1   // +1 forward, -1 backward
+    property string _ipcPendingTab: ""
+    property bool _ipcPendingSettings: false
 
     readonly property var activeMeta: panel.settingsOpen
         ? Registry.SETTINGS_META
@@ -77,12 +80,50 @@ PanelWindow {
 
     onIsOpenChanged: {
         if (panel.isOpen) {
-            panel.settingsOpen = false;
             panel.switcherOpen = false;
-            var preferred = NotchConfig.defaultTab === "last" ? NotchConfig.lastTab : "home";
-            if (!NotchConfig.isTabEnabled(preferred)) preferred = "home";
-            panel.activeTabId = preferred;
+            if (panel._ipcPendingSettings) {
+                panel._ipcPendingSettings = false;
+                panel.settingsOpen = true;
+            } else {
+                panel.settingsOpen = false;
+                var preferred = panel._ipcPendingTab !== ""
+                    ? panel._ipcPendingTab
+                    : (NotchConfig.defaultTab === "last" ? NotchConfig.lastTab : "home");
+                panel._ipcPendingTab = "";
+                if (!NotchConfig.isTabEnabled(preferred)) preferred = "home";
+                panel.activeTabId = preferred;
+            }
             card.forceActiveFocus();
+        }
+    }
+
+    IpcHandler {
+        target: "notch"
+        function open(tabId: string): void {
+            var targetId = tabId && tabId !== "" ? tabId : "home";
+            if (!panel.isOpen) {
+                panel._ipcPendingTab = targetId;
+                panel._ipcPendingSettings = false;
+                if (panel.root) panel.root.openDashboard();
+            } else {
+                panel.selectTab(targetId);
+            }
+        }
+        function openFilesTool(toolId: string): void {
+            NotchFilesStore.openTool(toolId || "");
+            open("files");
+        }
+        function openSettings(): void {
+            if (!panel.isOpen) {
+                panel._ipcPendingSettings = true;
+                if (panel.root) panel.root.openDashboard();
+            } else {
+                panel.switcherOpen = false;
+                panel.settingsOpen = true;
+            }
+        }
+        function close(): void {
+            if (panel.root && panel.isOpen) panel.root.closeDashboard();
         }
     }
 

@@ -2,6 +2,8 @@ singleton NotchConfig 1.0 NotchConfig.qml
 singleton NotchTimerState 1.0 NotchTimerState.qml
 singleton NotchTodoStore 1.0 NotchTodoStore.qml
 singleton NotchHealthStore 1.0 NotchHealthStore.qml
+singleton NotchFilesStore 1.0 NotchFilesStore.qml
+singleton NotchTeleprompterStore 1.0 NotchTeleprompterStore.qml
 NotchIcon 1.0 NotchIcon.qml
 NotchTheme 1.0 NotchTheme.qml
 NotchCenterPill 1.0 NotchCenterPill.qml
@@ -13,6 +15,9 @@ NotchTodoTab 1.0 NotchTodoTab.qml
 NotchTimerTab 1.0 NotchTimerTab.qml
 NotchNotifTab 1.0 NotchNotifTab.qml
 NotchClipboardTab 1.0 NotchClipboardTab.qml
+NotchFilesTab 1.0 NotchFilesTab.qml
+NotchTranslateTab 1.0 NotchTranslateTab.qml
+NotchTeleprompterTab 1.0 NotchTeleprompterTab.qml
 NotchWeatherTab 1.0 NotchWeatherTab.qml
 NotchHealthTab 1.0 NotchHealthTab.qml
 NotchSystemTab 1.0 NotchSystemTab.qml
