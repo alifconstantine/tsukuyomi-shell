@@ -60,9 +60,9 @@ diff -ruN hypr/modules/window_rules.lua hypr_new/modules/window_rules.lua
 +hl.on("window.open", function(win)
 +    if win.initial_class:lower() == "antigravity.exe" and win.initial_title:lower() == "antigravity"
 +        and win.fullscreen == 1 then
-+        hl.dispatch(hl.dsp.window.fullscreen({
-+            mode = "maximized",
-+            action = "unset",
++        hl.dispatch(hl.dsp.window.fullscreen_state({
++            internal = 0,
++            client = 0,
 +            window = "address:" .. win.address,
 +        }))
 +    end
