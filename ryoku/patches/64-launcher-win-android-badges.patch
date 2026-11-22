@@ -1,0 +1,152 @@
+diff -ruN quickshell/shell/modules/launcher/shared/providers/apps/Apps.qml quickshell_new/shell/modules/launcher/shared/providers/apps/Apps.qml
+--- a/shell/modules/launcher/shared/providers/apps/Apps.qml	2026-11-12 08:11:11.000000000 +0700
++++ b/shell/modules/launcher/shared/providers/apps/Apps.qml	2026-11-22 15:43:53.655964653 +0700
+@@ -14,6 +14,7 @@
+     id: apps
+ 
+     providerId: "apps"
++    prefixes: ["/win", "/apk"]
+ 
+     property int applicationRevision: 0
+ 
+@@ -91,9 +92,20 @@
+                 })(entryId, descriptor.sourceIndex, descriptor.desktopId)
+             });
+         }
++        var runtime = "";
++        var badge = "";
++        if (String(entryId).indexOf("tsukuyomi-win-") === 0 || String(entry.genericName || "") === "Windows App") {
++            runtime = "windows";
++            badge = "WIN";
++        } else if (String(entryId).indexOf("waydroid.") === 0 || String(entry.genericName || "") === "Android App") {
++            runtime = "android";
++            badge = "APK";
++        }
+         return {
+             id: entryId,
+             appId: entryId,
++            runtime: runtime,
++            badge: badge,
+             title: entry.name,
+             subtitle: sub,
+             icon: entry.icon ? Icons.path(entry.icon, "application-x-executable") : Icons.path("application-x-executable", true),
+@@ -103,8 +115,18 @@
+         };
+     }
+ 
+-    function query(text) {
+-        var ranked = Fuzzy.rank(apps.entries, text, Frecency.usage);
++    function query(text, prefix) {
++        var pool = apps.entries;
++        if (prefix === "/win") {
++            pool = pool.filter(function (e) {
++                return String(e.id || "").indexOf("tsukuyomi-win-") === 0 || String(e.genericName || "") === "Windows App";
++            });
++        } else if (prefix === "/apk") {
++            pool = pool.filter(function (e) {
++                return String(e.id || "").indexOf("waydroid.") === 0 || String(e.genericName || "") === "Android App";
++            });
++        }
++        var ranked = Fuzzy.rank(pool, text, Frecency.usage);
+         var rows = [];
+         for (var i = 0; i < ranked.length; i++)
+             rows.push(rowFor(ranked[i]));
+diff -ruN quickshell/shell/modules/launcher/shared/Singletons/Dispatcher.qml quickshell_new/shell/modules/launcher/shared/Singletons/Dispatcher.qml
+--- a/shell/modules/launcher/shared/Singletons/Dispatcher.qml	2026-11-12 08:11:11.000000000 +0700
++++ b/shell/modules/launcher/shared/Singletons/Dispatcher.qml	2026-11-22 15:43:53.656047439 +0700
+@@ -89,7 +89,7 @@
+ 
+         var raw;
+         if (providerId === "apps" && String(query || "").length === 0
+-                && typeof provider.allRows === "function")
++                && String(prefix || "").length === 0 && typeof provider.allRows === "function")
+             raw = provider.allRows();
+         else
+             raw = provider.query(query, prefix);
+diff -ruN quickshell/shell/modules/launcher/variants/main/Launcher.qml quickshell_new/shell/modules/launcher/variants/main/Launcher.qml
+--- a/shell/modules/launcher/variants/main/Launcher.qml	2026-11-22 15:42:47.607256305 +0700
++++ b/shell/modules/launcher/variants/main/Launcher.qml	2026-11-22 15:43:53.656125856 +0700
+@@ -69,6 +69,8 @@
+         if (p === "/folder") return I18n.tr("FOLDER");
+         if (p === "/image") return I18n.tr("IMAGE");
+         if (p === "/video") return I18n.tr("VIDEO");
++        if (p === "/win") return I18n.tr("WINDOWS");
++        if (p === "/apk") return I18n.tr("ANDROID");
+         if (p === "/") return I18n.tr("ACTIONS");
+         if (p === ">") return I18n.tr("PACKAGE");
+         if (p === "=") return I18n.tr("CALC");
+diff -ruN quickshell/shell/modules/launcher/variants/main/ResultGrid.qml quickshell_new/shell/modules/launcher/variants/main/ResultGrid.qml
+--- a/shell/modules/launcher/variants/main/ResultGrid.qml	2026-11-12 08:11:11.000000000 +0700
++++ b/shell/modules/launcher/variants/main/ResultGrid.qml	2026-11-22 15:43:53.656224101 +0700
+@@ -251,6 +251,28 @@
+                                 }
+                             }
+ 
++                            Rectangle {
++                                visible: !!(tile.entry && tile.entry.badge && tile.entry.badge.length > 0)
++                                anchors.top: parent.top
++                                anchors.right: parent.right
++                                anchors.margins: 5 * grid.s
++                                width: gridBadgeText.implicitWidth + 8 * grid.s
++                                height: 14 * grid.s
++                                radius: 4 * grid.s
++                                color: Theme.cardTop
++                                border.width: 1
++                                border.color: Theme.border
++                                Text {
++                                    id: gridBadgeText
++                                    anchors.centerIn: parent
++                                    text: tile.entry && tile.entry.badge ? tile.entry.badge : ""
++                                    color: Theme.iconDim
++                                    font.family: Theme.mono
++                                    font.pixelSize: 8 * grid.s
++                                    font.weight: Font.DemiBold
++                                }
++                            }
++
+                             MouseArea {
+                                 id: tileArea
+                                 anchors.fill: parent
+diff -ruN quickshell/shell/modules/launcher/variants/main/ResultList.qml quickshell_new/shell/modules/launcher/variants/main/ResultList.qml
+--- a/shell/modules/launcher/variants/main/ResultList.qml	2026-11-22 15:42:47.620928588 +0700
++++ b/shell/modules/launcher/variants/main/ResultList.qml	2026-11-22 15:43:53.656179627 +0700
+@@ -188,7 +188,7 @@
+                 anchors.verticalCenter: parent.verticalCenter
+                 anchors.left: icon.right
+                 anchors.leftMargin: row.hasIcon ? 11 * list.s : 0
+-                anchors.right: verb.left
++                anchors.right: runtimeBadge.visible ? runtimeBadge.left : verb.left
+                 anchors.rightMargin: 10 * list.s
+                 spacing: 1 * list.s
+ 
+@@ -213,6 +213,30 @@
+                 }
+             }
+ 
++            Rectangle {
++                id: runtimeBadge
++                visible: !!(row.entry && row.entry.badge && row.entry.badge.length > 0)
++                anchors.verticalCenter: parent.verticalCenter
++                anchors.right: verb.visible ? verb.left : parent.right
++                anchors.rightMargin: verb.visible ? 8 * list.s : 0
++                width: badgeLabel.implicitWidth + 10 * list.s
++                height: 18 * list.s
++                radius: 5 * list.s
++                color: Qt.alpha(Tsukuyomi.Style.text, 0.08)
++                border.width: 1
++                border.color: Tsukuyomi.Style.line
++
++                Text {
++                    id: badgeLabel
++                    anchors.centerIn: parent
++                    text: row.entry && row.entry.badge ? row.entry.badge : ""
++                    color: Tsukuyomi.Style.secondary
++                    font.family: Theme.mono
++                    font.pixelSize: 9 * list.s
++                    font.weight: Font.DemiBold
++                }
++            }
++
+             Text {
+                 id: verb
+                 anchors.verticalCenter: parent.verticalCenter
