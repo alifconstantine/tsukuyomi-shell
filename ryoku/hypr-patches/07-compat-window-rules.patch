@@ -18,7 +18,7 @@ diff -ruN hypr/modules/window_rules.lua hypr_new/modules/window_rules.lua
 +    match          = { class = "negative:(?i)^(.*\\.exe|wine)$" },
      suppress_event = "maximize",
  })
-@@ -304,3 +304,43 @@
+@@ -304,3 +304,37 @@
      workspace = "special:sharebar silent",
      no_focus  = true,
  })
@@ -48,17 +48,11 @@ diff -ruN hypr/modules/window_rules.lua hypr_new/modules/window_rules.lua
 +})
 +
 +hl.window_rule({
-+    name   = "float-wine-antigravity",
-+    match  = { initial_class = "(?i)^antigravity\\.exe$", initial_title = "(?i)^antigravity$" },
-+    float  = true,
-+    size   = fit(1080, 740),
-+    center = true,
-+})
-+
-+-- The XWayland caption buttons can send competing window-state and geometry
-+-- requests. Keep the main window under compositor control.
-+hl.window_rule({
 +    name = "manage-antigravity-xwayland",
 +    match = { xwayland = true, initial_class = "(?i)^antigravity\\.exe$", initial_title = "(?i)^antigravity$" },
-+    suppress_event = "maximize fullscreen x11configurerequest",
++    tile  = true,
++    -- Match the maximized state on both sides so Wine fits Chromium's
++    -- content and caption to the Hyprland work area.
++    fullscreen_state = "1 1",
++    suppress_event = "maximize fullscreen",
 +})

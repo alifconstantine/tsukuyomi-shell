@@ -1,0 +1,16 @@
+--- a/shell/shell.qml
++++ b/shell/shell.qml
+@@ -37,4 +37,5 @@
+ import "modules/confirm"
+ import Ryoku.Ui.Singletons
++import "tsukuyomi" as Tsukuyomi
+ import stage.modules.common as StageIsland
+ import stage as Stage
+@@ -61,4 +62,7 @@
+ ShellRoot {
+     id: root
++
++    Tsukuyomi.AntigravityCaption {}
++
+     // Keep native surfaces until Gokko's root has completed, not merely while
+     // its outer Store Scene exists; a nested load error must still fall back.
