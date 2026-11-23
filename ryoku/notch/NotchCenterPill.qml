@@ -17,7 +17,9 @@ Item {
     readonly property int memPct: pill.root ? pill.root.systemMemPercent : 0
     readonly property bool musicPlaying: Media.playing
     readonly property bool musicPresent: Media.present
-    readonly property bool expanded: pill.root ? pill.root.dashboardVisible : false
+    readonly property bool popupScreen: !pill.screen || (pill.root && pill.screen.name === pill.root.activePopupScreenName)
+    readonly property real dashboardReveal: pill.root && pill.popupScreen ? pill.root.notchReveal : 0
+    readonly property bool expanded: pill.root && pill.popupScreen && pill.root.dashboardVisible
 
     // Live Activity transient state
     property bool liveActive: false
@@ -239,16 +241,8 @@ Item {
         NumberAnimation { duration: 240; easing.type: Easing.OutCubic }
     }
 
-    opacity: pill.expanded ? 0.0 : 1.0
-    scale: pill.expanded ? 0.86 : 1.0
-    Behavior on opacity {
-        enabled: pill.anim
-        NumberAnimation { duration: pill.expanded ? 120 : 200; easing.type: Easing.OutCubic }
-    }
-    Behavior on scale {
-        enabled: pill.anim
-        NumberAnimation { duration: pill.expanded ? 140 : 240; easing.type: pill.expanded ? Easing.InCubic : Easing.OutBack; easing.overshoot: 0.7 }
-    }
+    opacity: 1 - Math.min(1, pill.dashboardReveal * 5)
+    scale: pill.anim ? 1 - Math.min(1, pill.dashboardReveal * 5) * 0.06 : 1
 
     function openNotch() {
         if (!pill.root) return;

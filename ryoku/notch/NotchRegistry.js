@@ -73,12 +73,12 @@ function indexOfTab(tabs, id) {
     for (var i = 0; i < tabs.length; i++) {
         if (tabs[i].id === id) return i;
     }
-    return 0;
+    return -1;
 }
 
 function nextTabId(tabs, currentId, delta) {
     if (!tabs || tabs.length === 0) return "home";
-    var idx = indexOfTab(tabs, currentId);
+    var idx = Math.max(0, indexOfTab(tabs, currentId));
     var next = (idx + delta + tabs.length) % tabs.length;
     return tabs[next].id;
 }

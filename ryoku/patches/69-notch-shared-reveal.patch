@@ -1,0 +1,80 @@
+--- a/shell/modules/bar/barstyles/qsbar/BarSlot.qml
++++ b/shell/modules/bar/barstyles/qsbar/BarSlot.qml
+@@ -1951,21 +1951,35 @@
+                 var rep = row.rep
+                 if (!rep) continue
+                 var start = -1, end = -1
++                var notchOnly = false
+                 for (var k = 0; k < rep.count; k++) {
+                     var it = rep.itemAt(k)
+                     if (!it) continue
+                     void(it.x); void(it.width); void(it.sepOn)
+                     if (!it.hasContent || !it.autoShown) continue
+-                    if (start < 0) start = row.x + it.x + it.visualLeftEdge
++                    if (start < 0) {
++                        start = row.x + it.x + it.visualLeftEdge
++                        notchOnly = it.gid === "G8"
++                    } else {
++                        notchOnly = false
++                    }
+                     end = row.x + it.x + it.visualRightEdge
+-                    if (it.sepOn) { runs.push({ a: start, b: end, isCenter: r === 1 }); start = -1 }
++                    if (it.sepOn) { runs.push({ a: start, b: end, notchOnly: notchOnly }); start = -1 }
+                 }
+-                if (start >= 0) runs.push({ a: start, b: end, isCenter: r === 1 })
++                if (start >= 0) runs.push({ a: start, b: end, notchOnly: notchOnly })
+             }
+             // Plugins now ride the gid rows above, so their pills are already in
+             // runs; no separate plugin run is needed.
+             return runs
+         }
++        readonly property real notchPillWidth: {
++            const run = barSlot.islandsShell ? islandRuns.find(item => item.notchOnly) : null
++            if (!run) return g8FloorWidth
++            const left = Math.max(barSlot.shellOuterMargin, run.a - barSlot.islandsPad)
++            const right = Math.min(width - barSlot.shellOuterMargin, run.b + barSlot.islandsPad)
++            return Math.max(0, right - left)
++        }
++
+         // The rendered pill rectangles in island coords: islandRuns extended by
+         // islandsPad and clamped exactly as the pill Repeater below draws them,
+         // sorted L->R. The reactor consumes these so its gap channels are the real
+@@ -1995,8 +2009,9 @@
+                 readonly property real rawLeft: modelData ? modelData.a - islandsPad : 0
+                 readonly property real rawRight: modelData ? modelData.b + islandsPad : 0
+                 visible: modelData && (modelData.b - modelData.a) > 0.5
+-                opacity: (modelData && modelData.isCenter && barSlot.root.dashboardVisible) ? 0.0 : 1.0
+-                Behavior on opacity { enabled: !Perf.reduceMotion; NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
++                opacity: modelData && modelData.notchOnly && barSlot.screen
++                    && barSlot.screen.name === barSlot.root.activePopupScreenName
++                    ? 1 - Math.min(1, barSlot.root.notchReveal * 5) : 1
+                 x: Math.max(barSlot.shellOuterMargin, rawLeft)
+                 y: 0
+                 width: Math.max(0,
+@@ -2141,6 +2156,7 @@
+                 power:        island.groupX("G14", 0.5),
+                 mpris:        island.groupX("G9",  0.5),
+                 dashboard:    island.groupContentX("G8", "dashboardCaretX", 0.5),
++                notchWidth:   island.notchPillWidth,
+                 launcher:     island.groupX("G1",  0.5)
+             }
+         }
+--- a/shell/modules/bar/barstyles/qsbar/Theme.qml
++++ b/shell/modules/bar/barstyles/qsbar/Theme.qml
+@@ -716,6 +716,7 @@
+         else if (name === "power") powerBarX = x
+         else if (name === "mpris") mprisBarX = x
+         else if (name === "dashboard") dashboardBarX = x
++        else if (name === "notchWidth") notchAnchorWidth = x
+         else if (name === "launcher") launcherBarX = x
+         else if (name === "trayMenu") trayMenuX = x
+         else if (name.indexOf("plugin:") === 0) {
+@@ -952,6 +953,8 @@
+     // ── Calendar & Notch state ──
+     property bool dashboardVisible: false
+     property bool notchSystemActive: false
++    property real notchReveal: 0
++    property real notchAnchorWidth: 0
+     onDashboardVisibleChanged: popupOpened("dashboardVisible")
+     property int calendarMonthOffset: 0
+     property int calendarTick: 0

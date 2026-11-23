@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Effects
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
@@ -9,8 +8,7 @@ import "NotchRegistry.js" as Registry
 
 // Expanded Tsukuyomi Dynamic Notch (replaces DashboardPopup in VariantRoot) +
 // sibling Hub-styled NotchSettingsWindow popup.
-// Morphs seamlessly out of the center island with spring physics, renders only
-// the active tab via Loader, and keeps the expanded header ultra-clean.
+// Morphs from the bar's clock island and mounts one dashboard page at a time.
 Item {
     id: notchHost
 
@@ -44,25 +42,30 @@ Item {
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "ryoku-dashboard"
 
+        readonly property real pageVisibility: {
+            const t = Math.max(0, Math.min(1, (reveal - 0.24) / 0.65));
+            return t * t * (3 - 2 * t);
+        }
         property real reveal: panel.isOpen ? 1.0 : 0.0
         Behavior on reveal {
             enabled: panel.anim
             NumberAnimation {
-                duration: panel.isOpen ? 280 : 200
-                easing.type: panel.isOpen ? Easing.OutCubic : Easing.InCubic
-            }
-        }
-        property real contentFade: panel.isOpen ? 1.0 : 0.0
-        Behavior on contentFade {
-            enabled: panel.anim
-            NumberAnimation {
-                duration: panel.isOpen ? 220 : 95
-                easing.type: panel.isOpen ? Easing.OutCubic : Easing.InCubic
+                duration: panel.isOpen ? 340 : 235
+                easing.type: panel.isOpen ? Easing.OutCubic : Easing.InOutCubic
             }
         }
         visible: reveal > 0.002
         WlrLayershell.keyboardFocus: panel.isOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+        mask: !panel.isOpen ? noInput : (NotchConfig.autoCollapse ? null : cardInput)
+        Region { id: noInput }
+        Region { id: cardInput; item: card }
 
+        Binding {
+            target: panel.root
+            property: "notchReveal"
+            value: panel.reveal
+            when: !!panel.root
+        }
         function openSettingsPopup(sec) {
             notchHost.openSettingsPopup(sec);
         }
@@ -73,7 +76,6 @@ Item {
     property string activeTabId: "home"
     property bool settingsOpen: false
     property bool switcherOpen: false
-    property int navDirection: 1   // +1 forward, -1 backward
     property string _ipcPendingTab: ""
     property bool _ipcPendingSettings: false
 
@@ -84,8 +86,9 @@ Item {
     readonly property int barTopY: panel.root && panel.root.barGapLead !== undefined ? panel.root.barGapLead : 8
     readonly property int barH: panel.root && panel.root.v2BarHeight ? panel.root.v2BarHeight : 33
     readonly property real barR: panel.root && panel.root.barCornerRadius !== undefined ? panel.root.barCornerRadius : 17
-    readonly property int maxW: Math.max(320, panel.width - 32)
-    readonly property int maxH: Math.max(180, panel.height - panel.barTopY - 24)
+    readonly property bool bottomBar: panel.root && panel.root.barPosition === "bottom"
+    readonly property int maxW: Math.max(1, panel.width - 32)
+    readonly property int maxH: Math.max(1, panel.height - panel.barTopY - 24)
 
     readonly property bool tpActive: !panel.settingsOpen && panel.activeTabId === "teleprompter"
     readonly property bool tpDistractionFree: panel.tpActive && NotchTeleprompterStore.focusMode
@@ -97,22 +100,24 @@ Item {
     readonly property real targetH: Math.min(panel.maxH, Math.round((Number(panel.activeMeta.h || 214) + panel.homeExtraH) * panel.scaleFactor) + panel.quickBarExtra)
 
     function stepTab(delta) {
-        if (panel.settingsOpen) return;
-        panel.navDirection = delta >= 0 ? 1 : -1;
-        var next = Registry.nextTabId(panel.tabs, panel.activeTabId, delta);
-        panel.activeTabId = next;
-        NotchConfig.lastTab = next;
-        panel.switcherOpen = false;
+        if (panel.settingsOpen || panel.tpDistractionFree || panel.tabs.length < 2) return;
+        const current = contentSlot.pendingTab || panel.activeTabId;
+        panel.selectTab(Registry.nextTabId(panel.tabs, current, delta), delta);
     }
 
-    function selectTab(id) {
-        var curIdx = Registry.indexOfTab(panel.tabs, panel.activeTabId);
-        var nextIdx = Registry.indexOfTab(panel.tabs, id);
-        panel.navDirection = nextIdx >= curIdx ? 1 : -1;
-        panel.activeTabId = id;
-        NotchConfig.lastTab = id;
+    function selectTab(id, direction) {
+        const nextIdx = Registry.indexOfTab(panel.tabs, id);
+        if (nextIdx < 0) return;
+        const curIdx = Registry.indexOfTab(panel.tabs, contentSlot.pendingTab || panel.activeTabId);
+        const sign = direction ? Math.sign(direction) : (nextIdx >= curIdx ? 1 : -1);
         panel.settingsOpen = false;
         panel.switcherOpen = false;
+        contentSlot.switchTo(id, sign);
+    }
+
+    function commitTab(id) {
+        panel.activeTabId = id;
+        NotchConfig.lastTab = id;
     }
 
     onIsOpenChanged: {
@@ -127,10 +132,12 @@ Item {
                     ? panel._ipcPendingTab
                     : (NotchConfig.defaultTab === "last" ? NotchConfig.lastTab : "home");
                 panel._ipcPendingTab = "";
-                if (!NotchConfig.isTabEnabled(preferred)) preferred = "home";
+                if (Registry.indexOfTab(panel.tabs, preferred) < 0) preferred = "home";
                 panel.activeTabId = preferred;
             }
             card.forceActiveFocus();
+        } else {
+            contentSlot.resetSwitch();
         }
     }
 
@@ -154,13 +161,15 @@ Item {
             panel.openSettingsPopup("appearance");
         }
         function close(): void {
-            if (panel.root && panel.isOpen) panel.root.closeDashboard();
+            if (panel.root) panel.root.dashboardVisible = false;
         }
     }
 
     onTabsChanged: {
-        if (!NotchConfig.isTabEnabled(panel.activeTabId))
+        if (Registry.indexOfTab(panel.tabs, panel.activeTabId) < 0) {
+            contentSlot.resetSwitch();
             panel.activeTabId = panel.tabs.length > 0 ? panel.tabs[0].id : "home";
+        }
     }
 
     SystemClock { id: sysClock; precision: SystemClock.Minutes }
@@ -184,58 +193,35 @@ Item {
         onClicked: if (panel.root) panel.root.dashboardVisible = false
     }
 
-    // Main morphing Dynamic Island container (choreographed In/Out elastic physics)
+    // The silhouette, the bar hand-off, and the content share one timeline.
     Rectangle {
         id: card
 
-        // Morph seamlessly from center island pill dimensions to active tab's adaptive size
-        readonly property real idleW: 164
-        readonly property real idleH: panel.barH
-
-        property real targetAnimatedW: panel.isOpen ? panel.targetW : idleW
-        property real targetAnimatedH: panel.isOpen ? panel.targetH : idleH
-
-        Behavior on targetAnimatedW {
-            enabled: panel.anim
-            NumberAnimation {
-                duration: panel.isOpen ? 300 : 210
-                easing.type: panel.isOpen ? Easing.OutBack : Easing.InCubic
-                easing.overshoot: 0.68
-            }
+        readonly property real idleW: panel.root && panel.root.notchAnchorWidth > 0 ? panel.root.notchAnchorWidth : 124
+        readonly property real idleX: panel.root && panel.root.dashboardBarX > 0 ? panel.root.dashboardBarX : parent.width / 2
+        readonly property real widePhase: panel.reveal + 0.075 * Math.sin(Math.PI * panel.reveal)
+        property real pageWidth: panel.targetW
+        property real pageHeight: panel.targetH
+        Behavior on pageWidth {
+            enabled: panel.anim && panel.reveal > 0.75
+            NumberAnimation { duration: 245; easing.type: Easing.OutQuart }
         }
-        Behavior on targetAnimatedH {
-            enabled: panel.anim
-            NumberAnimation {
-                duration: panel.isOpen ? 320 : 195
-                easing.type: panel.isOpen ? Easing.OutQuint : Easing.InCubic
-            }
+        Behavior on pageHeight {
+            enabled: panel.anim && panel.reveal > 0.75
+            NumberAnimation { duration: 245; easing.type: Easing.OutQuart }
         }
-
-        width: Math.round(targetAnimatedW)
-        height: Math.round(targetAnimatedH)
-        x: Math.round((parent.width - width) / 2)
-        y: (panel.root && panel.root.barPosition === "bottom")
-            ? (parent.height - panel.barTopY - height)
-            : panel.barTopY
+        width: Math.round(Math.min(panel.maxW, idleW + (pageWidth - idleW) * widePhase))
+        height: Math.round(panel.barH + (pageHeight - panel.barH) * panel.reveal * panel.reveal)
+        x: Math.round(Math.max(16, Math.min(parent.width - width - 16, idleX - width / 2)))
+        y: panel.bottomBar ? parent.height - panel.barTopY - height : panel.barTopY
 
         radius: Math.round(panel.barR + (Math.max(14, Math.min(26, NotchConfig.cornerRadius)) - panel.barR) * panel.reveal)
-        color: nt.surface
+        color: Perf.softwareRenderer || Perf.blurDisabled ? nt.solidSurface : nt.surface
         border.width: 1
         border.color: nt.border
-        opacity: Math.min(1, panel.reveal * 1.25)
+        opacity: Math.min(1, panel.reveal * 5)
         clip: true
         focus: panel.isOpen
-
-        RectangularShadow {
-            anchors.fill: parent
-            radius: parent.radius
-            blur: 18
-            spread: 0
-            offset: Qt.vector2d(0, (panel.root && panel.root.barPosition === "bottom") ? -4 : 6)
-            color: Qt.rgba(0, 0, 0, 0.45)
-            visible: !Perf.softwareRenderer && panel.reveal > 0.2
-            z: -1
-        }
 
         Keys.onPressed: e => {
             if (e.key === Qt.Key_Escape) {
@@ -260,8 +246,47 @@ Item {
             id: headerBar
             anchors { top: parent.top; left: parent.left; right: parent.right; topMargin: 10; leftMargin: 14; rightMargin: 14 }
             height: 28
-            opacity: panel.contentFade
-            transform: Translate { y: panel.anim ? Math.round((1.0 - panel.contentFade) * 6) : 0 }
+            opacity: panel.pageVisibility
+            enabled: panel.isOpen && panel.pageVisibility > 0.5
+            transform: Translate { y: panel.anim ? (panel.bottomBar ? 8 : -8) * (1 - panel.pageVisibility) : 0 }
+
+            MouseArea {
+                id: slideDrag
+                anchors { top: parent.top; bottom: parent.bottom; left: titleBtn.right; right: gearBtn.left }
+                enabled: panel.isOpen && !panel.settingsOpen && !panel.tpDistractionFree
+                    && !panel.switcherOpen && panel.tabs.length > 1
+                property real startX: 0
+                onPressed: mouse => { startX = mouse.x; }
+                onPositionChanged: mouse => {
+                    if (pressed && panel.anim && !contentSlot.pendingTab)
+                        contentSlot.followDrag(mouse.x - startX);
+                }
+                onReleased: mouse => {
+                    const distance = mouse.x - startX;
+                    if (Math.abs(distance) >= 46)
+                        panel.stepTab(distance < 0 ? 1 : -1);
+                    else
+                        contentSlot.settle();
+                }
+                onCanceled: contentSlot.settle()
+
+                WheelHandler {
+                    target: null
+                    orientation: Qt.Horizontal
+                    acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                    property real travel: 0
+                    property bool committed: false
+                    onActiveChanged: if (!active) { travel = 0; committed = false; }
+                    onWheel: event => {
+                        if (committed) return;
+                        travel += event.pixelDelta.x || event.angleDelta.x;
+                        if (Math.abs(travel) >= 52) {
+                            committed = true;
+                            panel.stepTab(travel < 0 ? 1 : -1);
+                        }
+                    }
+                }
+            }
 
             // Left: Back (in Settings) or Menu Icon + Menu Name (hidden in Teleprompter distraction-free mode)
             Rectangle {
@@ -392,11 +417,11 @@ Item {
 
                 WheelHandler {
                     acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                    orientation: Qt.Vertical
                     onWheel: event => {
-                        var delta = Math.abs(event.angleDelta.x) > Math.abs(event.angleDelta.y)
-                            ? event.angleDelta.x : event.angleDelta.y;
+                        var delta = event.pixelDelta.y || event.angleDelta.y * 0.6;
                         var maxX = Math.max(0, qpFlick.contentWidth - qpFlick.width);
-                        qpFlick.contentX = Math.max(0, Math.min(maxX, qpFlick.contentX - delta * 0.6));
+                        qpFlick.contentX = Math.max(0, Math.min(maxX, qpFlick.contentX - delta));
                         event.accepted = true;
                     }
                 }
@@ -455,16 +480,16 @@ Item {
         Item {
             id: bodyHost
             anchors {
-                top: quickBar.visible ? quickBar.bottom : headerBar.bottom
-                topMargin: 8
+                top: headerBar.bottom
+                topMargin: 8 + quickBar.height * (40 / 34)
                 bottom: dotsRow.top
                 bottomMargin: 6
                 left: parent.left
                 right: parent.right
             }
-            opacity: panel.contentFade
-            scale: panel.anim ? (0.95 + 0.05 * panel.contentFade) : 1.0
-            transform: Translate { y: panel.anim ? Math.round((1.0 - panel.contentFade) * 10) : 0 }
+            opacity: panel.pageVisibility
+            enabled: panel.isOpen && panel.pageVisibility > 0.5
+            transform: Translate { y: panel.anim ? (panel.bottomBar ? 1 : -1) * (1 - panel.pageVisibility) * 12 : 0 }
 
             // Left < arrow
             Rectangle {
@@ -510,7 +535,7 @@ Item {
                 }
             }
 
-            // Active-only Loader (zero RAM for inactive tabs)
+            // Finish the outgoing page before the loader replaces it.
             Item {
                 id: contentSlot
                 anchors {
@@ -524,19 +549,82 @@ Item {
                 clip: true
 
                 property real slideOffset: 0
-                property real contentFade: 1
+                property real pageOpacity: 1
+                property string pendingTab: ""
+                property int direction: 1
+                property real exitOffset: 0
+                readonly property real travel: Math.max(30, Math.min(56, width * 0.13))
 
-                function animateSwitch() {
-                    if (!panel.anim) return;
-                    slideOffset = panel.navDirection * 18;
-                    contentFade = 0.0;
-                    switchAnim.restart();
+                function resetSwitch() {
+                    exitPage.stop();
+                    enterPage.stop();
+                    pendingTab = "";
+                    slideOffset = 0;
+                    pageOpacity = 1;
+                }
+
+                function settle() {
+                    if (pendingTab || !panel.isOpen) return;
+                    if (panel.anim && (slideOffset !== 0 || pageOpacity !== 1))
+                        enterPage.restart();
+                }
+
+                function followDrag(offset) {
+                    enterPage.stop();
+                    slideOffset = Math.max(-travel, Math.min(travel, offset * 0.55));
+                }
+
+                function switchTo(tab, sign) {
+                    if (!panel.anim || !contentLoader.item || panel.reveal < 0.85) {
+                        resetSwitch();
+                        panel.commitTab(tab);
+                        return;
+                    }
+                    if (exitPage.running) {
+                        pendingTab = tab;
+                        direction = sign;
+                        return;
+                    }
+                    if (tab === panel.activeTabId) {
+                        settle();
+                        return;
+                    }
+                    enterPage.stop();
+                    pendingTab = tab;
+                    direction = sign;
+                    exitOffset = -sign * travel;
+                    exitPage.start();
+                }
+
+                Connections {
+                    target: panel
+                    function onAnimChanged() {
+                        if (!panel.anim) {
+                            const tab = contentSlot.pendingTab;
+                            contentSlot.resetSwitch();
+                            if (tab) panel.commitTab(tab);
+                        }
+                    }
                 }
 
                 ParallelAnimation {
-                    id: switchAnim
-                    NumberAnimation { target: contentSlot; property: "slideOffset"; to: 0; duration: 210; easing.type: Easing.OutCubic }
-                    NumberAnimation { target: contentSlot; property: "contentFade"; to: 1.0; duration: 190; easing.type: Easing.OutCubic }
+                    id: exitPage
+                    NumberAnimation { target: contentSlot; property: "slideOffset"; to: contentSlot.exitOffset; duration: 85; easing.type: Easing.InQuad }
+                    NumberAnimation { target: contentSlot; property: "pageOpacity"; to: 0; duration: 85; easing.type: Easing.InQuad }
+                    onFinished: {
+                        const tab = contentSlot.pendingTab;
+                        contentSlot.pendingTab = "";
+                        if (tab !== panel.activeTabId && Registry.indexOfTab(panel.tabs, tab) >= 0) {
+                            contentSlot.slideOffset = contentSlot.direction * contentSlot.travel;
+                            panel.commitTab(tab);
+                        }
+                        enterPage.start();
+                    }
+                }
+                ParallelAnimation {
+                    id: enterPage
+                    NumberAnimation { target: contentSlot; property: "slideOffset"; to: 0; duration: 190; easing.type: Easing.OutQuart }
+                    NumberAnimation { target: contentSlot; property: "pageOpacity"; to: 1; duration: 155; easing.type: Easing.OutCubic }
                 }
 
                 Loader {
@@ -544,11 +632,11 @@ Item {
                     width: parent.width
                     height: parent.height
                     x: contentSlot.slideOffset
-                    opacity: contentSlot.contentFade
+                    opacity: contentSlot.pageOpacity
+                    enabled: !exitPage.running
                     active: panel.reveal > 0.01
                     source: active ? Qt.resolvedUrl(String(panel.activeMeta.file || "NotchHomeTab.qml")) : ""
 
-                    onSourceChanged: contentSlot.animateSwitch()
                     onLoaded: {
                         if (item) {
                             item.root = panel.root;
@@ -576,8 +664,8 @@ Item {
             height: !panel.settingsOpen && !panel.tpDistractionFree && panel.tabs.length > 1 ? 8 : 0
             visible: height > 0
             spacing: 6
-            opacity: panel.reveal > 0.4 ? 1 : 0
-            Behavior on opacity { enabled: panel.anim; NumberAnimation { duration: 140 } }
+            opacity: panel.pageVisibility
+            enabled: panel.isOpen && panel.pageVisibility > 0.5
 
             Repeater {
                 model: panel.tabs
