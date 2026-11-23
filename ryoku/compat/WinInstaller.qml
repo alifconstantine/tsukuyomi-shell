@@ -220,12 +220,13 @@ ShellRoot {
         stdout: StdioCollector { id: installOut }
         stderr: StdioCollector {}
         onExited: code => {
-            if (root.cancelling) {
-                Qt.quit();
-                return;
-            }
             try {
                 const res = JSON.parse(installOut.text);
+                if (res.cancelled) {
+                    Qt.quit();
+                    return;
+                }
+                root.cancelling = false;
                 if (!res.ok || code !== 0) {
                     root.errorText = String(res.error || I18n.tr("Windows setup did not finish."));
                     root.step = "error";
@@ -257,6 +258,10 @@ ShellRoot {
                     root.step = "done";
                 }
             } catch (e) {
+                if (root.cancelling) {
+                    Qt.quit();
+                    return;
+                }
                 root.errorText = I18n.tr("Could not run Windows setup. Choose the file again or try changing its setup options.");
                 root.step = "error";
             }
@@ -558,7 +563,7 @@ ShellRoot {
                         Text {
                             width: parent.width - Tokens.s5 * 2
                             visible: root.step === "running" && !root.cancelling
-                            text: I18n.tr("Follow the Windows setup window. Close any app it opens automatically to finish adding shortcuts.")
+                            text: I18n.tr("Follow the Windows setup window. Shortcuts are added when setup finishes.")
                             color: Tsukuyomi.Style.secondary
                             font.family: Tokens.ui
                             font.pixelSize: 12
