@@ -24,6 +24,9 @@ Item {
     readonly property var droidConfig: droidStatus.config || ({})
     readonly property var androidModes: ["phone", "landscape", "game-gamescope"]
     readonly property var androidModeLabels: [I18n.tr("Phone"), I18n.tr("Landscape"), I18n.tr("Game")]
+    readonly property var phoneSizes: ["auto", "compact", "standard", "wide"]
+    readonly property var phoneSizeLabels: [I18n.tr("Auto"), I18n.tr("Compact"), I18n.tr("Standard"), I18n.tr("Wide")]
+    readonly property int phoneSizeIndex: Math.max(0, phoneSizes.indexOf(droidConfig.phoneSize || "auto"))
     property string androidWindowSettingsFor: ""
     property var droidApps: []
     property string statusNotice: ""
@@ -404,7 +407,7 @@ Item {
 
                 SettingCard {
                     width: parent.width
-                    title: I18n.tr("Viewport Size, Downloads & Game Mode")
+                    title: I18n.tr("Phone Window Size")
                     collapsible: false
 
                     Column {
@@ -414,19 +417,41 @@ Item {
                         bottomPadding: Tokens.s4
                         spacing: Tokens.s3
 
-                        Flow {
+                        Tsukuyomi.Tabs {
                             width: parent.width
-                            spacing: Tokens.s2
-                            Repeater {
-                                model: ["compact", "phone", "tablet", "landscape", "reset"]
-                                delegate: Btn {
-                                    id: presetBtn
-                                    required property string modelData
-                                    text: I18n.tr("Resize: ") + presetBtn.modelData.charAt(0).toUpperCase() + presetBtn.modelData.slice(1)
-                                    onAct: Quickshell.execDetached(["tsukuyomi-droid", "resize", presetBtn.modelData])
-                                }
+                            enabled: !page.busy
+                            options: page.phoneSizeLabels
+                            current: page.phoneSizeLabels[page.phoneSizeIndex]
+                            onChose: label => {
+                                const index = page.phoneSizeLabels.indexOf(label);
+                                if (index >= 0 && index !== page.phoneSizeIndex)
+                                    page.runAction(["tsukuyomi-droid", "set-config", "--phone-size", page.phoneSizes[index]],
+                                        I18n.tr("Phone window size saved. Reopen an Android app to apply it."));
                             }
                         }
+
+                        Text {
+                            width: parent.width
+                            color: Tsukuyomi.Style.muted
+                            font.family: Tokens.ui
+                            font.pixelSize: Tokens.fSmall
+                            wrapMode: Text.WordWrap
+                            text: I18n.tr("Auto uses multiple windows when supported and Standard on software graphics. A fixed size shows one Android app at a time. Changing size may restart Android.")
+                        }
+                    }
+                }
+
+                SettingCard {
+                    width: parent.width
+                    title: I18n.tr("Downloads & Game Mode")
+                    collapsible: false
+
+                    Column {
+                        x: Tokens.s4
+                        width: parent.width - 2 * x
+                        topPadding: Tokens.s3
+                        bottomPadding: Tokens.s4
+                        spacing: Tokens.s3
 
                         Flow {
                             width: parent.width
