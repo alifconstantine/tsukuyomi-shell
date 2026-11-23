@@ -59,7 +59,7 @@ jq --arg browser "${browser%.desktop}" \
 printf '{"clockEnabled":true,"clockDesign":"digital","clock24h":true,"dateShow":true,"calendarEnabled":false}\n' > "$draft/.config/ryoku/widgets.json"
 jq -n --arg browser "$browser" '
     {desktop:{apps:{files:"dolphin", browser:(
-        if $browser == "" then "xdg-open about:blank"
+        if $browser == "" then "gtk-launch \"$(xdg-settings get default-web-browser)\""
         else "gtk-launch " + $browser end
     )}}}' > "$draft/.config/ryoku/desktop.json"
 printf '{"enabled":false}\n' > "$draft/.config/ryoku/visualizer.json"
