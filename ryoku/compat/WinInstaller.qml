@@ -29,15 +29,17 @@ ShellRoot {
     property bool useWayland: false
     property bool useDxvk: true
     property bool pinPortable: false
+    property bool shareInstallerFolder: false
     property string errorText: ""
     property string activeSlug: ""
     property bool cancelling: false
 
     readonly property var availableModes: {
         const list = [
-            { id: "isolated", title: I18n.tr("Install Windows App"), desc: I18n.tr("Set up the app in its own environment and add it to App Launcher.") },
-            { id: "portable", title: I18n.tr("Run Without Installing"), desc: I18n.tr("Open a portable app directly.") }
+            { id: "isolated", title: I18n.tr("Install Windows App"), desc: I18n.tr("Set up the app in its own environment and add it to App Launcher.") }
         ];
+        if (root.inspectData.kind !== "msi")
+            list.push({ id: "portable", title: I18n.tr("Run Without Installing"), desc: I18n.tr("Open a portable app directly.") });
         if (root.prefixes.length > 0) {
             list.push({ id: "existing", title: I18n.tr("Update or Use Existing Environment"), desc: I18n.tr("Run setup in an environment you already created.") });
         }
@@ -93,6 +95,7 @@ ShellRoot {
         if (!filePath || filePath === "")
             return;
         root.targetFile = filePath;
+        root.shareInstallerFolder = false;
         root.step = "inspecting";
         root.inspectData = {};
         root.appName = "";
@@ -120,6 +123,8 @@ ShellRoot {
         ];
         if (root.installMode === "portable" && root.pinPortable)
             cmd.push("--pin-portable");
+        if (root.useSandbox && root.shareInstallerFolder)
+            cmd.push("--share-installer-folder");
         installProc.command = cmd;
         installProc.running = true;
     }
@@ -178,6 +183,8 @@ ShellRoot {
                 if (obj.arch === "arm64")
                     throw new Error(I18n.tr("This file is for ARM64. Choose the Windows x64 or x86 download."));
                 root.inspectData = obj;
+                if (obj.kind === "msi" && root.installMode === "portable")
+                    root.installMode = "isolated";
                 root.appName = String(obj.product_name || "");
                 root.step = "configure";
             } catch (e) {
@@ -484,7 +491,7 @@ ShellRoot {
                                     spacing: 8
                                     TogglePill {
                                         checked: root.useSandbox
-                                        label: I18n.tr("Safe Sandbox (bwrap)")
+                                        label: I18n.tr("Bubblewrap Isolation")
                                         onToggled: next => root.useSandbox = next
                                     }
                                     TogglePill {
@@ -508,6 +515,21 @@ ShellRoot {
                                         label: I18n.tr("Pin to App Launcher")
                                         onToggled: next => root.pinPortable = next
                                     }
+                                    TogglePill {
+                                        visible: root.useSandbox && !(root.installMode === "portable" && root.pinPortable)
+                                        checked: root.shareInstallerFolder
+                                        label: I18n.tr("Share Installer Folder (Read Only)")
+                                        onToggled: next => root.shareInstallerFolder = next
+                                    }
+                                }
+                                Text {
+                                    width: parent.width - Tokens.s3 * 2
+                                    visible: root.runner === "umu" && root.useSandbox
+                                    text: I18n.tr("Select Wine Staging to use Bubblewrap isolation.")
+                                    color: Tsukuyomi.Style.secondary
+                                    font.family: Tokens.ui
+                                    font.pixelSize: 12
+                                    wrapMode: Text.WordWrap
                                 }
                             }
                         }
@@ -536,7 +558,7 @@ ShellRoot {
                         Text {
                             width: parent.width - Tokens.s5 * 2
                             visible: root.step === "running" && !root.cancelling
-                            text: I18n.tr("Tsukuyomi prepares an environment for the app. Follow the app’s setup window when it opens.")
+                            text: I18n.tr("Follow the Windows setup window. Close any app it opens automatically to finish adding shortcuts.")
                             color: Tsukuyomi.Style.secondary
                             font.family: Tokens.ui
                             font.pixelSize: 12
