@@ -33,7 +33,8 @@ Item {
         readonly property var root: notchHost.root
         screen: panel.root ? panel.root.activePopupScreen : null
 
-        readonly property bool anim: !Perf.reduceMotion
+        // This transition only animates geometry and opacity on software renderers.
+        readonly property bool anim: !Perf.userReduceMotion
         readonly property bool isOpen: panel.root ? panel.root.dashboardVisible : false
 
         color: "transparent"
