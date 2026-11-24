@@ -1,21 +1,27 @@
-# Tsukuyomi desktop
+# Tsukuyomi Desktop Design Specification
 
-Gunakan pola interaksi Ryoku sebagai rujukan, terutama untuk kepadatan QS Bar, ringkasan perangkat di Controls, dan transisi dock. Bangun panel sesuai layanan end-4 serta konfigurasi Tsukuyomi. Logo Arch tetap menjadi simbol default.
+Tsukuyomi Desktop builds on pinned upstream **Ryoku (`08ff328`)** with a neutral monochrome desktop identity, shared UI grammar across Hub/Store/Notch/Monitor, and automatic degradation for software-rendered sessions.
 
-## Bar
+## Palette & Material
 
-Bar horizontal memakai tiga pill setinggi 28 px dalam area 38 px. Bentuk hover dan fokus mengikuti radius kontrol di dalam pill. Workspace ditunjukkan dengan angka dan satu indikator yang bergeser mengikuti workspace aktif. Pill tengah memuat jam dengan angka berlebar tetap dan tanggal singkat. Pill kanan membawa indikator yang dipilih pengguna dengan overflow saat ruang terbatas.
+- **Neutral Default Surfaces:** Dark mode uses `#161616` primary surface, `#1C1C1C` navigation rail, `#222222` elevated cards, and silver keyboard focus. Light mode follows the Ryoku light neutral tokens.
+- **Independent Accent Source:** Accent color can follow preset palettes, custom HEX, or wallpaper extraction independently of Dark/Light mode.
+- **Frosted & Software Fallback:** Menus, dock, and Dynamic Notch use rounded Frosted cards with compositor blur (`ignore_alpha`) on hardware GPUs. When `TSUKUYOMI_SOFTWARE_RENDERER=1` or Low Power / Reduce Motion is active, surfaces switch to crisp solid colors with shadows, blur passes, and heavy geometry animations disabled.
 
-## Kontrol Sistem
+## Bar & Dynamic Notch
 
-Letakkan ringkasan perangkat di bagian atas agar CPU, RAM, dan kondisi baterai terbaca sekilas. Gunakan angka besar untuk CPU, strip penggunaan inti, dua garis historis untuk CPU dan RAM, dan meter ringkas untuk RAM, swap, serta baterai ketika datanya tersedia. Wi-Fi, Bluetooth, volume, kecerahan, dan profil daya mengikuti di bawah. Aksi sesi berada di bagian akhir, dengan konfirmasi untuk keluar, mulai ulang, atau mematikan perangkat.
+- **QS Bar (`Islands`):** Locked to the three-pill `Islands` form with Arch logo for System Controls, live workspaces, right-side status/RAM readout, and centered **Dynamic Notch** pill.
+- **Dynamic Notch:** Morphs directly out of the center pill on the active monitor and mounts only one active module at a time via `Loader.setSource`. Includes 13 tabs (`Home`, `Music`, `Calendar`, `To-Do`, `Timer`, `Notifications`, `Clipboard`, `Files`, `Translate`, `Teleprompter`, `Weather`, `Health`, `System`) plus a lazy-loaded Hub-styled `NotchSettingsWindow`.
 
-Gunakan sumber data yang sudah dipakai shell untuk angka dan grafik. GPU, suhu, jaringan, dan disk bisa ditambahkan setelah deteksi ketersediaan dan polling-nya diverifikasi.
+## Dock, Launcher & Wallpapers
 
-## Dock
+- **Dock:** Shared capsule dock with launcher, Dolphin, installer-selected browser, and Kitty. Visibility and auto-hide are controlled in **Hub → Appearance → Dock**; design, position, and pins are edited in Stage Editor.
+- **App Launcher (`Super+Space`):** Main search launcher with `/win` and `/apk` runtime filters and `WIN` / `APK` badges.
+- **Wallpapers (`Super+W`):** Patched `ryogami` picker bundled with `Cloud Valley` default, live preview, shader transitions (instant/lightweight on software renderer), and `Enter` confirmation.
 
-Jaga bentuk satu kapsul kaca dengan ikon aplikasi asli. Pin bawaan terdiri dari Daftar Aplikasi, Dolphin, browser yang dipilih saat instalasi, dan Kitty. Ikon aplikasi terangkat sedikit saat hover, sementara titik di bawahnya tetap menandai jendela yang sedang berjalan. Daftar Aplikasi terbuka dari dock dan memakai pencarian aplikasi shell.
+## Hub, Store, Monitor & Compatibility
 
-## Material
-
-Dark dan Light menggunakan permukaan netral. Simpan pilihan material terpisah dari aksen. Gunakan kaca dengan sorotan tepi halus untuk Kontrol Sistem, menu jam, dan dock, serta permukaan solid untuk bar dan area yang padat teks. Gunakan warna latar netral saat transparansi dimatikan. Uji teks di atas wallpaper terang dan gelap.
+- **Tsukuyomi Hub:** Starts at `General`, keeps a consistent bottom `ActionBar`, and unifies desktop, appearance, lockscreen (`Clockwork Orbital`), add-ons, subshells, and `Compatibility` management.
+- **Tsukuyomi Store:** Matches Hub window geometry, integrates Flatpak/Flathub setup and `Compat Add-ons`, and ships bundled package helpers for Store bundles.
+- **Tsukuyomi Monitor:** Patched `ryomanager` (`Processes`, `Performance`, `System`) floating/centered in Hyprland with Wayland/NVIDIA/llvmpipe WebKitGTK hardening.
+- **WinBridge & DroidBridge UI:** Floating `WinInstaller` & `DroidInstaller` dialogs, `CompatPage` runtime management (Windows `Force Stop`, UMU/bwrap guard, Android Phone viewport presets), and Dynamic Notch Files Shelf contextual `Install App` pill.
