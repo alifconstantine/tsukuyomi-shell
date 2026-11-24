@@ -183,8 +183,8 @@ Item {
                             color: Tsukuyomi.Style.secondary
                             font.family: Tokens.ui
                             font.pixelSize: Tokens.fSmall
-                            text: page.winStatus.wineAvailable
-                                ? I18n.tr("Bundled Windows runtime ready") : I18n.tr("Windows runtime unavailable")
+                            text: (page.winStatus.wineAvailable
+                                ? I18n.tr("Bundled Windows runtime ready") : I18n.tr("Windows runtime unavailable"))
                                 + "  ·  NTSync: " + (page.winStatus.ntsyncAvailable ? I18n.tr("Active") : I18n.tr("Unavailable"))
                                 + "  ·  Sandbox: " + (page.winStatus.bwrapAvailable ? I18n.tr("Bubblewrap Ready") : I18n.tr("Missing"))
                                 + "  ·  DXVK: " + (page.winStatus.dxvkAvailable ? I18n.tr("Ready") : I18n.tr("Missing"))
@@ -230,7 +230,14 @@ Item {
                                 readonly property string nextRunner: (page.winConfig.defaultRunner || "wine") === "wine" ? "umu" : "wine"
                                 text: I18n.tr("Runner: ") + String(page.winConfig.defaultRunner || "wine").toUpperCase()
                                 enabled: !page.busy
-                                onAct: page.runAction(["tsukuyomi-win", "set-defaults", "--runner", nextRunner], I18n.tr("Updated default runner."))
+                                onAct: {
+                                    const cmd = ["tsukuyomi-win", "set-defaults", "--runner", nextRunner];
+                                    if (nextRunner === "umu")
+                                        cmd.push("--sandbox", "false");
+                                    page.runAction(cmd, nextRunner === "umu"
+                                        ? I18n.tr("Switched default runner to UMU Proton (Bubblewrap disabled).")
+                                        : I18n.tr("Updated default runner."));
+                                }
                             }
                             Btn {
                                 readonly property bool curSandbox: page.winConfig.defaultSandbox !== false

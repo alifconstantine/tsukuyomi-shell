@@ -1,0 +1,208 @@
+--- a/hub/pages/IconThemeSettings.qml
++++ b/hub/pages/IconThemeSettings.qml
+@@ -52,7 +52,7 @@
+                         if (code === "")
+                             continue;
+                         codes.push(code);
+-                        names[code] = String(rows[i].name || code);
++                        names[code] = code === "ryoku-folders" ? I18n.tr("Tsukuyomi Folders") : String(rows[i].name || code);
+                     }
+                     root.options = codes;
+                     root.labels = names;
+--- a/hub/pages/AddonsPage.qml
++++ b/hub/pages/AddonsPage.qml
+@@ -244,7 +244,7 @@
+         Spawn.runApp(["ryostore", "open", "bundles"], { label: "ryostore" });
+     }
+     function browseOmarchyMarket() {
+-        Spawn.runApp(["ryostore", "open", "omarchy-plugins"], { label: "ryostore" });
++        Spawn.runApp(["ryostore", "open", "plugins"], { label: "ryostore" });
+     }
+     function requestPluginRemove(id, name) {
+         pg.confirmKind = "plugin";
+@@ -2134,7 +2134,7 @@
+                     width: parent.width
+                     text: pg.confirmKind === "omarchy"
+                         ? I18n.tr("This removes the add-on from the Omarchy bar. You can install it again from the market.")
+-                        : I18n.tr("This deletes the add-on and its settings from your desktop. You can reinstall it from RyoStore.")
++                        : I18n.tr("This deletes the add-on and its settings from your desktop. You can reinstall it from Tsukuyomi Store.")
+                     color: Tokens.inkOnBoneDim; font.family: Tokens.ui
+                     font.pixelSize: Tokens.fSmall; wrapMode: Text.WordWrap
+                 }
+--- a/hub/pages/ImportPage.qml
++++ b/hub/pages/ImportPage.qml
+@@ -140,7 +140,7 @@
+     // Ryoku default, nothing highlighted).
+     function segCurrent(norm) {
+         var d = pg.conflictDecision[norm];
+-        if (d === "ryoku") return "Keep Ryoku's";
++        if (d === "ryoku") return "Keep Tsukuyomi's";
+         if (d === "mine") return "Use mine";
+         if (d && d.remap) return "Remap";
+         return "";
+@@ -154,7 +154,7 @@
+         pg.conflictDecision = m;
+     }
+     function chooseSegment(norm, label) {
+-        if (label === "Keep Ryoku's") pg.setDecision(norm, "ryoku");
++        if (label === "Keep Tsukuyomi's") pg.setDecision(norm, "ryoku");
+         else if (label === "Use mine") pg.setDecision(norm, "mine");
+         else if (label === "Remap") pg.startRemap(norm);
+     }
+@@ -956,7 +956,7 @@
+                                     id: seg
+                                     anchors.right: parent.right
+                                     anchors.verticalCenter: parent.verticalCenter
+-                                    options: ["Keep Ryoku's", "Use mine", "Remap"]
++                                    options: ["Keep Tsukuyomi's", "Use mine", "Remap"]
+                                     current: pg.segCurrent(confRow.modelData.norm)
+                                     onChose: (label) => pg.chooseSegment(confRow.modelData.norm, label)
+                                 }
+--- a/hub/pages/StoreDesignGallery.qml
++++ b/hub/pages/StoreDesignGallery.qml
+@@ -193,7 +193,7 @@
+                             return designCard.modelData.downloadPauseReason.length > 0
+                                 ? I18n.tr("Under construction") + " · " + I18n.tr(designCard.modelData.downloadPauseReason)
+                                 : I18n.tr("Under construction");
+-                        return I18n.tr("Available · install from RyoStore");
++                        return I18n.tr("Available · install from Tsukuyomi Store");
+                     }
+ 
+                     width: Math.floor((cardFlow.width - (cardFlow.perRow - 1) * Tokens.s2) / cardFlow.perRow)
+--- a/hub/pages/UpdateRun.qml
++++ b/hub/pages/UpdateRun.qml
+@@ -72,7 +72,7 @@
+             }
+             Text {
+                 anchors.verticalCenter: parent.verticalCenter
+-                text: view.run.phase === "done" ? I18n.tr("Ryoku is up to date")
++                text: view.run.phase === "done" ? I18n.tr("System is up to date")
+                     : view.stopped ? I18n.tr("Update stopped")
+                     : view.run.phase === "error" ? (view.run.label !== "" ? I18n.tr("Update failed while %1").arg(view.run.label.toLowerCase()) : I18n.tr("Update failed"))
+                     : view.run.starting && view.run.phase === "idle" ? I18n.tr("Starting the update\u2026")
+--- a/hub/schema/AddonsPage.js
++++ b/hub/schema/AddonsPage.js
+@@ -80,7 +80,7 @@
+         "tab": "",
+         "group": "OTHER",
+         "key": "",
+-        "label": "Browse RyoStore",
++        "label": "Browse Tsukuyomi Store",
+         "desc": "Opens the matching plugin or bundle catalogue",
+         "ctl": "action",
+         "src": "ryostore open plugins|bundles"
+--- a/hub/schema/LauncherPage.js
++++ b/hub/schema/LauncherPage.js
+@@ -10,7 +10,7 @@
+         "group": "LAUNCHER",
+         "key": "variant",
+         "label": "Style",
+-        "desc": "Picks the launcher Super+Space opens, shipped or from RyoStore",
++        "desc": "Picks the launcher Super+Space opens, shipped or from Tsukuyomi Store",
+         "ctl": "seg",
+         "src": "launcher.json"
+     },
+--- a/hub/schema/LockscreenPage.js
++++ b/hub/schema/LockscreenPage.js
+@@ -42,8 +42,8 @@
+         "tab": "",
+         "group": "OTHER",
+         "key": "",
+-        "label": "Browse RyoStore",
+-        "desc": "Opens the RyoStore lockscreen catalogue",
++        "label": "Browse Tsukuyomi Store",
++        "desc": "Opens the Tsukuyomi Store lockscreen catalogue",
+         "ctl": "action",
+         "src": "ryostore open lockscreens"
+     }
+--- a/stage/modules/ii/editMode/EditDockAppearancePage.qml
++++ b/stage/modules/ii/editMode/EditDockAppearancePage.qml
+@@ -157,7 +157,7 @@
+ 
+         EditPanelSectionLabel {
+             visible: root.design === "ryoku"
+-            text: Translation.tr("Ryoku design")
++            text: Translation.tr("Tsukuyomi design")
+         }
+ 
+         EditOptionChips {
+--- a/stage/modules/ii/editMode/EditDockDesignPicker.qml
++++ b/stage/modules/ii/editMode/EditDockDesignPicker.qml
+@@ -250,7 +250,7 @@
+     EditPanelRow {
+         Layout.fillWidth: true
+         symbol: "storefront"
+-        title: Translation.tr("Browse RyoStore")
++        title: Translation.tr("Browse Tsukuyomi Store")
+         subtitle: Translation.tr("Docks made by the community")
+         onActivated: root.browseStore()
+     }
+--- a/stage/modules/settings/configs/widgets/DesktopWeatherBehaviorOptions.qml
++++ b/stage/modules/settings/configs/widgets/DesktopWeatherBehaviorOptions.qml
+@@ -134,6 +134,6 @@
+     }
+ 
+     ContentSubsectionLabel {
+-        text: Translation.tr("Location and units follow Ryoku Weather settings.")
++        text: Translation.tr("Location and units follow Desktop Weather settings.")
+     }
+ }
+--- a/shell/modules/bar/barstyles/qsbar/controlcenter/kit/CcWidgetList.qml
++++ b/shell/modules/bar/barstyles/qsbar/controlcenter/kit/CcWidgetList.qml
+@@ -429,7 +429,7 @@
+                                 onAct: list.exportRequested(wr.wid)
+                             }
+                             Btn {
+-                                text: I18n.tr("SHARE TO RYOSTORE")
++                                text: I18n.tr("SHARE TO TSUKUYOMI STORE")
+                                 onAct: list.shareRequested(wr.wid)
+                             }
+                             Btn {
+--- a/shell/modules/bar/barstyles/qsbar/modules/UpdateWidget.qml
++++ b/shell/modules/bar/barstyles/qsbar/modules/UpdateWidget.qml
+@@ -25,10 +25,10 @@
+     implicitHeight: 28
+ 
+     readonly property string tooltipText: {
+-        if (!updateAvailable) return I18n.tr("Ryoku is up to date")
++        if (!updateAvailable) return I18n.tr("System is up to date")
+         var lines = []
+         if (pending > 0) {
+-            var head = I18n.tr("Ryoku update") + " · " + (pending === 1
++            var head = I18n.tr("Tsukuyomi update") + " · " + (pending === 1
+                 ? I18n.tr("%1 commit").arg(pending) : I18n.tr("%1 commits").arg(pending))
+             if (Updates.channel !== "") head += " · " + Updates.channel
+             lines.push(head)
+--- a/shell/modules/bar/barstyles/qsbar/modules/ParticleStream.qml
++++ b/shell/modules/bar/barstyles/qsbar/modules/ParticleStream.qml
+@@ -974,7 +974,7 @@
+ 
+     // Ryoku pushed an update (UpdateWidget's 6h poll flipped to available)
+     readonly property bool upd7: theme.omarchyUpdateAvail === true
+-    onUpd7Changed: if (armed7 && upd7) pushText("UPDATE READY", "RYOKU", 1, "long")
++    onUpd7Changed: if (armed7 && upd7) pushText("UPDATE READY", "TSUKUYOMI", 1, "long")
+ 
+     // do-not-disturb toggled
+     readonly property bool dnd7: theme.notifSilenced === true
+--- a/shell/modules/bar/popouts/CapturePopout.qml
++++ b/shell/modules/bar/popouts/CapturePopout.qml
+@@ -806,7 +806,7 @@
+         // hint: the companion beautify/annotate app.
+         Text {
+             width: parent.width
+-            text: I18n.tr("Super+Shift+S opens Ryoshot to beautify & annotate.")
++            text: I18n.tr("Super+Shift+S opens the screenshot editor to beautify & annotate.")
+             color: root.inkDim
+             font.family: Theme.fontPrimary
+             font.pixelSize: (root.roomy ? 10 : 9) * root.s
+--- a/shell/services/Config.qml
++++ b/shell/services/Config.qml
+@@ -564,7 +564,7 @@
+             property string markText: "力"
+             property string markImage: ""
+             property bool markTint: true
+-            property string name: "Ryoku"
++            property string name: "Tsukuyomi"
+         }
+     }
+ 

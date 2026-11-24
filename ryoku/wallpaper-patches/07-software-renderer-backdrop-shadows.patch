@@ -1,0 +1,88 @@
+--- a/SceneBackdrop.qml
++++ b/SceneBackdrop.qml
+@@ -1,5 +1,6 @@
+ import QtQuick
+ import QtQuick.Effects
++import Quickshell
+ 
+ // The picker draws this blur itself so a sheet's backdrop looks the same on every compositor.
+ Item {
+@@ -10,7 +11,8 @@
+     readonly property bool wanted: root.state.sheet !== "" && !root.state.sceneThrough
+     property real reveal: root.wanted ? 1 : 0
+     Behavior on reveal { NumberAnimation { duration: Theme.standard; easing.type: Theme.revealEasing } }
+-    visible: root.reveal > 0.001 && img.status === Image.Ready
++    readonly property bool softwareRenderer: Quickshell.env("TSUKUYOMI_SOFTWARE_RENDERER") === "1"
++    visible: root.reveal > 0.001 && (root.softwareRenderer || img.status === Image.Ready)
+     opacity: root.reveal
+ 
+     readonly property string key: {
+@@ -31,8 +33,15 @@
+         return e && e.thumb ? Library.fileUrl(e.thumb) : ""
+     }
+ 
++    Rectangle {
++        anchors.fill: parent
++        visible: root.softwareRenderer
++        color: Theme.withAlpha(Theme.bg, 0.88)
++    }
++
+     // Blurred small and scaled up: the blur hides the upscale and costs a fraction of a fullscreen pass.
+     Item {
++        visible: !root.softwareRenderer
+         width: 480
+         height: root.width > 0 ? Math.round(480 * root.height / root.width) : 270
+         scale: root.width / 480
+@@ -41,7 +50,7 @@
+         Image {
+             id: img
+             anchors.fill: parent
+-            source: root.wanted || root.reveal > 0 ? root.thumb : ""
++            source: !root.softwareRenderer && (root.wanted || root.reveal > 0) ? root.thumb : ""
+             sourceSize: Qt.size(640, 360)
+             fillMode: Image.PreserveAspectCrop
+             asynchronous: true
+@@ -51,7 +60,8 @@
+             anchors.fill: parent
+             source: img
+             autoPaddingEnabled: false
+-            blurEnabled: true
++            visible: !root.softwareRenderer
++            blurEnabled: !root.softwareRenderer
+             blur: 1.0
+             blurMax: 32
+             saturation: -0.1
+--- a/FolioSheet.qml
++++ b/FolioSheet.qml
+@@ -1,5 +1,6 @@
+ import QtQuick
+ import QtQuick.Effects
++import Quickshell
+ 
+ // Callers parent content into mastheadArea, indexArea and readingArea.
+ Item {
+@@ -35,6 +36,7 @@
+ 
+     RectangularShadow {
+         anchors.fill: panel
++        visible: Quickshell.env("TSUKUYOMI_SOFTWARE_RENDERER") !== "1"
+         offset.y: 16 * Theme.scale
+         blur: 28 * Theme.scale
+         color: Qt.rgba(0, 0, 0, 0.42)
+--- a/BrowserPanel.qml
++++ b/BrowserPanel.qml
+@@ -1,5 +1,6 @@
+ import QtQuick
+ import QtQuick.Effects
++import Quickshell
+ import Ryoku.Ui.Singletons
+ 
+ Item {
+@@ -431,6 +432,7 @@
+ 
+         RectangularShadow {
+             anchors.fill: sheet
++            visible: Quickshell.env("TSUKUYOMI_SOFTWARE_RENDERER") !== "1"
+             offset.y: 16 * panel._s
+             blur: 28 * panel._s
+             color: Qt.rgba(0, 0, 0, 0.42)

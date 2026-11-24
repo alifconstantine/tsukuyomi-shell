@@ -11,7 +11,7 @@ diff -ruN qs-a/welcome/PageDone.qml qs-b/welcome/PageDone.qml
 +                    onAct: root.runCommand(["ryostore", "open", "discover"])
 +                }
 +                Btn {
-+                    text: I18n.tr("System Manager")
++                    text: I18n.tr("Tsukuyomi Monitor")
 +                    onAct: root.runCommand(["ryomanager"])
                  }
                  Btn {

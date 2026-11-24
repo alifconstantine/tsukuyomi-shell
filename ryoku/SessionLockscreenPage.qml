@@ -132,6 +132,8 @@ Item {
 
                                 readonly property bool nearViewport: {
                                     const view = settings.viewport;
+                                    if (!view || !view.contentItem)
+                                        return true;
                                     const scrollY = view.contentY;
                                     const top = mapToItem(view.contentItem, 0, 0).y - scrollY;
                                     return top + height > -height && top < view.height + height;
@@ -157,6 +159,10 @@ Item {
                                     Image {
                                         source: card.modelData.preview
                                         fillMode: Image.PreserveAspectFit
+                                        sourceSize: Qt.size(
+                                            Math.max(1, Math.round(preview.width * Screen.devicePixelRatio)),
+                                            Math.max(1, Math.round(preview.height * Screen.devicePixelRatio))
+                                        )
                                         asynchronous: true
                                     }
                                 }

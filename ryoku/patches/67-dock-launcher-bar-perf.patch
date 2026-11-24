@@ -1,0 +1,36 @@
+--- a/shell/services/Dock.qml
++++ b/shell/services/Dock.qml
+@@ -71,7 +71,7 @@
+     // more than one identity. Persist desktop-entry ids, then resolve window
+     // classes through the desktop database so every dock design groups the same
+     // application and aliases do not create duplicate pins.
+-    readonly property var quickshellApps: ({ "Ryoku Settings": "ryoku-hub", "Ryostore": "ryostore", "ryovm": "ryovm" })
++    readonly property var quickshellApps: ({ "Tsukuyomi Hub": "ryoku-hub", "Ryoku Settings": "ryoku-hub", "Tsukuyomi Store": "tsukuyomi-store", "Ryostore": "tsukuyomi-store", "ryovm": "ryovm" })
+     function plainId(value) {
+         return String(value ?? "").trim().replace(/\.desktop$/i, "");
+     }
+--- a/shell/modules/launcher/variants/main/Launcher.qml
++++ b/shell/modules/launcher/variants/main/Launcher.qml
+@@ -122,8 +122,10 @@
+             return;
+         }
+         root.results = Dispatcher.results(root.query, Metrics.maxResults);
+-        root.appEntries = Dispatcher.resultsFor("apps", "", "", 0);
+-        root.totalCount = root.appEntries.length;
++        if (root.resting || root.appEntries.length === 0) {
++            root.appEntries = Dispatcher.resultsFor("apps", "", "", 0);
++            root.totalCount = root.appEntries.length;
++        }
+     }
+ 
+     // Machine-readable snapshot consumed by the stable selector.
+--- a/shell/modules/bar/barstyles/qsbar/BarSlot.qml
++++ b/shell/modules/bar/barstyles/qsbar/BarSlot.qml
+@@ -2024,6 +2024,7 @@
+                 z: 0
+                 RectangularShadow {
+                     anchors.fill: parent
++                    visible: !Perf.shadowsDisabled && !Perf.softwareRenderer && barSlot.root.barShadowEnabled
+                     radius: parent.radius
+                     blur: barSlot.root.barShellShadowBlur
+                     spread: 0
