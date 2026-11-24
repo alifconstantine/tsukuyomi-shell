@@ -5,5 +5,6 @@ set -euo pipefail
 picker=${1:?STAGED_PICKER_DIR is required}
 here=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 for change in "$here"/wallpaper-patches/*.patch; do
-    patch --batch --forward --fuzz=0 -d "$picker" -p1 < "$change"
+    patch --batch --forward --fuzz=0 --no-backup-if-mismatch -d "$picker" -p1 < "$change"
 done
+find "$picker" -name '*.orig' -delete

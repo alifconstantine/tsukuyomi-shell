@@ -78,11 +78,12 @@ done
 
 shopt -s nullglob
 for change in "$here"/patches/*.patch; do
-    patch --batch --forward --fuzz=0 -d "$draft/.config/quickshell" -p1 < "$change"
+    patch --batch --forward --fuzz=0 --no-backup-if-mismatch -d "$draft/.config/quickshell" -p1 < "$change"
 done
 for change in "$here"/hypr-patches/*.patch; do
-    patch --batch --forward --fuzz=0 -d "$draft/.config/hypr" -p1 < "$change"
+    patch --batch --forward --fuzz=0 --no-backup-if-mismatch -d "$draft/.config/hypr" -p1 < "$change"
 done
+find "$draft" -name '*.orig' -delete
 
 widget_catalog="$draft/.config/quickshell/shell/modules/bar/barstyles/qsbar/core"
 {

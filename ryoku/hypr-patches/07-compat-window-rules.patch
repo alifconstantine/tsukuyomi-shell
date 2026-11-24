@@ -15,13 +15,21 @@ diff -ruN hypr/modules/window_rules.lua hypr_new/modules/window_rules.lua
  hl.window_rule({
      name           = "suppress-maximize",
 -    match          = { class = ".*" },
-+    match          = { class = "negative:(?i)^(.*\\.exe|wine)$" },
++    match          = { class = "negative:(?i)^(.*\\.exe|wine|steam_app_.*|umu-.*)$" },
      suppress_event = "maximize",
  })
-@@ -304,3 +304,37 @@
+@@ -304,3 +304,47 @@
      workspace = "special:sharebar silent",
      no_focus  = true,
  })
++
++hl.window_rule({
++    name   = "float-tsukuyomi-monitor",
++    match  = { class = "^ryomanager$" },
++    float  = true,
++    size   = fit(1280, 800),
++    center = true,
++})
 +
 +hl.window_rule({
 +    name   = "float-tsukuyomi-compat-installer",
@@ -32,19 +40,21 @@ diff -ruN hypr/modules/window_rules.lua hypr_new/modules/window_rules.lua
 +})
 +
 +hl.window_rule({
-+    name    = "float-waydroid-apps",
-+    match   = { class = "^(waydroid\\..*|Waydroid)$" },
-+    float   = true,
-+    center  = true,
-+    no_blur = true,
-+    opaque  = true,
++    name      = "float-waydroid-apps",
++    match     = { class = "(?i)^(waydroid\\..*|waydroid)$" },
++    float     = true,
++    center    = true,
++    no_blur   = true,
++    no_shadow = true,
++    opaque    = true,
 +})
 +
 +hl.window_rule({
-+    name    = "compat-wine-apps",
-+    match   = { class = "(?i)^(.*\\.exe|wine)$" },
-+    no_blur = true,
-+    opaque  = true,
++    name      = "compat-wine-apps",
++    match     = { class = "(?i)^(.*\\.exe|wine|steam_app_.*|umu-.*)$" },
++    no_blur   = true,
++    no_shadow = true,
++    opaque    = true,
 +})
 +
 +hl.window_rule({

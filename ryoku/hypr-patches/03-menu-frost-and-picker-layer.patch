@@ -1,6 +1,17 @@
 --- a/modules/decoration.lua
 +++ b/modules/decoration.lua
-@@ -173,20 +173,19 @@
+@@ -68,8 +68,8 @@
+     screen_shader    = screen_shader,
+     shadow           = {
+       enabled      = not no_shadow,
+-      range        = 45,
+-      render_power = 4,
++      range        = 20,
++      render_power = 3,
+       color        = 0xd10a0807,
+     },
+     blur             = {
+@@ -173,20 +173,27 @@
    ignore_alpha = 0.05,
  })
  
@@ -8,6 +19,14 @@
 --- a full-screen layer: blur only the card (ignore_alpha keeps the frost off the
 --- clear surround), so it reads as frosted glass floating over the desktop with
 --- no full-screen dim. QML owns the open/close morph, so suppress the layer anim.
++-- Dock and frame edge frost (honors performance.json no_blur).
++hl.layer_rule({
++  name         = "tsukuyomi-frost",
++  match        = { namespace = "^ryoku-(frame-edge|dock)$" },
++  blur         = not no_blur,
++  ignore_alpha = 0.05,
++})
++
 +-- Menus reserve transparent space for dismissal. Frost only the visible card.
 +hl.layer_rule({
 +  name         = "tsukuyomi-bar-menu-frost",

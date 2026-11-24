@@ -1,0 +1,19 @@
+--- a/xdph.conf
++++ b/xdph.conf
+@@ -5,5 +5,4 @@
+     # survives a restart (OBS reopening a scene) resumes its source. Browsers
+     # and Discord never ask, so they still pick every time.
+     allow_token_by_default = true
+-    custom_picker_binary = hyprland-preview-share-picker
+ }
+--- a/modules/env.lua
++++ b/modules/env.lua
+@@ -1,6 +1,6 @@
+-hl.env("XCURSOR_THEME",     "Bibata-Modern-Ice")
++hl.env("XCURSOR_THEME",     "Bibata-Modern-Classic")
+ hl.env("XCURSOR_SIZE",      "24")
+-hl.env("HYPRCURSOR_THEME",  "Bibata-Modern-Ice")
++hl.env("HYPRCURSOR_THEME",  "Bibata-Modern-Classic")
+ hl.env("HYPRCURSOR_SIZE",   "24")
+ 
+ -- VA-API/GLX hints are nvidia-only, and forcing them when an iGPU drives the

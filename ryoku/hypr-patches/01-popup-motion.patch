@@ -9,6 +9,6 @@
 +-- animation and let the fullscreen dismiss surfaces disappear immediately.
 +hl.layer_rule({
 +  name    = "tsukuyomi-popup-motion",
-+  match   = { namespace = "^(ryoku-(dashboard|control|network|volume|bluetooth|battery|brightness|power-profile|tray|traymenu|workspace|cpu|memory|gpu|thermals|storage|ai-usage|mpris|plugin-panel|dock-menu|sidebar-left|corner-dismiss|qsbar-tooltip|image-carousel(-cr|-hs)?|media-browser(-hs)?|media-carousel)|quickshell(-popup-dismiss|:dock-dismiss))$" },
++  match   = { namespace = "^(ryoku-(dashboard|control|network|volume|bluetooth|battery|brightness|power-profile|tray|traymenu|workspace|cpu|memory|gpu|thermals|storage|ai-usage|mpris|plugin-panel|dock-menu|sidebar-left|corner-dismiss|qsbar-tooltip|notch-settings|osd|keyboard-osd|dialog|desktop-menu|gamebar|reload-cover|image-carousel(-cr|-hs)?|media-browser(-hs)?|media-carousel)|tsukuyomi-antigravity-controls|clipboard|quickshell(-popup-dismiss|:dock-dismiss))$" },
 +  no_anim = true,
 +})
