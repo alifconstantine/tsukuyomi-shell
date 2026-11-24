@@ -85,6 +85,16 @@ for change in "$here"/hypr-patches/*.patch; do
 done
 find "$draft" -name '*.orig' -delete
 
+# Build-time syntax gates: never ship broken Lua or JSON configs.
+if command -v luac >/dev/null 2>&1; then
+    while IFS= read -r -d '' lua_file; do
+        luac -p "$lua_file"
+    done < <(find "$draft/.config/hypr" -name '*.lua' -type f -print0)
+fi
+while IFS= read -r -d '' json_file; do
+    jq empty "$json_file"
+done < <(find "$draft/.config/ryoku" -name '*.json' -type f -print0)
+
 widget_catalog="$draft/.config/quickshell/shell/modules/bar/barstyles/qsbar/core"
 {
     printf '.pragma library\nvar entries = '

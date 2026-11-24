@@ -1,6 +1,6 @@
 --- a/modules/perf_saver.lua
 +++ b/modules/perf_saver.lua
-@@ -19,3 +19,27 @@
+@@ -19,3 +19,31 @@
  if saver() then
    hl.config({ decoration = { blur = { enabled = false }, shadow = { enabled = false } } })
  end
