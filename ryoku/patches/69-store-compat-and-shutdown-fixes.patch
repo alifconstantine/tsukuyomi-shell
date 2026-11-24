@@ -1,0 +1,105 @@
+--- a/ryostore/App.qml
++++ b/ryostore/App.qml
+@@ -283,6 +283,10 @@
+                   : I18n.tr("%1 installed pieces, all current.").arg(libraryCount))
+                : (currentCategory
+                   ? (categoryID === "flatpak" ? I18n.tr("Applications from Flathub, installed with Flatpak.")
++                     : categoryID === "barstyles" ? I18n.tr("Complete bar compositions for the Tsukuyomi desktop.")
++                     : categoryID === "fastfetch" ? I18n.tr("Terminal readout styles applied from Tsukuyomi Hub.")
++                     : categoryID === "decors" ? I18n.tr("Curated artwork and surfaces for Tsukuyomi Hub and apps.")
++                     : categoryID === "lockscreens" ? I18n.tr("Complete lock scenes for Tsukuyomi session lock.")
+                      : String(currentCategory.description || I18n.tr("Browse this collection.")))
+                   : I18n.tr("Explore additions for your desktop.")))
+     // The Themes category browses per provider through a subtab strip; the filter
+@@ -576,15 +580,39 @@
+             openRoute("discover");
+     }
+ 
++    function installItem(item, dither, components) {
++        if (item && item.compatPackage) {
++            if (compatPkgProc.running || (app.compatInstalled && app.compatInstalled.offline))
++                return;
++            compatPkgProc.command = ["kitty", "-e", "/usr/lib/tsukuyomi/compat-store-setup", "install", String(item.compatPackage)];
++            compatPkgProc.running = true;
++            return;
++        }
++        Store.install(item, dither, components);
++    }
++
++    function removeItem(item) {
++        if (item && item.compatPackage) {
++            if (compatPkgProc.running)
++                return;
++            compatPkgProc.command = ["kitty", "-e", "/usr/lib/tsukuyomi/compat-store-setup", "remove", String(item.compatPackage)];
++            compatPkgProc.running = true;
++            return;
++        }
++        Store.remove(item);
++    }
++
+     function requestQuit() {
+         // An in-flight install runs a backend transaction that is not safe to
+         // interrupt: poll until the store is idle, then quit.
+-        if (Store.busyKey !== "") {
++        if (Store.busyKey !== "" || compatPkgProc.running || flatpakSetup.running) {
+             if (!quitArm.running)
+                 quitArm.start();
+             return;
+         }
+         quitArm.stop();
++        compatStatus.running = false;
++        flatpakStatus.running = false;
+         // Stop our child processes and defer the quit past this event, so the QML
+         // engine tears down with nothing in flight. Quitting straight out of the
+         // window close handler races that teardown into a pure-virtual crash.
+@@ -850,10 +878,10 @@
+         positionText: app.positionText
+         offline: Store.offline
+         reducedMotion: app.reducedMotion
+-        onInstallRequested: item => Store.install(item)
++        onInstallRequested: item => app.installItem(item)
+         onDetailsRequested: item => app.openSelectedDetail()
+         onSettingsRequested: item => Store.openSettings(item)
+-        onRemoveRequested: item => Store.remove(item)
++        onRemoveRequested: item => app.removeItem(item)
+     }
+ 
+     ProviderTabs {
+@@ -1198,24 +1226,10 @@
+         installError: Store.installError
+         reducedMotion: app.reducedMotion
+         onCloseRequested: app.closeDetail()
+-        onInstallRequested: (item, dither, components) => {
+-            if (item && item.compatPackage) {
+-                compatPkgProc.command = ["kitty", "-e", "/usr/lib/tsukuyomi/compat-store-setup", "install", String(item.compatPackage)];
+-                compatPkgProc.running = true;
+-            } else {
+-                Store.install(item, dither, components);
+-            }
+-        }
++        onInstallRequested: (item, dither, components) => app.installItem(item, dither, components)
+         onRetryRequested: (item, dither, components) => Store.retryInstall(item, dither, components)
+         onSettingsRequested: item => Store.openSettings(item)
+-        onRemoveRequested: item => {
+-            if (item && item.compatPackage) {
+-                compatPkgProc.command = ["kitty", "-e", "/usr/lib/tsukuyomi/compat-store-setup", "remove", String(item.compatPackage)];
+-                compatPkgProc.running = true;
+-            } else {
+-                Store.remove(item);
+-            }
+-        }
++        onRemoveRequested: item => app.removeItem(item)
+         onEnabledRequested: (item, enabled) => Store.setOmarchyEnabled(item, enabled)
+     }
+ }
+--- a/ryostore/InstallProgress.qml
++++ b/ryostore/InstallProgress.qml
+@@ -24,7 +24,7 @@
+         if (category === "rices")
+             return I18n.tr("Apply it in Wallpapers → Rices.");
+         if (category === "decors")
+-            return I18n.tr("Choose it in Tsukuyomi Hub → Profile → Hero.");
++            return I18n.tr("Apply it in Tsukuyomi Hub → Appearance.");
+         if (category === "barstyles")
+             return I18n.tr("Switch it in Tsukuyomi Hub → Appearance → Bar Studio.");
+         return "";
