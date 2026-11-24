@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -14,9 +15,14 @@ Item {
     NotchTheme { id: _fallbackTheme; root: null }
     readonly property bool anim: !Perf.reduceMotion
 
-    Component.onCompleted: {
+    function activateTelemetry() {
         if (sys.root && sys.root.notchSystemActive !== undefined)
             sys.root.notchSystemActive = true;
+    }
+
+    onRootChanged: activateTelemetry()
+    Component.onCompleted: {
+        activateTelemetry();
         droidStatusProc.running = true;
     }
 
@@ -103,15 +109,15 @@ Item {
                 Text {
                     text: mc.valueText
                     color: sys.theme.ink
-                    font.family: theme.monoFont
+                    font.family: sys.theme.monoFont
                     font.pixelSize: 14
                     font.weight: Font.DemiBold
                 }
                 Text {
-                    anchors.baseline: parent.children[0].baseline
+                    anchors.verticalCenter: parent.verticalCenter
                     text: mc.subText
                     color: sys.theme.muted
-                    font.family: theme.monoFont
+                    font.family: sys.theme.monoFont
                     font.pixelSize: 9
                     elide: Text.ElideRight
                 }

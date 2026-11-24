@@ -188,7 +188,7 @@ Item {
             if (app.length > 16) app = app.slice(0, 15) + "…";
             if (body.length > 26) body = body.slice(0, 25) + "…";
             pill.triggerLive("notif", "notifications", app, body, nt.accent, false);
-            if (!Notifs.dnd)
+            if (!Notifs.dnd && (!pill.root || !pill.popupScreen || pill.root.activePopupScreen === pill.popupScreen))
                 NotchConfig.playSound(NotchConfig.notifSound);
         }
     }
@@ -302,7 +302,7 @@ Item {
                     : (pill.memPct >= 75 ? nt.warning : nt.success)
 
                 Behavior on ratio {
-                    enabled: pill.anim
+                    enabled: pill.anim && !Perf.softwareRenderer
                     NumberAnimation { duration: 350; easing.type: Easing.OutCubic }
                 }
                 onRatioChanged: requestPaint()

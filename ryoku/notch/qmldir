@@ -21,5 +21,4 @@ NotchTeleprompterTab 1.0 NotchTeleprompterTab.qml
 NotchWeatherTab 1.0 NotchWeatherTab.qml
 NotchHealthTab 1.0 NotchHealthTab.qml
 NotchSystemTab 1.0 NotchSystemTab.qml
-NotchSettingsView 1.0 NotchSettingsView.qml
 NotchSettingsWindow 1.0 NotchSettingsWindow.qml

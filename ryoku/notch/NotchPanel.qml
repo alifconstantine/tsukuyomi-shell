@@ -16,15 +16,48 @@ Item {
     width: 0
     height: 0
 
+    property string pendingSettingsSection: ""
+
     function openSettingsPopup(sec) {
         if (notchHost.root && notchHost.root.dashboardVisible)
             notchHost.root.dashboardVisible = false;
-        settingsPopup.openWindow(sec || "appearance");
+        const target = sec || "appearance";
+        if (settingsLoader.item) {
+            settingsLoader.item.openWindow(target);
+        } else {
+            notchHost.pendingSettingsSection = target;
+            settingsLoader.active = true;
+        }
     }
 
-    NotchSettingsWindow {
-        id: settingsPopup
-        root: notchHost.root
+    Loader {
+        id: settingsLoader
+        active: false
+        source: active ? Qt.resolvedUrl("NotchSettingsWindow.qml") : ""
+        onLoaded: {
+            if (item) {
+                item.root = notchHost.root;
+                item.openWindow(notchHost.pendingSettingsSection || "appearance");
+            }
+        }
+    }
+
+    Connections {
+        target: settingsLoader.item
+        ignoreUnknownSignals: true
+        function onVisibleChanged() {
+            if (settingsLoader.item && !settingsLoader.item.visible && !settingsLoader.item.open)
+                settingsUnloadTimer.restart();
+        }
+    }
+
+    Timer {
+        id: settingsUnloadTimer
+        interval: 250
+        onTriggered: {
+            if (settingsLoader.item && !settingsLoader.item.visible && !settingsLoader.item.open)
+                settingsLoader.active = false;
+        }
     }
 
     PanelWindow {
@@ -33,8 +66,7 @@ Item {
         readonly property var root: notchHost.root
         screen: panel.root ? panel.root.activePopupScreen : null
 
-        // This transition only animates geometry and opacity on software renderers.
-        readonly property bool anim: !Perf.userReduceMotion
+        readonly property bool anim: !Perf.reduceMotion
         readonly property bool isOpen: panel.root ? panel.root.dashboardVisible : false
 
         color: "transparent"
@@ -635,15 +667,23 @@ Item {
                     x: contentSlot.slideOffset
                     opacity: contentSlot.pageOpacity
                     enabled: !exitPage.running
-                    active: panel.reveal > 0.01
-                    source: active ? Qt.resolvedUrl(String(panel.activeMeta.file || "NotchHomeTab.qml")) : ""
+                    readonly property bool shouldLoad: panel.reveal > 0.01
+                    readonly property string tabFile: String(panel.activeMeta.file || "NotchHomeTab.qml")
 
-                    onLoaded: {
-                        if (item) {
-                            item.root = panel.root;
-                            item.theme = nt;
+                    function syncTab() {
+                        if (!shouldLoad) {
+                            source = "";
+                            return;
                         }
+                        setSource(Qt.resolvedUrl(tabFile), {
+                            root: panel.root,
+                            theme: nt
+                        });
                     }
+
+                    onShouldLoadChanged: syncTab()
+                    onTabFileChanged: if (shouldLoad) syncTab()
+                    Component.onCompleted: if (shouldLoad) syncTab()
                 }
 
                 Connections {

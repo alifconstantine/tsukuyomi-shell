@@ -90,6 +90,8 @@ Item {
         }
         tr.busy = true;
         tr.netError = false;
+        if (txProc.running)
+            txProc.running = false;
         txProc.command = [
             "python3", "-c",
             "import sys, json, urllib.request, urllib.parse\n" +
@@ -450,7 +452,7 @@ Item {
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
-                                Quickshell.execDetached(["wl-copy", tr.outputText]);
+                                Quickshell.execDetached(["wl-copy", "--", tr.outputText]);
                                 tr.copied = true;
                                 copyReset.restart();
                             }

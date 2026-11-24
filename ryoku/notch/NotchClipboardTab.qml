@@ -330,7 +330,7 @@ Item {
                 }
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    text: cb.query !== "" || cb.pinnedOnly
+                    text: cb.query !== ""
                         ? I18n.tr("No matching clipboard entries")
                         : I18n.tr("Clipboard history is empty")
                     color: cb.theme.muted
@@ -419,6 +419,7 @@ Item {
                                 anchors.fill: parent
                                 source: modelData.thumb ? ("file://" + modelData.thumb) : ""
                                 fillMode: Image.PreserveAspectCrop
+                                sourceSize: Qt.size(80, 80)
                                 asynchronous: true
                             }
                         }

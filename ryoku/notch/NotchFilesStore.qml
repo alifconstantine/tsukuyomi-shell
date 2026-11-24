@@ -419,6 +419,7 @@ Singleton {
     function connectGdrive() {
         fs.setMessage("Opening browser for Google Drive OAuth...", false);
         Quickshell.execDetached(["sh", "-c", "rclone config create gdrive drive && touch /tmp/tsukuyomi-gdrive-updated"]);
+        gdrivePoll.attempts = 0;
         gdrivePoll.restart();
     }
 
@@ -461,43 +462,18 @@ Singleton {
 
     Timer {
         id: gdrivePoll
+        property int attempts: 0
         interval: 2500
         repeat: true
         onTriggered: {
+            attempts += 1;
             fs.checkRclone();
-            if (fs.gdriveRemote !== "") stop();
+            if (fs.gdriveRemote !== "" || attempts >= 24)
+                stop();
         }
     }
 
     // ── Runners & Storage ────────────────────────────────────────────────────
-
-    Process {
-        id: dirRunner
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    var parsed = JSON.parse(text || "{}");
-                    var arr = Array.isArray(parsed.entries) ? parsed.entries : [];
-                    var out = [];
-                    for (var i = 0; i < arr.length; i++) {
-                        var it = arr[i];
-                        var ext = it.isDir ? "" : fs.extOf(it.path);
-                        out.push({
-                            name: it.name,
-                            path: it.path,
-                            ext: ext,
-                            category: fs.categoryForExt(ext, it.isDir),
-                            sizeText: it.sizeText,
-                            isDir: !!it.isDir
-                        });
-                    }
-                    fs.dirEntries = out;
-                } catch (e) {
-                    fs.dirEntries = [];
-                }
-            }
-        }
-    }
 
     Process {
         id: pickerRunner

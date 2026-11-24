@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Effects
 import Quickshell
@@ -105,6 +106,8 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "ryoku-notch-settings"
     WlrLayershell.keyboardFocus: win.open ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    Region { id: noInput }
+    mask: win.open ? null : noInput
 
     property real reveal: win.open ? 1.0 : 0.0
     Behavior on reveal {
@@ -259,6 +262,19 @@ PanelWindow {
         }
     }
 
+    // Unclipped shadow sibling behind the pop-up card
+    RectangularShadow {
+        anchors.fill: card
+        radius: card.radius
+        blur: 24
+        spread: 0
+        offset: Qt.vector2d(0, 10)
+        color: Qt.rgba(0, 0, 0, 0.5)
+        opacity: card.opacity
+        scale: card.scale
+        visible: !Perf.softwareRenderer && !Perf.shadowsDisabled && win.reveal > 0.2
+    }
+
     // Pop-up Card (Hub / Store grammar)
     Rectangle {
         id: card
@@ -276,17 +292,6 @@ PanelWindow {
         Behavior on scale {
             enabled: win.anim
             NumberAnimation { duration: 230; easing.type: win.open ? Easing.OutBack : Easing.InCubic; easing.overshoot: 0.65 }
-        }
-
-        RectangularShadow {
-            anchors.fill: parent
-            radius: parent.radius
-            blur: 24
-            spread: 0
-            offset: Qt.vector2d(0, 10)
-            color: Qt.rgba(0, 0, 0, 0.5)
-            visible: !Perf.softwareRenderer && win.reveal > 0.2
-            z: -1
         }
 
         Keys.onEscapePressed: win.closeWindow()

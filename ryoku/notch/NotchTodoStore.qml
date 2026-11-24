@@ -77,7 +77,17 @@ Singleton {
         store.persist();
     }
 
+    property bool _suppressReload: false
+
+    Timer {
+        id: suppressClear
+        interval: 350
+        onTriggered: store._suppressReload = false
+    }
+
     function persist() {
+        store._suppressReload = true;
+        suppressClear.restart();
         file.setText(JSON.stringify({ nextId: store.nextId, items: store.items }));
     }
 
@@ -109,7 +119,11 @@ Singleton {
         watchChanges: true
         atomicWrites: true
         printErrors: false
-        onFileChanged: reload()
-        onLoaded: store.reloadFromDisk()
+        onFileChanged: {
+            if (!store._suppressReload) reload();
+        }
+        onLoaded: {
+            if (!store._suppressReload) store.reloadFromDisk();
+        }
     }
 }

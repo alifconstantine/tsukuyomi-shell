@@ -114,7 +114,17 @@ Singleton {
         }
     }
 
+    property bool _suppressReload: false
+
+    Timer {
+        id: suppressClear
+        interval: 350
+        onTriggered: hs._suppressReload = false
+    }
+
     function persist() {
+        hs._suppressReload = true;
+        suppressClear.restart();
         file.setText(JSON.stringify({
             dateKey: hs.dateKey,
             waterGlasses: hs.waterGlasses,
@@ -170,8 +180,12 @@ Singleton {
         watchChanges: true
         atomicWrites: true
         printErrors: false
-        onFileChanged: reload()
-        onLoaded: hs.reloadFromDisk()
+        onFileChanged: {
+            if (!hs._suppressReload) reload();
+        }
+        onLoaded: {
+            if (!hs._suppressReload) hs.reloadFromDisk();
+        }
         onLoadFailed: hs.ensureToday()
     }
 }

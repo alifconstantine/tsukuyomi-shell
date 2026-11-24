@@ -140,6 +140,8 @@ Item {
                             anchors.fill: parent
                             source: mus.artSource
                             fillMode: Image.PreserveAspectCrop
+                            sourceSize: Qt.size(112, 112)
+                            asynchronous: true
                             smooth: true
                             visible: mus.hasArt && status === Image.Ready
                         }
