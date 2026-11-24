@@ -18,7 +18,20 @@ ShellRoot {
     property string errorText: ""
     property bool installingAddon: false
     property bool launcherReady: false
+    property bool windowClosed: false
+    property string installStage: "inspect"
+    property string installDiagnostic: ""
     readonly property bool needsArm: !!inspectData.needs_arm_translation && !inspectData.arm_translation_installed
+    readonly property string installStageTitle: {
+        switch (installStage) {
+        case "runtime": return I18n.tr("Preparing Android");
+        case "boot": return I18n.tr("Waiting for Android to Start");
+        case "install": return I18n.tr("Installing Android App");
+        case "stores": return I18n.tr("Preparing Bundled Android Stores");
+        case "launcher": return I18n.tr("Adding to App Launcher");
+        default: return I18n.tr("Reading Android Package");
+        }
+    }
 
     function pickFile() {
         if (!filePicker.running)
@@ -47,10 +60,12 @@ ShellRoot {
         if (root.targetFile === "" || root.needsArm || root.installingAddon || installProc.running)
             return;
         root.errorText = "";
+        root.installStage = "inspect";
+        root.installDiagnostic = "";
         root.step = "running";
         installProc.command = [
             "/usr/lib/tsukuyomi/tsukuyomi-droid", "install",
-            root.targetFile
+            root.targetFile, "--progress"
         ];
         installProc.running = true;
     }
@@ -95,6 +110,10 @@ ShellRoot {
         stdout: StdioCollector {}
         stderr: StdioCollector {}
         onExited: code => {
+            if (root.windowClosed) {
+                Qt.quit();
+                return;
+            }
             root.installingAddon = false;
             if (code === 0)
                 root.loadInspect(root.targetFile);
@@ -108,8 +127,20 @@ ShellRoot {
     Process {
         id: installProc
         stdout: StdioCollector { id: installOut }
-        stderr: StdioCollector { id: installErr }
+        stderr: SplitParser {
+            onRead: line => {
+                const prefix = "TSUKUYOMI_PROGRESS ";
+                if (line.startsWith(prefix))
+                    root.installStage = line.slice(prefix.length).trim();
+                else if (line.trim().length > 0)
+                    root.installDiagnostic = line.trim().slice(0, 500);
+            }
+        }
         onExited: code => {
+            if (root.windowClosed) {
+                Qt.quit();
+                return;
+            }
             try {
                 const res = JSON.parse(installOut.text);
                 if (code === 0 && res.ok) {
@@ -118,9 +149,9 @@ ShellRoot {
                     root.step = "done";
                     return;
                 }
-                root.errorText = String(res.error || installErr.text || I18n.tr("Failed to install Android package."));
+                root.errorText = String(res.error || root.installDiagnostic || I18n.tr("Failed to install Android package."));
             } catch (e) {
-                root.errorText = installErr.text.trim() || I18n.tr("Failed to install Android package.");
+                root.errorText = root.installDiagnostic || I18n.tr("Failed to install Android package.");
             }
             root.step = "error";
         }
@@ -133,6 +164,11 @@ ShellRoot {
         implicitHeight: 460
         color: Tsukuyomi.Style.surface
         visible: true
+        onClosed: {
+            root.windowClosed = true;
+            if (!installProc.running && !addonProc.running)
+                Qt.quit();
+        }
 
         Shortcut {
             sequence: "Escape"
@@ -307,7 +343,7 @@ ShellRoot {
                     visible: root.step === "inspecting" || root.step === "running" || root.installingAddon
                     anchors.fill: parent
                     title: root.installingAddon ? I18n.tr("Installing ARM Support")
-                        : root.step === "inspecting" ? I18n.tr("Reading Android Package") : I18n.tr("Installing Android App")
+                        : root.step === "inspecting" ? I18n.tr("Reading Android Package") : root.installStageTitle
                     collapsible: false
 
                     Column {
@@ -321,8 +357,8 @@ ShellRoot {
                         }
                         Text {
                             width: parent.width - Tokens.s5 * 2
-                            visible: root.step === "running"
-                            text: I18n.tr("Starting Android and installing the app. The first start can take a minute.")
+                            visible: root.step === "running" && root.installStage === "boot"
+                            text: I18n.tr("The first Android start can take up to two minutes.")
                             color: Tsukuyomi.Style.secondary
                             font.family: Tokens.ui
                             font.pixelSize: 12
@@ -375,6 +411,15 @@ ShellRoot {
                     primary: true
                     onAct: {
                         Quickshell.execDetached(["/usr/lib/tsukuyomi/droid-launch", String(root.inspectData.package)]);
+                        Qt.quit();
+                    }
+                }
+                Btn {
+                    visible: root.step === "done" && !root.launcherReady
+                    text: I18n.tr("Open Android")
+                    primary: true
+                    onAct: {
+                        Quickshell.execDetached(["/usr/lib/tsukuyomi/tsukuyomi-droid", "open-ui"]);
                         Qt.quit();
                     }
                 }

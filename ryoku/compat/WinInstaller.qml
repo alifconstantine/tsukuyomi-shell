@@ -32,7 +32,9 @@ ShellRoot {
     property bool shareInstallerFolder: false
     property string errorText: ""
     property string activeSlug: ""
+    property string installStage: "environment"
     property bool cancelling: false
+    property bool windowClosed: false
 
     readonly property var availableModes: {
         const list = [
@@ -108,10 +110,12 @@ ShellRoot {
         if (root.targetFile === "" || installProc.running || listProc.running)
             return;
         root.errorText = "";
+        root.installStage = "environment";
         root.step = "running";
 
         const cmd = [
             "/usr/lib/tsukuyomi/tsukuyomi-win", "install",
+            "--progress",
             "--file", root.targetFile,
             "--name", root.appName,
             "--mode", root.installMode,
@@ -218,8 +222,17 @@ ShellRoot {
     Process {
         id: installProc
         stdout: StdioCollector { id: installOut }
-        stderr: StdioCollector {}
+        stderr: SplitParser {
+            onRead: line => {
+                if (line === "TSUKUYOMI_PROGRESS setup")
+                    root.installStage = "setup";
+            }
+        }
         onExited: code => {
+            if (root.windowClosed) {
+                Qt.quit();
+                return;
+            }
             try {
                 const res = JSON.parse(installOut.text);
                 if (res.cancelled) {
@@ -272,6 +285,10 @@ ShellRoot {
         id: exportProc
         stdout: StdioCollector { id: exportOut }
         onExited: code => {
+            if (root.windowClosed) {
+                Qt.quit();
+                return;
+            }
             try {
                 const res = JSON.parse(exportOut.text);
                 if (!res.ok || code !== 0)
@@ -292,6 +309,13 @@ ShellRoot {
         implicitHeight: 470
         color: Tsukuyomi.Style.surface
         visible: true
+        onClosed: {
+            root.windowClosed = true;
+            if (installProc.running)
+                root.cancelInstall();
+            else if (!exportProc.running)
+                Qt.quit();
+        }
 
         Shortcut {
             sequence: "Escape"
@@ -554,7 +578,9 @@ ShellRoot {
                     anchors.fill: parent
                     title: root.step === "inspecting" ? I18n.tr("Reading Windows File")
                         : root.step === "exporting" ? I18n.tr("Adding to App Launcher")
-                        : root.cancelling ? I18n.tr("Cancelling Setup") : I18n.tr("Setting Up Windows App")
+                        : root.cancelling ? I18n.tr("Cancelling Setup")
+                        : root.installStage === "environment" ? I18n.tr("Preparing Windows Environment")
+                        : I18n.tr("Windows Setup")
                     collapsible: false
 
                     Column {
@@ -570,7 +596,10 @@ ShellRoot {
                         Text {
                             width: parent.width - Tokens.s5 * 2
                             visible: root.step === "running" && !root.cancelling
-                            text: I18n.tr("Follow the Windows setup window. Shortcuts are added when setup finishes.")
+                            text: root.installStage === "environment"
+                                ? I18n.tr("The first setup prepares an environment for this app. The installer opens when it is ready.")
+                                : root.installMode === "portable" ? I18n.tr("Switch to the Windows app to use it.")
+                                : I18n.tr("Continue in the Windows setup window. App Launcher shortcuts are added when setup finishes.")
                             color: Tsukuyomi.Style.secondary
                             font.family: Tokens.ui
                             font.pixelSize: 12
