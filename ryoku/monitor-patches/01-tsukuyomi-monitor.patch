@@ -1,23 +1,3 @@
---- a/main.go
-+++ b/main.go
-@@ -17,7 +17,7 @@
- 	app := NewApp()
- 
- 	if err := wails.Run(&options.App{
--		Title:     "RyoManager",
-+		Title:     "Tsukuyomi Monitor",
- 		Width:     1380,
- 		Height:    860,
- 		MinWidth:  980,
-@@ -25,7 +25,7 @@
- 		AssetServer: &assetserver.Options{
- 			Assets: assets,
- 		},
--		BackgroundColour: &options.RGBA{R: 9, G: 9, B: 10, A: 1},
-+		BackgroundColour: &options.RGBA{R: 22, G: 22, B: 22, A: 1},
- 		OnStartup:        app.startup,
- 		Linux: &linux.Options{
- 			WebviewGpuPolicy: linux.WebviewGpuPolicyAlways,
 --- a/app.go
 +++ b/app.go
 @@ -21,7 +21,7 @@
@@ -29,6 +9,196 @@
  
  func validateIdentity(pid int, start uint64) error {
  	if pid <= 1 || pid == os.Getpid() {
+@@ -173,5 +173,9 @@
+ 	cmd.Stdin = nil
+ 	cmd.Stdout = nil
+ 	cmd.Stderr = nil
+-	return cmd.Start()
++	if err := cmd.Start(); err != nil {
++		return err
++	}
++	go func() { _ = cmd.Wait() }()
++	return nil
+ }
+--- a/collector.go
++++ b/collector.go
+@@ -3,10 +3,12 @@
+ import (
+ 	"bufio"
+ 	"bytes"
++	"context"
+ 	"encoding/base64"
+ 	"encoding/json"
+ 	"fmt"
+ 	"io"
++	"net"
+ 	"os"
+ 	"os/exec"
+ 	"os/user"
+@@ -898,7 +900,7 @@
+ 		}
+ 	}
+ 	names := []string{icon, icon + ".png", icon + ".svg"}
+-	roots := []string{"/run/current-system/sw/share/icons/hicolor", "/usr/share/icons/hicolor", "/usr/share/pixmaps"}
++	roots := []string{"/usr/share/icons/Papirus-Dark", "/usr/share/icons/Papirus", "/usr/share/icons/hicolor", "/usr/share/pixmaps"}
+ 	if h, e := os.UserHomeDir(); e == nil {
+ 		roots = append([]string{filepath.Join(h, ".local/share/icons/hicolor")}, roots...)
+ 	}
+@@ -993,7 +995,7 @@
+ 			continue
+ 		}
+ 		name := f[2]
+-		if strings.HasPrefix(name, "loop") || strings.HasPrefix(name, "ram") {
++		if strings.HasPrefix(name, "loop") || strings.HasPrefix(name, "ram") || strings.HasPrefix(name, "zram") {
+ 			continue
+ 		}
+ 		sys := filepath.Join("/sys/block", name)
+@@ -1033,8 +1035,29 @@
+ 	}
+ 	return out, current
+ }
++func resolveBlockRoot(dev string) string {
++	realDev := dev
++	if resolved, err := filepath.EvalSymlinks(dev); err == nil && resolved != "" {
++		realDev = resolved
++	}
++	base := filepath.Base(realDev)
++	if _, err := os.Stat(filepath.Join("/sys/block", base)); err == nil {
++		return base
++	}
++	if matches, _ := filepath.Glob(filepath.Join("/sys/block", "*", base)); len(matches) > 0 {
++		return filepath.Base(filepath.Dir(matches[0]))
++	}
++	root := base
++	for len(root) > 0 && root[len(root)-1] >= '0' && root[len(root)-1] <= '9' {
++		root = root[:len(root)-1]
++	}
++	root = strings.TrimSuffix(root, "p")
++	return root
++}
++
+ func readMounts() map[string][]DiskMount {
+ 	out := map[string][]DiskMount{}
++	seenBtrfs := map[string]bool{}
+ 	b, e := os.ReadFile("/proc/mounts")
+ 	if e != nil {
+ 		return out
+@@ -1044,19 +1067,26 @@
+ 		if len(f) < 3 || !strings.HasPrefix(f[0], "/dev/") {
+ 			continue
+ 		}
+-		base := filepath.Base(f[0])
+-		root := base
+-		for len(root) > 0 && root[len(root)-1] >= '0' && root[len(root)-1] <= '9' {
+-			root = root[:len(root)-1]
+-		}
+-		root = strings.TrimSuffix(root, "p")
++		root := resolveBlockRoot(f[0])
++		if f[2] == "btrfs" {
++			// Collapse multiple subvolume mounts of the same Btrfs filesystem onto the primary mount.
++			if seenBtrfs[root] && f[1] != "/" {
++				continue
++			}
++			seenBtrfs[root] = true
++		}
+ 		var st syscall.Statfs_t
+ 		if syscall.Statfs(f[1], &st) != nil {
+ 			continue
+ 		}
+ 		total := st.Blocks * uint64(st.Bsize)
+ 		free := st.Bavail * uint64(st.Bsize)
+-		out[root] = append(out[root], DiskMount{Path: f[1], FS: f[2], Used: safeDelta(total, free), Total: total, System: f[1] == "/"})
++		m := DiskMount{Path: f[1], FS: f[2], Used: safeDelta(total, free), Total: total, System: f[1] == "/"}
++		if f[2] == "btrfs" && f[1] == "/" {
++			out[root] = []DiskMount{m}
++		} else {
++			out[root] = append(out[root], m)
++		}
+ 	}
+ 	return out
+ }
+@@ -1077,7 +1107,8 @@
+ 		} else if strings.HasPrefix(name, "veth") || strings.HasPrefix(name, "br") || strings.HasPrefix(name, "docker") || strings.HasPrefix(name, "vir") || strings.HasPrefix(name, "tun") {
+ 			kind = "virtual"
+ 		}
+-		n := NetworkInfo{Name: name, Kind: kind, State: readString(filepath.Join(base, "operstate")), RxTotal: r.rx, TxTotal: r.tx, IPv4: []string{}, IPv6: []string{}, MAC: readStringPtr(filepath.Join(base, "address")), MTU: u64ptrIf(readUint(filepath.Join(base, "mtu"))), SpeedMbps: f64ptrIf(float64(readInt(filepath.Join(base, "speed"))))}
++		ipv4, ipv6 := interfaceIPs(name)
++		n := NetworkInfo{Name: name, Kind: kind, State: readString(filepath.Join(base, "operstate")), RxTotal: r.rx, TxTotal: r.tx, IPv4: ipv4, IPv6: ipv6, MAC: readStringPtr(filepath.Join(base, "address")), MTU: u64ptrIf(readUint(filepath.Join(base, "mtu"))), SpeedMbps: f64ptrIf(float64(readInt(filepath.Join(base, "speed"))))}
+ 		if sampled && sampleMS > 0 {
+ 			if o, ok := prev[name]; ok {
+ 				sec := sampleMS / 1000
+@@ -1096,8 +1127,34 @@
+ 	}
+ 	return out, cur
+ }
++func interfaceIPs(name string) ([]string, []string) {
++	v4, v6 := []string{}, []string{}
++	iface, err := net.InterfaceByName(name)
++	if err != nil {
++		return v4, v6
++	}
++	addrs, err := iface.Addrs()
++	if err != nil {
++		return v4, v6
++	}
++	for _, a := range addrs {
++		ipNet, ok := a.(*net.IPNet)
++		if !ok || ipNet.IP == nil {
++			continue
++		}
++		if ip4 := ipNet.IP.To4(); ip4 != nil {
++			v4 = append(v4, ip4.String())
++		} else if !ipNet.IP.IsLinkLocalUnicast() {
++			v6 = append(v6, ipNet.IP.String())
++		}
++	}
++	return v4, v6
++}
++
+ func wifiInfo(name string) (string, *float64, *float64) {
+-	cmd := exec.Command("iw", "dev", name, "link")
++	ctx, cancel := context.WithTimeout(context.Background(), 1500*time.Millisecond)
++	defer cancel()
++	cmd := exec.CommandContext(ctx, "iw", "dev", name, "link")
+ 	b, e := cmd.Output()
+ 	if e != nil {
+ 		return "", nil, nil
+@@ -1309,8 +1366,34 @@
+ 	return 0
+ }
+ 
++func nvidiaAllSuspended() bool {
++	vendors, _ := filepath.Glob("/sys/bus/pci/devices/*/vendor")
++	found := false
++	for _, vp := range vendors {
++		v := strings.TrimSpace(readString(vp))
++		if v != "0x10de" {
++			continue
++		}
++		cls := strings.TrimSpace(readString(filepath.Join(filepath.Dir(vp), "class")))
++		if !strings.HasPrefix(cls, "0x03") {
++			continue
++		}
++		found = true
++		st := strings.TrimSpace(readString(filepath.Join(filepath.Dir(vp), "power/runtime_status")))
++		if st != "suspended" {
++			return false
++		}
++	}
++	return found
++}
++
+ func readNvidiaGPUs() []GpuInfo {
+-	cmd := exec.Command("nvidia-smi", "--query-gpu=index,name,utilization.gpu,utilization.memory,memory.used,memory.total,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.mem,driver_version,pstate", "--format=csv,noheader,nounits")
++	if nvidiaAllSuspended() {
++		return []GpuInfo{}
++	}
++	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
++	defer cancel()
++	cmd := exec.CommandContext(ctx, "nvidia-smi", "--query-gpu=index,name,utilization.gpu,utilization.memory,memory.used,memory.total,temperature.gpu,power.draw,power.limit,clocks.gr,clocks.mem,driver_version,pstate", "--format=csv,noheader,nounits")
+ 	b, err := cmd.Output()
+ 	if err != nil {
+ 		return []GpuInfo{}
 --- a/frontend/index.html
 +++ b/frontend/index.html
 @@ -4,7 +4,7 @@
@@ -419,16 +589,6 @@
  .system-seal small { color: var(--ryo-ink-faint); font-family: var(--ryo-mono); font-size: 9px; letter-spacing: .14em; }
  .system-grid { margin-top: 10px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
  .system-grid > div {
---- a/frontend/src/lib/pages/ProcessesPage.svelte
-+++ b/frontend/src/lib/pages/ProcessesPage.svelte
-@@ -641,7 +641,6 @@
- <section class="page processes-page">
-   <div class="page-head processes-head">
-     <div class="title-block">
--      <div class="section-label"><i></i><span class="section-mark">力</span> SYSTEM / PROCESSES <span>処理</span><b>01</b></div>
-       <h1>Processes</h1>
-       <p>Apps and services grouped by identity, with every reading tied to a live process.</p>
-     </div>
 --- a/frontend/src/lib/pages/PerformancePage.svelte
 +++ b/frontend/src/lib/pages/PerformancePage.svelte
 @@ -130,7 +130,6 @@
@@ -438,6 +598,16 @@
 -      <div class="section-label"><i></i><span class="section-mark">性能</span><span>PERFORMANCE</span></div>
        <h1>Performance</h1>
        <p>Live hardware readings with gaps left visible when collection pauses.</p>
+     </div>
+--- a/frontend/src/lib/pages/ProcessesPage.svelte
++++ b/frontend/src/lib/pages/ProcessesPage.svelte
+@@ -641,7 +641,6 @@
+ <section class="page processes-page">
+   <div class="page-head processes-head">
+     <div class="title-block">
+-      <div class="section-label"><i></i><span class="section-mark">力</span> SYSTEM / PROCESSES <span>処理</span><b>01</b></div>
+       <h1>Processes</h1>
+       <p>Apps and services grouped by identity, with every reading tied to a live process.</p>
      </div>
 --- a/frontend/src/lib/pages/SystemPage.svelte
 +++ b/frontend/src/lib/pages/SystemPage.svelte
@@ -467,3 +637,49 @@
      <div><span>LIVE PROCESSES</span><strong>{snapshot?.processCount ?? "—"}</strong><small>Visible to the current user session</small></div>
    </div>
  
+--- a/main.go
++++ b/main.go
+@@ -3,6 +3,7 @@
+ import (
+ 	"embed"
+ 	"log"
++	"os"
+ 
+ 	"github.com/wailsapp/wails/v2"
+ 	"github.com/wailsapp/wails/v2/pkg/options"
+@@ -14,21 +15,31 @@
+ var assets embed.FS
+ 
+ func main() {
++	softwareRenderer := os.Getenv("TSUKUYOMI_SOFTWARE_RENDERER") == "1" || os.Getenv("LIBGL_ALWAYS_SOFTWARE") == "1"
++	_, hasNvidia := os.Stat("/proc/driver/nvidia/version")
++	if (softwareRenderer || hasNvidia == nil) && os.Getenv("WEBKIT_DISABLE_DMABUF_RENDERER") == "" {
++		_ = os.Setenv("WEBKIT_DISABLE_DMABUF_RENDERER", "1")
++	}
++	gpuPolicy := linux.WebviewGpuPolicyOnDemand
++	if softwareRenderer {
++		gpuPolicy = linux.WebviewGpuPolicyNever
++	}
++
+ 	app := NewApp()
+ 
+ 	if err := wails.Run(&options.App{
+-		Title:     "RyoManager",
++		Title:     "Tsukuyomi Monitor",
+ 		Width:     1380,
+ 		Height:    860,
+-		MinWidth:  980,
++		MinWidth:  760,
+ 		MinHeight: 640,
+ 		AssetServer: &assetserver.Options{
+ 			Assets: assets,
+ 		},
+-		BackgroundColour: &options.RGBA{R: 9, G: 9, B: 10, A: 1},
++		BackgroundColour: &options.RGBA{R: 22, G: 22, B: 22, A: 1},
+ 		OnStartup:        app.startup,
+ 		Linux: &linux.Options{
+-			WebviewGpuPolicy: linux.WebviewGpuPolicyAlways,
++			WebviewGpuPolicy: gpuPolicy,
+ 		},
+ 		Bind: []interface{}{
+ 			app,
