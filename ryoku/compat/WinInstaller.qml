@@ -326,6 +326,9 @@ ShellRoot {
                         width: 34
                         height: 34
                         fillMode: Image.PreserveAspectFit
+                        sourceSize: Qt.size(68, 68)
+                        asynchronous: true
+                        cache: false
                         visible: root.hasIconPreview
                         source: root.hasIconPreview ? ("file://" + String(root.inspectData.icon_preview)) : ""
                     }
@@ -512,7 +515,11 @@ ShellRoot {
                                     TogglePill {
                                         checked: root.runner === "umu"
                                         label: root.runner === "umu" ? I18n.tr("Runner: UMU Proton") : I18n.tr("Runner: Wine Staging")
-                                        onToggled: next => root.runner = next ? "umu" : "wine"
+                                        onToggled: next => {
+                                            root.runner = next ? "umu" : "wine";
+                                            if (next)
+                                                root.useSandbox = false;
+                                        }
                                     }
                                     TogglePill {
                                         visible: root.installMode === "portable"
@@ -645,7 +652,7 @@ ShellRoot {
 
                 Btn {
                     visible: root.step === "configure"
-                    enabled: !listProc.running && (root.installMode !== "existing" || root.existingSlug !== "")
+                    enabled: !listProc.running && !(root.runner === "umu" && root.useSandbox) && (root.installMode !== "existing" || root.existingSlug !== "")
                     text: root.installMode === "portable" && !root.pinPortable ? I18n.tr("Run Now") : I18n.tr("Install")
                     primary: true
                     onAct: root.startInstall()

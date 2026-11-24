@@ -51,7 +51,7 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.namespace: "tsukuyomi-antigravity-controls"
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
-    color: "#121214"
+    color: Style.surface
 
     Row {
         anchors.fill: parent
@@ -79,7 +79,7 @@ PanelWindow {
                 Text {
                     anchors.centerIn: parent
                     text: control.modelData.icon
-                    color: control.enabled ? "#F3F3F4" : "#8A8A90"
+                    color: hover.hovered && control.enabled ? "#FFFFFF" : (control.enabled ? Style.text : Style.muted)
                     font.pixelSize: 16
                 }
 

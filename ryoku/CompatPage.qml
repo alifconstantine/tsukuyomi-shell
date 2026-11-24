@@ -338,6 +338,11 @@ Item {
                                             onAct: page.runAction(["tsukuyomi-win", "configure", winRow.modelData.id, "--sandbox", winRow.modelData.sandbox === false ? "true" : "false"], I18n.tr("Updated app sandbox setting."))
                                         }
                                         Btn {
+                                            text: I18n.tr("Force Stop")
+                                            enabled: !page.busy
+                                            onAct: page.runAction(["tsukuyomi-win", "force-stop", winRow.modelData.id], I18n.tr("Stopped running Windows processes for ") + (winRow.modelData.name || winRow.modelData.id))
+                                        }
+                                        Btn {
                                             text: I18n.tr("Uninstall")
                                             enabled: !page.busy
                                             onAct: page.runAction(["tsukuyomi-win", "uninstall", winRow.modelData.id], I18n.tr("Uninstalled ") + (winRow.modelData.name || winRow.modelData.id))
