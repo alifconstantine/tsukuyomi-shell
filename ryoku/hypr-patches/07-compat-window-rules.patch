@@ -18,7 +18,7 @@ diff -ruN hypr/modules/window_rules.lua hypr_new/modules/window_rules.lua
 +    match          = { class = "negative:(?i)^(.*\\.exe|wine|steam_app_.*|umu-.*)$" },
      suppress_event = "maximize",
  })
-@@ -304,3 +304,47 @@
+@@ -304,3 +304,55 @@
      workspace = "special:sharebar silent",
      no_focus  = true,
  })
@@ -65,4 +65,12 @@ diff -ruN hypr/modules/window_rules.lua hypr_new/modules/window_rules.lua
 +    -- content and caption to the Hyprland work area.
 +    fullscreen_state = "1 1",
 +    suppress_event = "maximize fullscreen",
++})
++
++-- Orpheus requests a fixed 1500×860 window, which can exceed the work area.
++hl.window_rule({
++    name = "manage-orpheus-xwayland",
++    match = { xwayland = true, initial_class = "(?i)^orpheus\\.exe$", initial_title = "(?i)^orpheus$" },
++    tile  = true,
++    fullscreen_state = "1 1",
 +})
