@@ -162,6 +162,9 @@ ShellRoot {
                         width: 36
                         height: 36
                         fillMode: Image.PreserveAspectFit
+                        sourceSize: Qt.size(72, 72)
+                        asynchronous: true
+                        cache: false
                         visible: root.hasIconPreview
                         source: root.hasIconPreview ? ("file://" + String(root.inspectData.icon_preview)) : ""
                     }
